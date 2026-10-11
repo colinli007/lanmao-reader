@@ -12,6 +12,8 @@ struct QjsEngine {
     QjsHostCallback callback;
     // 最外层求值的截止时间（毫秒，单调时钟），0 表示不限时
     int64_t deadline_ms;
+    // 最外层求值的外部中止标志，非 0 表示中止；由其它线程写入，NULL 表示没有
+    const int32_t *abort_flag;
     // 求值嵌套深度：宿主函数里再次求值时大于 1
     int32_t depth;
 };
@@ -22,10 +24,21 @@ static int64_t now_ms(void) {
     return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
+static bool is_aborted(const QjsEngine *engine) {
+    return engine->abort_flag != NULL && __atomic_load_n(engine->abort_flag, __ATOMIC_RELAXED) != 0;
+}
+
 static int interrupt_handler(JSRuntime *rt, void *opaque) {
     (void)rt;
     QjsEngine *engine = opaque;
-    return engine->deadline_ms > 0 && now_ms() > engine->deadline_ms;
+    return is_aborted(engine) || (engine->deadline_ms > 0 && now_ms() > engine->deadline_ms);
+}
+
+// 与 QuickJS 自己的中断错误一致：InternalError("interrupted")，并标记为 uncatchable，try/catch 拦不住
+static JSValue throw_interrupted(JSContext *ctx) {
+    JSValue error = JS_NewInternalError(ctx, "interrupted");
+    JS_SetUncatchableError(ctx, error);
+    return JS_Throw(ctx, error);
 }
 
 // Dart isolate 在两次事件之间可能被调度到另一个 OS 线程，QuickJS 记录的栈顶就失效了，
@@ -120,6 +133,12 @@ static JSValue host_function(JSContext *ctx, JSValueConst this_val, int argc, JS
     char *result = engine->callback(magic, args_json != NULL ? args_json : "[]", &is_error);
     free(args_json);
 
+    // 中止信号在宿主函数执行期间被设置时，不管它正常返回还是报错（报错可能就是内层被中止、或被唤醒的取消），
+    // 都不能把结果交回 JS：否则外层 JS 能 catch 住，或者宿主函数吞掉中止后 JS 继续执行
+    if (is_aborted(engine)) {
+        free(result);
+        return throw_interrupted(ctx);
+    }
     if (is_error) {
         JSValue error = JS_ThrowPlainError(ctx, "%s", result != NULL ? result : "host error");
         free(result);
@@ -198,7 +217,7 @@ char *qjs_set_global(QjsEngine *engine, const char *name, const char *json) {
 }
 
 char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_t timeout_ms,
-               int32_t *is_error) {
+               const int32_t *abort_flag, int32_t *is_error) {
     JSContext *ctx = engine->ctx;
     *is_error = 0;
 
@@ -206,10 +225,14 @@ char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_
     sync_stack_top(engine);
     if (is_outermost) {
         engine->deadline_ms = timeout_ms > 0 ? now_ms() + timeout_ms : 0;
+        engine->abort_flag = abort_flag;
     }
     engine->depth++;
 
-    JSValue value = JS_Eval(ctx, code, strlen(code), filename, JS_EVAL_TYPE_GLOBAL);
+    // 中断回调只在循环回边和函数调用处轮询，没有循环的代码可能一次都不检查，所以先查一次
+    JSValue value = is_outermost && is_aborted(engine)
+                        ? throw_interrupted(ctx)
+                        : JS_Eval(ctx, code, strlen(code), filename, JS_EVAL_TYPE_GLOBAL);
     char *out;
     if (JS_IsException(value)) {
         *is_error = 1;
@@ -220,7 +243,10 @@ char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_
     JS_FreeValue(ctx, value);
 
     engine->depth--;
-    if (is_outermost) engine->deadline_ms = 0;
+    if (is_outermost) {
+        engine->deadline_ms = 0;
+        engine->abort_flag = NULL;
+    }
     return out;
 }
 

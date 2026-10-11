@@ -9,6 +9,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.13.0"
+  blocking_bridge:
+    dependency: "direct main"
+    description:
+      path: "../packages/blocking_bridge"
+      relative: true
+    source: path
+    version: "0.1.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -71,7 +78,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_driver:
-    dependency: transitive
+    dependency: "direct dev"
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -155,7 +162,7 @@ packages:
     source: hosted
     version: "1.16.0"
   native_synchronization:
-    dependency: "direct main"
+    dependency: transitive
     description:
       path: "../packages/native_synchronization"
       relative: true

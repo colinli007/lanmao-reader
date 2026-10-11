@@ -15,7 +15,9 @@ final value = engine.eval('java.md5Encode(result)', timeout: const Duration(seco
 engine.dispose();
 ```
 
-一个 `JsEngine` 只能在创建它的 isolate 里使用。需要等待网络或界面操作的宿主函数，见 `spike/lib/js_worker.dart` 里的阻塞桥。
+一个 `JsEngine` 只能在创建它的 isolate 里使用。需要等待网络或界面操作的宿主函数，用 `packages/blocking_bridge` 的阻塞桥，接法见 `spike/lib/js_tasks.dart`。
+
+`eval` 可以传入外部中止信号 `abortSignal`（共享内存里的一个 `Int32`，任何线程写入非 0 都会中止求值）。中止对 JS 的 `try/catch` 不可见，并且会穿过宿主函数边界：宿主函数返回时如果信号已经设置，调用它的 JS 也会被中止。
 
 ## 测试
 

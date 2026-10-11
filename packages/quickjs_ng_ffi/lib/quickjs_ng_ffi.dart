@@ -69,8 +69,11 @@ class JsEngine {
   }
 
   /// 执行代码并返回最后一个表达式的值（按 JSON 转成 Dart 对象）。
-  /// 嵌套调用时 [timeout] 只在最外层生效。
-  Object? eval(String code, {Duration? timeout, String filename = '<eval>'}) {
+  ///
+  /// [abortSignal] 指向的值被（任意线程）置为非 0 后，JS 被中止并抛出 [JsException]，JS 里的 try/catch 拦不住；
+  /// 宿主函数返回时也会检查它，所以宿主函数吞掉内层的中止也没用。
+  /// 嵌套调用时 [timeout] 和 [abortSignal] 只在最外层生效。
+  Object? eval(String code, {Duration? timeout, Pointer<Int32>? abortSignal, String filename = '<eval>'}) {
     _checkAlive();
     return using((arena) {
       final isError = arena<Int32>();
@@ -79,6 +82,7 @@ class JsEngine {
         code.toNativeUtf8(allocator: arena).cast(),
         filename.toNativeUtf8(allocator: arena).cast(),
         timeout?.inMilliseconds ?? 0,
+        abortSignal ?? nullptr,
         isError,
       );
       final text = result == nullptr ? null : result.cast<Utf8>().toDartString();

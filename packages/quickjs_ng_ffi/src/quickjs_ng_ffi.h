@@ -39,9 +39,11 @@ FFI_PLUGIN_EXPORT char *qjs_set_global(QjsEngine *engine, const char *name, cons
 
 // 求值。返回结果的 JSON（undefined 或不可序列化的值返回 NULL）。
 // 出错时 *is_error 置 1，返回错误消息。返回的字符串用 qjs_free_string 释放。
-// timeout_ms <= 0 表示不限时；嵌套调用沿用最外层的截止时间。
+// timeout_ms <= 0 表示不限时。abort_flag 可为 NULL；指向的值被其它线程置为非 0 时中止求值，
+// 宿主函数返回时也会检查它，所以中止能穿过宿主函数边界，JS 的 try/catch 拦不住。
+// 嵌套调用沿用最外层的截止时间和中止标志。
 FFI_PLUGIN_EXPORT char *qjs_eval(QjsEngine *engine, const char *code, const char *filename,
-                                 int32_t timeout_ms, int32_t *is_error);
+                                 int32_t timeout_ms, const int32_t *abort_flag, int32_t *is_error);
 
 FFI_PLUGIN_EXPORT void qjs_free_string(char *str);
 

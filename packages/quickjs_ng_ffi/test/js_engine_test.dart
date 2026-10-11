@@ -1,6 +1,11 @@
 // 在开发机上运行：
 //   ./tool/build_host.sh
 //   QUICKJS_NG_FFI_LIB=build/host/libquickjs_ng_ffi.dylib dart test
+import 'dart:ffi';
+import 'dart:io';
+import 'dart:isolate';
+
+import 'package:ffi/ffi.dart';
 import 'package:quickjs_ng_ffi/quickjs_ng_ffi.dart';
 import 'package:test/test.dart';
 
@@ -80,4 +85,84 @@ void main() {
     expect(engine.eval('let s = 0; for (let i = 0; i < 20000; i++) s += java.log(i); s'), isA<num>());
     expect(count, 20000);
   });
+
+  group('外部中止信号', () {
+    late Pointer<Int32> abort;
+
+    setUp(() => abort = calloc<Int32>());
+    tearDown(() => calloc.free(abort));
+
+    // eval 是同步 FFI 调用，求值期间本 isolate 的事件循环不转，所以由另一个 isolate 延时写标志
+    Future<void> abortAfter(Duration delay) =>
+        Isolate.spawn(_writeFlagLater, (abort.address, delay.inMilliseconds));
+
+    Matcher interrupted() =>
+        throwsA(isA<JsException>().having((e) => e.message, 'message', contains('interrupted')));
+
+    test('中止死循环，引擎之后仍可用', () async {
+      await abortAfter(const Duration(milliseconds: 200));
+      final watch = Stopwatch()..start();
+      expect(() => engine.eval('while (true) {}', abortSignal: abort), interrupted());
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+      expect(engine.eval('"still alive"'), 'still alive');
+    });
+
+    test('try/catch 捕获不到中止', () async {
+      await abortAfter(const Duration(milliseconds: 200));
+      expect(
+        () => engine.eval('while (true) { try { while (true) {} } catch (e) {} }', abortSignal: abort),
+        interrupted(),
+      );
+    });
+
+    test('求值开始前信号已设置时不执行任何代码', () {
+      var calls = 0;
+      engine.register('host.mark', (args) => ++calls);
+      abort.value = 1;
+      expect(() => engine.eval('host.mark()', abortSignal: abort), interrupted());
+      expect(calls, 0);
+    });
+
+    test('外层 JS 捕获不到嵌套求值的中止', () async {
+      engine.register('host.nested', (args) => engine.eval(args[0] as String));
+      await abortAfter(const Duration(milliseconds: 200));
+      expect(
+        () => engine.eval('try { host.nested("while (true) {}") } catch (e) {} "continued"', abortSignal: abort),
+        interrupted(),
+      );
+    });
+
+    test('宿主函数吞掉中止后正常返回，调用方 JS 仍被中止', () async {
+      engine.register('host.nested', (args) {
+        try {
+          return engine.eval(args[0] as String);
+        } on JsException {
+          return '';
+        }
+      });
+      await abortAfter(const Duration(milliseconds: 200));
+      expect(
+        () => engine.eval('host.nested("while (true) {}") + "continued"', abortSignal: abort),
+        interrupted(),
+      );
+    });
+
+    test('信号在宿主函数执行期间被设置，宿主函数报普通错误也拦不住中止', () async {
+      engine.register('host.wait', (args) {
+        sleep(const Duration(milliseconds: 400));
+        throw StateError('普通错误');
+      });
+      await abortAfter(const Duration(milliseconds: 200));
+      expect(
+        () => engine.eval('try { host.wait() } catch (e) {} "continued"', abortSignal: abort),
+        interrupted(),
+      );
+    });
+  });
+}
+
+void _writeFlagLater((int, int) args) {
+  final (address, delayMs) = args;
+  sleep(Duration(milliseconds: delayMs));
+  Pointer<Int32>.fromAddress(address).value = 1;
 }
