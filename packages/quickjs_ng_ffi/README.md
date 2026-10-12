@@ -19,6 +19,13 @@ engine.dispose();
 
 `eval` 可以传入外部中止信号 `abortSignal`（共享内存里的一个 `Int32`，任何线程写入非 0 都会中止求值）。中止对 JS 的 `try/catch` 不可见，并且会穿过宿主函数边界：宿主函数返回时如果信号已经设置，调用它的 JS 也会被中止。
 
+`JsRegExp` 用 quickjs-ng 自带的 libregexp 执行正则，语法同 JS `RegExp`，匹配同样接受 `abortSignal`，用来跑书源提供的、可能灾难性回溯的正则。正则属于创建它的引擎，引擎释放时一并释放。
+
+```dart
+final regExp = JsRegExp(engine, r'第(\d+)章');
+final matches = regExp.allMatches(text, abortSignal: signal); // 中止时抛出 JsException('interrupted')
+```
+
 ## 测试
 
 ```bash

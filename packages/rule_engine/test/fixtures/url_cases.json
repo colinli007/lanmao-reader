@@ -1,0 +1,185 @@
+{
+ "generator": "java.net.URL（tool/jsoup_oracle/UrlOracle.java）",
+ "cases": [
+  {
+   "note": "上一级",
+   "base": "https://a.com/book/1/",
+   "relative": "../2/",
+   "expected": "https://a.com/book/2/"
+  },
+  {
+   "note": "同级",
+   "base": "https://a.com/book/1/",
+   "relative": "2.html",
+   "expected": "https://a.com/book/1/2.html"
+  },
+  {
+   "note": "中文不编码",
+   "base": "https://a.com/book/1/",
+   "relative": "/search?k=三体",
+   "expected": "https://a.com/search?k=三体"
+  },
+  {
+   "note": "空格不编码",
+   "base": "https://a.com/s",
+   "relative": "/s?k=a b",
+   "expected": "https://a.com/s?k=a b"
+  },
+  {
+   "note": "选项后缀保留",
+   "base": "https://a.com/s",
+   "relative": "/s,{\"method\":\"POST\",\"body\":\"k=1\"}",
+   "expected": "https://a.com/s,{\"method\":\"POST\",\"body\":\"k=1\"}"
+  },
+  {
+   "note": "基准地址从逗号截断",
+   "base": "https://a.com/s,{\"method\":\"POST\"}",
+   "relative": "x.html",
+   "expected": "https://a.com/x.html"
+  },
+  {
+   "note": "只有查询串",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "?page=2",
+   "expected": "https://a.com/book/1/?page=2"
+  },
+  {
+   "note": "只有片段",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "#c",
+   "expected": "https://a.com/book/1/index.html?x=1#c"
+  },
+  {
+   "note": "空串",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "",
+   "expected": "https://a.com/book/1/index.html?x=1#top"
+  },
+  {
+   "note": "空白",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "   ",
+   "expected": "https://a.com/book/1/index.html?x=1#top"
+  },
+  {
+   "note": "协议相对地址",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "//cdn.b.com/img.jpg",
+   "expected": "https://cdn.b.com/img.jpg"
+  },
+  {
+   "note": "绝对地址",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "http://other.com/x",
+   "expected": "http://other.com/x"
+  },
+  {
+   "note": "大写协议",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "HTTPS://Other.com/X",
+   "expected": "HTTPS://Other.com/X"
+  },
+  {
+   "note": "javascript",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "javascript:void(0)",
+   "expected": ""
+  },
+  {
+   "note": "data 地址",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "data:image/png;base64,AAAA",
+   "expected": "data:image/png;base64,AAAA"
+  },
+  {
+   "note": "其它协议",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "mailto:a@b.com",
+   "expected": "mailto:a@b.com"
+  },
+  {
+   "note": "未知协议",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "tel:123",
+   "expected": "tel:123"
+  },
+  {
+   "note": "越过根目录",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "../../../../x",
+   "expected": "https://a.com/../../x"
+  },
+  {
+   "note": "基准没有路径",
+   "base": "https://a.com",
+   "relative": "x",
+   "expected": "https://a.com/x"
+  },
+  {
+   "note": "基准没有路径时只有查询串",
+   "base": "https://a.com",
+   "relative": "?q=1",
+   "expected": "https://a.com/?q=1"
+  },
+  {
+   "note": "点段",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "./x/./y/../z",
+   "expected": "https://a.com/book/1/x/z"
+  },
+  {
+   "note": "以 .. 结尾",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "a/..",
+   "expected": "https://a.com/book/1/"
+  },
+  {
+   "note": "去掉首尾空白",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "  /trim  ",
+   "expected": "https://a.com/trim"
+  },
+  {
+   "note": "端口",
+   "base": "https://a.com:8080/x/y",
+   "relative": "z",
+   "expected": "https://a.com:8080/x/z"
+  },
+  {
+   "note": "用户信息",
+   "base": "https://user@a.com/x/",
+   "relative": "z",
+   "expected": "https://user@a.com/x/z"
+  },
+  {
+   "note": "同协议无斜杠",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "https:x",
+   "expected": "https://a.com/book/1/x"
+  },
+  {
+   "note": "基准不合法",
+   "base": "not a url",
+   "relative": "x",
+   "expected": "x"
+  },
+  {
+   "note": "基准为空",
+   "base": "",
+   "relative": "x",
+   "expected": "x"
+  },
+  {
+   "note": "带查询和片段",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "x?a=1#f",
+   "expected": "https://a.com/book/1/x?a=1#f"
+  },
+  {
+   "note": "查询里有问号",
+   "base": "https://a.com/book/1/index.html?x=1#top",
+   "relative": "/p?a=?b",
+   "expected": "https://a.com/p?a=?b"
+  }
+ ]
+}

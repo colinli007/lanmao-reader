@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:blocking_bridge/blocking_bridge.dart';
 
 import 'js_tasks.dart';
+import 'rule_engine_check.dart';
 
 class CheckResult {
   CheckResult(this.name, this.passed, this.detail, this.elapsed);
@@ -277,6 +278,7 @@ final Map<String, _Check> _checks = {
     _expect(await pool.run(evalJs('"alive"')) == 'alive', '池不可用');
     return '新 worker ${takeoverMs}ms 后接手';
   },
+  '规则引擎：真实书源四条链路（外网）': (f) => runRuleEngineChains(),
 };
 
 void _expect(bool condition, String message) {

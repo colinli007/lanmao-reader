@@ -158,6 +158,123 @@ class QuickjsNgFfiBindings {
       );
   late final _qjs_free_string = _qjs_free_stringPtr
       .asFunction<void Function(ffi.Pointer<ffi.Char>)>();
+
+  /// 正则：直接调用 libregexp，和 JS 求值无关，但内存分配和中止检查用同一个引擎。
+  /// 编译 UTF-8 的 pattern，flags 是 libregexp.h 里 LRE_FLAG_* 的组合（不含 g、y）。
+  /// 成功返回字节码（用 qjs_regexp_free 释放），*capture_count 写入分组数（含第 0 组），
+  /// 有命名分组时 *group_names 写入以逗号连接的组名（未命名的组为空，用 qjs_free_string 释放），否则为 NULL。
+  /// 失败返回 NULL，*error 写入失败原因（用 qjs_free_string 释放）。
+  ffi.Pointer<ffi.Uint8> qjs_regexp_compile(
+    ffi.Pointer<QjsEngine> engine,
+    ffi.Pointer<ffi.Char> pattern,
+    int flags,
+    ffi.Pointer<ffi.Int32> capture_count,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> group_names,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> error,
+  ) {
+    return _qjs_regexp_compile(
+      engine,
+      pattern,
+      flags,
+      capture_count,
+      group_names,
+      error,
+    );
+  }
+
+  late final _qjs_regexp_compilePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<ffi.Uint8> Function(
+            ffi.Pointer<QjsEngine>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Int32>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          )
+        >
+      >('qjs_regexp_compile');
+  late final _qjs_regexp_compile = _qjs_regexp_compilePtr
+      .asFunction<
+        ffi.Pointer<ffi.Uint8> Function(
+          ffi.Pointer<QjsEngine>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Int32>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+        )
+      >();
+
+  /// 在 UTF-16 串 input[0, len) 里从 start 开始查找下一个匹配。
+  /// 返回 1 表示匹配，0 表示没有匹配，-1 表示被中止，-2 表示内存不足等内部错误。
+  /// 匹配时 captures（长度为分组数的 2 倍）写入每组的起止下标，未参与匹配的组为 -1。
+  /// abort_flag 的含义和 qjs_eval 相同；在求值内部调用时沿用外层的中止标志。
+  int qjs_regexp_exec(
+    ffi.Pointer<QjsEngine> engine,
+    ffi.Pointer<ffi.Uint8> bytecode,
+    ffi.Pointer<ffi.Uint16> input,
+    int len,
+    int start,
+    ffi.Pointer<ffi.Int32> abort_flag,
+    ffi.Pointer<ffi.Int32> captures,
+  ) {
+    return _qjs_regexp_exec(
+      engine,
+      bytecode,
+      input,
+      len,
+      start,
+      abort_flag,
+      captures,
+    );
+  }
+
+  late final _qjs_regexp_execPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<QjsEngine>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Pointer<ffi.Uint16>,
+            ffi.Int32,
+            ffi.Int32,
+            ffi.Pointer<ffi.Int32>,
+            ffi.Pointer<ffi.Int32>,
+          )
+        >
+      >('qjs_regexp_exec');
+  late final _qjs_regexp_exec = _qjs_regexp_execPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<QjsEngine>,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint16>,
+          int,
+          int,
+          ffi.Pointer<ffi.Int32>,
+          ffi.Pointer<ffi.Int32>,
+        )
+      >();
+
+  void qjs_regexp_free(
+    ffi.Pointer<QjsEngine> engine,
+    ffi.Pointer<ffi.Uint8> bytecode,
+  ) {
+    return _qjs_regexp_free(engine, bytecode);
+  }
+
+  late final _qjs_regexp_freePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<QjsEngine>, ffi.Pointer<ffi.Uint8>)
+        >
+      >('qjs_regexp_free');
+  late final _qjs_regexp_free = _qjs_regexp_freePtr
+      .asFunction<
+        void Function(ffi.Pointer<QjsEngine>, ffi.Pointer<ffi.Uint8>)
+      >();
 }
 
 final class QjsEngine extends ffi.Opaque {}

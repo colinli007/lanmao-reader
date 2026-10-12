@@ -1,0 +1,804 @@
+{
+ "generator": "jsoup 1.16.2（scratchpad 里的 Oracle.java）",
+ "cases": [
+  {
+   "note": "标签",
+   "op": "select",
+   "ctx": "",
+   "arg": "div",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5",
+    "21"
+   ]
+  },
+  {
+   "note": "id",
+   "op": "select",
+   "ctx": "",
+   "arg": "#main",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "class 不区分大小写",
+   "op": "select",
+   "ctx": "",
+   "arg": ".box",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "标签加 class",
+   "op": "select",
+   "ctx": "",
+   "arg": "div.list",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "全部，含根",
+   "op": "select",
+   "ctx": "",
+   "arg": "*",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23"
+   ]
+  },
+  {
+   "note": "有属性",
+   "op": "select",
+   "ctx": "",
+   "arg": "[data-id]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "10"
+   ]
+  },
+  {
+   "note": "属性名前缀",
+   "op": "select",
+   "ctx": "",
+   "arg": "[^data-]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "10"
+   ]
+  },
+  {
+   "note": "属性等于",
+   "op": "select",
+   "ctx": "",
+   "arg": "[data-id=7]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "10"
+   ]
+  },
+  {
+   "note": "属性等于（引号）",
+   "op": "select",
+   "ctx": "",
+   "arg": "[data-id=\"7\"]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "10"
+   ]
+  },
+  {
+   "note": "属性不等于",
+   "op": "select",
+   "ctx": "",
+   "arg": "[href!=/x]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "23"
+   ]
+  },
+  {
+   "note": "属性前缀",
+   "op": "select",
+   "ctx": "",
+   "arg": "[href^=/]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13",
+    "22"
+   ]
+  },
+  {
+   "note": "属性后缀不区分大小写",
+   "op": "select",
+   "ctx": "",
+   "arg": "[href$=.HTML]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13"
+   ]
+  },
+  {
+   "note": "属性包含",
+   "op": "select",
+   "ctx": "",
+   "arg": "[href*=a.com]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "15"
+   ]
+  },
+  {
+   "note": "属性正则",
+   "op": "select",
+   "ctx": "",
+   "arg": "[href~=\\d+\\.html]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13"
+   ]
+  },
+  {
+   "note": "属性正则匹配单词",
+   "op": "select",
+   "ctx": "",
+   "arg": "[rel~=next]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "22"
+   ]
+  },
+  {
+   "note": "后代",
+   "op": "select",
+   "ctx": "",
+   "arg": "div p",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7",
+    "9",
+    "10"
+   ]
+  },
+  {
+   "note": "子元素",
+   "op": "select",
+   "ctx": "",
+   "arg": "div > p",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7",
+    "9",
+    "10"
+   ]
+  },
+  {
+   "note": "多级子元素",
+   "op": "select",
+   "ctx": "",
+   "arg": "body > div > ul > li",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "14",
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": "紧邻兄弟",
+   "op": "select",
+   "ctx": "",
+   "arg": "h3 + p",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7",
+    "9"
+   ]
+  },
+  {
+   "note": "后续兄弟",
+   "op": "select",
+   "ctx": "",
+   "arg": "h3 ~ p",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7",
+    "9",
+    "10"
+   ]
+  },
+  {
+   "note": "逗号",
+   "op": "select",
+   "ctx": "",
+   "arg": "h3, li",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "6",
+    "8",
+    "12",
+    "14",
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": "逗号的优先级",
+   "op": "select",
+   "ctx": "",
+   "arg": "p, ul > li",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7",
+    "9",
+    "10",
+    "12",
+    "14",
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": ":lt",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:lt(2)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "14"
+   ]
+  },
+  {
+   "note": ":gt",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:gt(1)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": ":eq",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:eq(0)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12"
+   ]
+  },
+  {
+   "note": ":has",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:has(h3)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": ":has 子元素",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:has(> h3)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": ":not",
+   "op": "select",
+   "ctx": "",
+   "arg": "p:not(.intro)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "9",
+    "10"
+   ]
+  },
+  {
+   "note": ":not 嵌套 :has",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:not(:has(a))",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "18"
+   ]
+  },
+  {
+   "note": ":contains",
+   "op": "select",
+   "ctx": "",
+   "arg": "p:contains(第二)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "9"
+   ]
+  },
+  {
+   "note": ":contains 合并空白",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:contains(简介   一)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": ":containsOwn",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:containsOwn(简介)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": []
+  },
+  {
+   "note": ":matches",
+   "op": "select",
+   "ctx": "",
+   "arg": "a:matches(第.章)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13",
+    "15"
+   ]
+  },
+  {
+   "note": ":matchesOwn",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:matchesOwn(^$)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5",
+    "21"
+   ]
+  },
+  {
+   "note": ":nth-child",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-child(2)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "14"
+   ]
+  },
+  {
+   "note": ":nth-child(odd)",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-child(odd)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "16"
+   ]
+  },
+  {
+   "note": ":nth-child(2n)",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-child(2n)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "14",
+    "18"
+   ]
+  },
+  {
+   "note": ":nth-child(-n+3) 按 jsoup 的解析",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-child(-n+3)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": ":nth-last-child",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-last-child(1)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "18"
+   ]
+  },
+  {
+   "note": ":nth-of-type",
+   "op": "select",
+   "ctx": "",
+   "arg": "p:nth-of-type(2)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "9"
+   ]
+  },
+  {
+   "note": ":nth-last-of-type",
+   "op": "select",
+   "ctx": "",
+   "arg": "p:nth-last-of-type(1)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "10"
+   ]
+  },
+  {
+   "note": ":first-of-type",
+   "op": "select",
+   "ctx": "",
+   "arg": "h3:first-of-type",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "6"
+   ]
+  },
+  {
+   "note": ":last-of-type",
+   "op": "select",
+   "ctx": "",
+   "arg": "h3:last-of-type",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "8"
+   ]
+  },
+  {
+   "note": ":first-child",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:first-child",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12"
+   ]
+  },
+  {
+   "note": ":last-child",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:last-child",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "18"
+   ]
+  },
+  {
+   "note": ":only-child",
+   "op": "select",
+   "ctx": "",
+   "arg": "a:only-child",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13",
+    "15",
+    "17"
+   ]
+  },
+  {
+   "note": ":only-of-type",
+   "op": "select",
+   "ctx": "",
+   "arg": "ul:only-of-type",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "11"
+   ]
+  },
+  {
+   "note": ":empty",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:empty",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "18"
+   ]
+  },
+  {
+   "note": ":empty 空白文本",
+   "op": "select",
+   "ctx": "",
+   "arg": "span:empty",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "19"
+   ]
+  },
+  {
+   "note": ":empty 注释",
+   "op": "select",
+   "ctx": "",
+   "arg": "em:empty",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "20"
+   ]
+  },
+  {
+   "note": ":root",
+   "op": "select",
+   "ctx": "",
+   "arg": ":root",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "1"
+   ]
+  },
+  {
+   "note": ":containsData",
+   "op": "select",
+   "ctx": "",
+   "arg": "script:containsData(s = 1)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "23"
+   ]
+  },
+  {
+   "note": "以组合符开头",
+   "op": "select",
+   "ctx": "",
+   "arg": "> div",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": []
+  },
+  {
+   "note": "组合",
+   "op": "select",
+   "ctx": "",
+   "arg": "div#main > ul li:eq(1) a",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "15"
+   ]
+  },
+  {
+   "note": "标签加属性",
+   "op": "select",
+   "ctx": "",
+   "arg": "a[title]",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13"
+   ]
+  },
+  {
+   "note": "命名空间通配",
+   "op": "select",
+   "ctx": "",
+   "arg": "*|div",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5",
+    "21"
+   ]
+  },
+  {
+   "note": "nth 里有空格时 jsoup 报错",
+   "op": "select",
+   "ctx": "",
+   "arg": "li:nth-child(2n + 1)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "error": "SelectorParseException"
+  },
+  {
+   "note": "不支持的伪类",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:hover",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "error": "SelectorParseException"
+  },
+  {
+   "note": ":lt 参数不是数字",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:lt(a)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "error": "SelectorParseException"
+  },
+  {
+   "note": "括号不配对",
+   "op": "select",
+   "ctx": "",
+   "arg": "div:has(",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "error": "SelectorParseException"
+  },
+  {
+   "note": "从元素选择时包含它本身",
+   "op": "select",
+   "ctx": "#main",
+   "arg": "div",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": ":lt 不含起点",
+   "op": "select",
+   "ctx": "#main",
+   "arg": "li:lt(2)",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "14"
+   ]
+  },
+  {
+   "note": "从元素选择时 :root 是起点",
+   "op": "select",
+   "ctx": "ul",
+   "arg": ":root",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "11"
+   ]
+  },
+  {
+   "note": "起点的子元素",
+   "op": "select",
+   "ctx": "ul",
+   "arg": "> li",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "14",
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": "getElementsByClass",
+   "op": "byClass",
+   "ctx": "",
+   "arg": "list",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "getElementsByClass 含本身",
+   "op": "byClass",
+   "ctx": "#main",
+   "arg": "BOX",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "getElementsByTag",
+   "op": "byTag",
+   "ctx": "",
+   "arg": "LI",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "12",
+    "14",
+    "16",
+    "18"
+   ]
+  },
+  {
+   "note": "id",
+   "op": "byId",
+   "ctx": "",
+   "arg": "main",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "5"
+   ]
+  },
+  {
+   "note": "getElementsContainingOwnText",
+   "op": "ownTextContains",
+   "ctx": "",
+   "arg": "第一",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "13"
+   ]
+  },
+  {
+   "note": "getElementsContainingOwnText 不区分大小写和空白",
+   "op": "ownTextContains",
+   "ctx": "",
+   "arg": "简介 一",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "7"
+   ]
+  },
+  {
+   "note": "abs: 前缀",
+   "op": "attr",
+   "ctx": "#main",
+   "arg": "abs:href",
+   "html": "<html><head><title>T</title></head><body>\n<div id=\"main\" class=\"Box list\">\n  <h3>标题A</h3><p class=\"intro\">简介 一</p>\n  <h3>标题B</h3><p>第二段</p><p data-id=\"7\" data-x=\"y\">三</p>\n  <ul><li><a href=\"/1.html\" title=\"第一章\">第一章</a></li><li><a href=\"https://a.com/2\">第二章</a></li><li class=\"vip\"><a href=\"javascript:void(0)\">VIP</a></li><li></li></ul>\n  <span> </span><em><!-- c --></em>\n</div>\n<div class=\"footer\"><a href=\"/x\" rel=\"nofollow next\">下一页</a><script>var s = 1;</script></div>\n</body></html>",
+   "items": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "https://a.com/2",
+    "",
+    "javascript:void(0)",
+    "",
+    "",
+    ""
+   ]
+  }
+ ]
+}

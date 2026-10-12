@@ -159,6 +159,96 @@ void main() {
       );
     });
   });
+
+  group('可中断的正则', _regExpTests);
+}
+
+void _regExpTests() {
+  late JsEngine engine;
+  late Pointer<Int32> abort;
+
+  setUp(() {
+    engine = JsEngine();
+    abort = calloc<Int32>();
+  });
+  tearDown(() {
+    engine.dispose();
+    calloc.free(abort);
+  });
+
+  test('分组匹配，未参与匹配的组为空', () {
+    final match = JsRegExp(engine, r'(\d+)-(\d+)?').firstMatch('a 12- b')!;
+    expect(match.input.substring(match.start, match.end), '12-');
+    expect(match.group(1), '12');
+    expect(match.group(2), isNull);
+    expect(match.groupStart(2), -1);
+  });
+
+  test('中止灾难性回溯，之后同一个正则仍可用', () async {
+    final regExp = JsRegExp(engine, r'(a+)+b');
+    await Isolate.spawn(_writeFlagLater, (abort.address, 200));
+    final watch = Stopwatch()..start();
+    expect(
+      () => regExp.firstMatch('a' * 30, abortSignal: abort),
+      throwsA(isA<JsException>().having((e) => e.message, 'message', contains('interrupted'))),
+    );
+    expect(watch.elapsedMilliseconds, lessThan(2000));
+    abort.value = 0;
+    final match = regExp.firstMatch('aab', abortSignal: abort)!;
+    expect(match.group(0), 'aab');
+    expect(engine.eval('1 + 1'), 2);
+  });
+
+  test('编译失败带有原因', () {
+    expect(
+      () => JsRegExp(engine, '[未闭合'),
+      throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('unexpected end'))),
+    );
+  });
+
+  test('Unicode 标志下代理对算一个字符', () {
+    final match = JsRegExp(engine, '第(.)章', unicode: true).firstMatch('第𠀀章')!;
+    expect(match.group(1), '𠀀');
+  });
+
+  test('非 Unicode 模式下 pattern 里的 BMP 以外字符按两个代理项匹配', () {
+    expect(JsRegExp(engine, r'\s*🍵\s*').firstMatch('a 🍵 b')?.start, 1);
+    expect(JsRegExp(engine, '📖').allMatches('📖x📖'), hasLength(2));
+  });
+
+  test('标志与 (?i:) 修饰符', () {
+    expect(JsRegExp(engine, 'abc', ignoreCase: true).firstMatch('xABC')?.start, 1);
+    expect(JsRegExp(engine, '(?i:a)b').firstMatch('Ab ab AB')?.start, 0);
+    expect(JsRegExp(engine, '^b', multiLine: true).firstMatch('a\nb')?.start, 2);
+    expect(JsRegExp(engine, 'a.b', dotAll: true).firstMatch('a\nb')?.start, 0);
+    expect(JsRegExp(engine, 'a.b').firstMatch('a\nb'), isNull);
+  });
+
+  test('allMatches 跳过空匹配，命名分组', () {
+    final regExp = JsRegExp(engine, r'(?<n>\d*)');
+    final matches = regExp.allMatches('1a22');
+    expect(matches.map((m) => m.group(0)).toList(), ['1', '', '22', '']);
+    expect(matches.first.namedGroup('n'), '1');
+    expect(regExp.groupIndex('n'), 1);
+    expect(JsRegExp(engine, 'x').allMatches(''), isEmpty);
+  });
+
+  test('嵌套在求值里时沿用外层的中止标志', () async {
+    final regExp = JsRegExp(engine, r'(a+)+b');
+    engine.register('host.match', (args) => regExp.firstMatch(args[0] as String)?.start);
+    await Isolate.spawn(_writeFlagLater, (abort.address, 200));
+    expect(
+      () => engine.eval('try { host.match("${'a' * 30}") } catch (e) {} "continued"', abortSignal: abort),
+      throwsA(isA<JsException>().having((e) => e.message, 'message', contains('interrupted'))),
+    );
+  });
+
+  test('引擎释放时一并释放正则', () {
+    final other = JsEngine();
+    final regExp = JsRegExp(other, 'a');
+    other.dispose();
+    expect(() => regExp.firstMatch('a'), throwsStateError);
+  });
 }
 
 void _writeFlagLater((int, int) args) {

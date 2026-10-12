@@ -1,0 +1,385 @@
+{
+ "generator": "jsoup 1.16.2（scratchpad 里的 Oracle.java）",
+ "cases": [
+  {
+   "note": "合并空白",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>  第一章\n   开始 </p>",
+   "items": [
+    "第一章 开始"
+   ]
+  },
+  {
+   "note": "ownText 不含子元素",
+   "op": "ownText",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>作者：<a>刘慈欣</a></p>",
+   "items": [
+    "作者："
+   ]
+  },
+  {
+   "note": "块级元素之间补空格",
+   "op": "text",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><p>One</p><p>Two</p></div>",
+   "items": [
+    "One Two"
+   ]
+  },
+  {
+   "note": "块级元素后面紧跟文本",
+   "op": "text",
+   "ctx": "",
+   "arg": "body",
+   "html": "<div>One</div>Two",
+   "items": [
+    "One Two"
+   ]
+  },
+  {
+   "note": "br 算空格",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>Hello<br>there</p>",
+   "items": [
+    "Hello there"
+   ]
+  },
+  {
+   "note": "行内元素",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>Hello <b>there</b> now</p>",
+   "items": [
+    "Hello there now"
+   ]
+  },
+  {
+   "note": "nbsp 当空白合并",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>a&nbsp;&nbsp;b &nbsp; c</p>",
+   "items": [
+    "a b c"
+   ]
+  },
+  {
+   "note": "零宽空格和软连字符",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>a&#8203;b&shy;c</p>",
+   "items": [
+    "abc"
+   ]
+  },
+  {
+   "note": "pre 保留空白",
+   "op": "text",
+   "ctx": "",
+   "arg": "body",
+   "html": "<pre>  a\n  b</pre><p> x  y </p>",
+   "items": [
+    "a\n  b x y"
+   ]
+  },
+  {
+   "note": "脚本和样式不算文本",
+   "op": "text",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div>a<script>var x = 1;</script>b<style>p{}</style>c</div>",
+   "items": [
+    "a b c"
+   ]
+  },
+  {
+   "note": "textNodes",
+   "op": "textNodes",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div>  first <b>x</b> second\n line <br> third </div>",
+   "items": [
+    " first \u0002 second line \u0002 third "
+   ]
+  },
+  {
+   "note": "ownText 里的 br",
+   "op": "ownText",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>a<br>b<span>c</span> d </p>",
+   "items": [
+    "a b d"
+   ]
+  },
+  {
+   "note": "列表",
+   "op": "text",
+   "ctx": "",
+   "arg": "ul",
+   "html": "<ul><li>a</li><li>b</li></ul>",
+   "items": [
+    "a b"
+   ]
+  },
+  {
+   "note": "表格",
+   "op": "text",
+   "ctx": "",
+   "arg": "table",
+   "html": "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>",
+   "items": [
+    "a b c"
+   ]
+  },
+  {
+   "note": "相邻行内元素",
+   "op": "text",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><span>a</span><span>b</span> <span>c</span></div>",
+   "items": [
+    "ab c"
+   ]
+  },
+  {
+   "note": "嵌套块和首尾空白",
+   "op": "text",
+   "ctx": "",
+   "arg": "div#x",
+   "html": "<div id=\"x\">\n <h1> Title </h1>\n <div>Body <i>it</i></div> tail</div>",
+   "items": [
+    "Title Body it tail"
+   ]
+  },
+  {
+   "note": "注释不算文本",
+   "op": "text",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>a<!-- c -->b</p>",
+   "items": [
+    "ab"
+   ]
+  },
+  {
+   "note": "没有直接文本",
+   "op": "ownText",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><p>only child</p></div>",
+   "items": [
+    ""
+   ]
+  },
+  {
+   "note": "常见正文",
+   "op": "text",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div id=\"content\">&nbsp;&nbsp;&nbsp;&nbsp;第一段<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;第二段<br /></div>",
+   "items": [
+    "第一段 第二段"
+   ]
+  },
+  {
+   "note": "整个文档",
+   "op": "text",
+   "ctx": "",
+   "arg": "html",
+   "html": "<html><head><title> T </title></head><body><p>x</p></body></html>",
+   "items": [
+    "T x"
+   ]
+  },
+  {
+   "note": "嵌套块",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div class=\"a\" id=\"x\"><p>One</p><p>Two <b>b</b></p></div>",
+   "items": [
+    "<div class=\"a\" id=\"x\">\n <p>One</p>\n <p>Two <b>b</b></p>\n</div>"
+   ]
+  },
+  {
+   "note": "br 换行",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div id=\"c\">line1<br>line2<br>  line3</div>",
+   "items": [
+    "<div id=\"c\">\n line1\n <br>\n line2\n <br>\n  line3\n</div>"
+   ]
+  },
+  {
+   "note": "文本转义",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>a &amp; b &lt; c &nbsp;d \"q\" &gt;</p>",
+   "items": [
+    "<p>a &amp; b &lt; c &nbsp;d \"q\" &gt;</p>"
+   ]
+  },
+  {
+   "note": "属性转义",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "a",
+   "html": "<a href='x\"y' title=\"&amp;<>\">t</a>",
+   "items": [
+    "<a href=\"x&quot;y\" title=\"&amp;<>\">t</a>"
+   ]
+  },
+  {
+   "note": "布尔属性",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "input",
+   "html": "<input type=\"checkbox\" checked disabled=\"disabled\" value=\"\" readonly=\"no\">",
+   "items": [
+    "<input type=\"checkbox\" checked disabled value=\"\" readonly=\"no\">"
+   ]
+  },
+  {
+   "note": "行内元素之间的空白",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><span>a</span> <span>b</span></div>",
+   "items": [
+    "<div>\n <span>a</span> <span>b</span>\n</div>"
+   ]
+  },
+  {
+   "note": "注释",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><!-- c --><p>x</p></div>",
+   "items": [
+    "<div>\n <!-- c -->\n <p>x</p>\n</div>"
+   ]
+  },
+  {
+   "note": "img",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p><img src=\"a.jpg\" alt=\"\">text</p>",
+   "items": [
+    "<p><img src=\"a.jpg\" alt=\"\">text</p>"
+   ]
+  },
+  {
+   "note": "多个元素用换行连接",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>one</p><p>two</p>",
+   "items": [
+    "<p>one</p>\n<p>two</p>"
+   ]
+  },
+  {
+   "note": "pre",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "pre",
+   "html": "<pre>  a\n   b  </pre>",
+   "items": [
+    "<pre>  a\n   b  </pre>"
+   ]
+  },
+  {
+   "note": "常见正文的 HTML",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div id=\"content\">&nbsp;&nbsp;&nbsp;&nbsp;第一段<br /><br />&nbsp;&nbsp;&nbsp;&nbsp;第二段<br /></div>",
+   "items": [
+    "<div id=\"content\">\n &nbsp;&nbsp;&nbsp;&nbsp;第一段\n <br>\n <br>\n &nbsp;&nbsp;&nbsp;&nbsp;第二段\n <br>\n</div>"
+   ]
+  },
+  {
+   "note": "目录列表",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "ul",
+   "html": "<ul>\n  <li><a href=\"/1\">第一章</a></li>\n  <li><a href=\"/2\">第二章</a></li>\n</ul>",
+   "items": [
+    "<ul>\n <li><a href=\"/1\">第一章</a></li>\n <li><a href=\"/2\">第二章</a></li>\n</ul>"
+   ]
+  },
+  {
+   "note": "文本和块交替",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div>\n  text\n  <div>inner</div>\n  more\n</div>",
+   "items": [
+    "<div>\n text \n <div>\n  inner\n </div> more\n</div>\n<div>\n inner\n</div>"
+   ]
+  },
+  {
+   "note": "td 按行内格式化",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "td",
+   "html": "<table><tr><td> a <b>b</b> </td></tr></table>",
+   "items": [
+    "<td>a <b>b</b></td>"
+   ]
+  },
+  {
+   "note": "脚本原样输出",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "div",
+   "html": "<div><script>var a = \"<b>\" && 1;</script><style>p > a {}</style></div>",
+   "items": [
+    "<div>\n <script>var a = \"<b>\" && 1;</script>\n <style>p > a {}</style>\n</div>"
+   ]
+  },
+  {
+   "note": "控制字符",
+   "op": "outerHtml",
+   "ctx": "",
+   "arg": "span",
+   "html": "<span>a\u0001b</span>",
+   "items": [
+    "<span>a&#x1;b</span>"
+   ]
+  },
+  {
+   "note": "data",
+   "op": "data",
+   "ctx": "",
+   "arg": "script",
+   "html": "<script>var a = \"<b>\";</script>",
+   "items": [
+    "var a = \"<b>\";"
+   ]
+  },
+  {
+   "note": "textNodes 不含脚本",
+   "op": "textNodes",
+   "ctx": "",
+   "arg": "p",
+   "html": "<p>  a  <br>\n\n b<script>x</script></p>",
+   "items": [
+    " a \u0002 b"
+   ]
+  }
+ ]
+}

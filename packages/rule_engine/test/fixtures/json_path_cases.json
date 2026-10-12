@@ -1,0 +1,452 @@
+{
+ "generator": "Jayway json-path 3.0.0（tool/jsoup_oracle/JsonPathOracle.java）",
+ "cases": [
+  {
+   "note": "整数",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.code",
+   "definite": true,
+   "string": "0",
+   "list": [
+    "0"
+   ]
+  },
+  {
+   "note": "嵌套属性",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.total",
+   "definite": true,
+   "string": "3",
+   "list": [
+    "3"
+   ]
+  },
+  {
+   "note": "不带 $ 的路径",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "data.total",
+   "definite": true,
+   "string": "3",
+   "list": [
+    "3"
+   ]
+  },
+  {
+   "note": "属性名带连字符",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.book-name",
+   "definite": true,
+   "string": "连字符",
+   "list": [
+    "连字符"
+   ]
+  },
+  {
+   "note": "方括号属性",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$['data']['total']",
+   "definite": true,
+   "string": "3",
+   "list": [
+    "3"
+   ]
+  },
+  {
+   "note": "下标",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0].name",
+   "definite": true,
+   "string": "三体",
+   "list": [
+    "三体"
+   ]
+  },
+  {
+   "note": "负下标",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[-1].name",
+   "definite": true,
+   "string": "流浪地球",
+   "list": [
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "下标越界",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[5].name",
+   "definite": true,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "通配",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[*].name",
+   "definite": false,
+   "string": "三体\n球状闪电\n流浪地球",
+   "list": [
+    "三体",
+    "球状闪电",
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "通配时缺少的属性跳过",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[*].author",
+   "definite": false,
+   "string": "刘慈欣\n刘慈欣",
+   "list": [
+    "刘慈欣",
+    "刘慈欣"
+   ]
+  },
+  {
+   "note": "确定路径指向数组",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0].tags",
+   "definite": true,
+   "string": "科幻\n完本",
+   "list": [
+    "科幻",
+    "完本"
+   ]
+  },
+  {
+   "note": "确定路径指向对象",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0]",
+   "definite": true,
+   "string": "{id=1, name=三体, author=刘慈欣, tags=[\"科幻\",\"完本\"], score=9.5, format=3, intro=null}",
+   "list": [
+    "{id=1, name=三体, author=刘慈欣, tags=[\"科幻\",\"完本\"], score=9.5, format=3, intro=null}"
+   ]
+  },
+  {
+   "note": "null 值",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0].intro",
+   "definite": true,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "小数",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0].score",
+   "definite": true,
+   "string": "9.5",
+   "list": [
+    "9.5"
+   ]
+  },
+  {
+   "note": "整数值的小数",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[1].score",
+   "definite": true,
+   "string": "8.0",
+   "list": [
+    "8.0"
+   ]
+  },
+  {
+   "note": "1.0",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.dot",
+   "definite": true,
+   "string": "1.0",
+   "list": [
+    "1.0"
+   ]
+  },
+  {
+   "note": "科学计数",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.big",
+   "definite": true,
+   "string": "1.0E20",
+   "list": [
+    "1.0E20"
+   ]
+  },
+  {
+   "note": "布尔",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.flag",
+   "definite": true,
+   "string": "true",
+   "list": [
+    "true"
+   ]
+  },
+  {
+   "note": "路径不存在",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.missing",
+   "definite": true,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "在数组上取属性",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list.name",
+   "definite": true,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "深度扫描加通配",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$..search[*]",
+   "definite": false,
+   "string": "{title=深层}\n{title=更深}",
+   "list": [
+    "{title=深层}",
+    "{title=更深}"
+   ]
+  },
+  {
+   "note": "深度扫描",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$..title",
+   "definite": false,
+   "string": "深层\n更深",
+   "list": [
+    "深层",
+    "更深"
+   ]
+  },
+  {
+   "note": "深度扫描多个",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$..name",
+   "definite": false,
+   "string": "三体\n球状闪电\n流浪地球",
+   "list": [
+    "三体",
+    "球状闪电",
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "嵌套通配",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[*].tags[*]",
+   "definite": false,
+   "string": "科幻\n完本\n短篇",
+   "list": [
+    "科幻",
+    "完本",
+    "短篇"
+   ]
+  },
+  {
+   "note": "过滤",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[?(@.format==3)].name",
+   "definite": false,
+   "string": "三体\n流浪地球",
+   "list": [
+    "三体",
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "过滤与",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[?(@.format == 3 && @.id > 1)].name",
+   "definite": false,
+   "string": "流浪地球",
+   "list": [
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "过滤字符串",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[?(@.author == '刘慈欣')].id",
+   "definite": false,
+   "string": "1\n2",
+   "list": [
+    "1",
+    "2"
+   ]
+  },
+  {
+   "note": "过滤存在",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[?(@.extra)].name",
+   "definite": false,
+   "string": "流浪地球",
+   "list": [
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "过滤不存在",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[?(!@.extra)].name",
+   "definite": false,
+   "string": "三体\n球状闪电",
+   "list": [
+    "三体",
+    "球状闪电"
+   ]
+  },
+  {
+   "note": "对象通配",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.*",
+   "definite": false,
+   "string": "3\n连字符\n[{\"id\":1,\"name\":\"三体\",\"author\":\"刘慈欣\",\"tags\":[\"科幻\",\"完本\"],\"score\":9.5,\"format\":3,\"intro\":null},{\"id\":2,\"name\":\"球状闪电\",\"author\":\"刘慈欣\",\"tags\":[],\"score\":8.0,\"format\":1},{\"id\":3,\"name\":\"流浪地球\",\"tags\":[\"短篇\"],\"format\":3,\"extra\":{\"a\":1,\"b\":\"x\"}}]\n[{\"title\":\"深层\"}]\n{search=[{\"title\":\"更深\"}]}",
+   "list": [
+    "3",
+    "连字符",
+    "[{\"id\":1,\"name\":\"三体\",\"author\":\"刘慈欣\",\"tags\":[\"科幻\",\"完本\"],\"score\":9.5,\"format\":3,\"intro\":null},{\"id\":2,\"name\":\"球状闪电\",\"author\":\"刘慈欣\",\"tags\":[],\"score\":8.0,\"format\":1},{\"id\":3,\"name\":\"流浪地球\",\"tags\":[\"短篇\"],\"format\":3,\"extra\":{\"a\":1,\"b\":\"x\"}}]",
+    "[{\"title\":\"深层\"}]",
+    "{search=[{\"title\":\"更深\"}]}"
+   ]
+  },
+  {
+   "note": "多个下标",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0,2].name",
+   "definite": false,
+   "string": "三体\n流浪地球",
+   "list": [
+    "三体",
+    "流浪地球"
+   ]
+  },
+  {
+   "note": "切片",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0:2].id",
+   "definite": false,
+   "string": "1\n2",
+   "list": [
+    "1",
+    "2"
+   ]
+  },
+  {
+   "note": "负切片",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[-2:].id",
+   "definite": false,
+   "string": "2\n3",
+   "list": [
+    "2",
+    "3"
+   ]
+  },
+  {
+   "note": "省略起点",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[:1].id",
+   "definite": false,
+   "string": "1",
+   "list": [
+    "1"
+   ]
+  },
+  {
+   "note": "空数组",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.empty",
+   "definite": true,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "空数组通配",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.empty[*]",
+   "definite": false,
+   "string": "",
+   "list": []
+  },
+  {
+   "note": "多个属性",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[0]['name','id']",
+   "definite": true,
+   "string": "{name=三体, id=1}",
+   "list": [
+    "{name=三体, id=1}"
+   ]
+  },
+  {
+   "note": "嵌套对象输出",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[2].extra",
+   "definite": true,
+   "string": "{a=1, b=x}",
+   "list": [
+    "{a=1, b=x}"
+   ]
+  },
+  {
+   "note": "嵌套对象的字符串",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.list[2].extra.b",
+   "definite": true,
+   "string": "x",
+   "list": [
+    "x"
+   ]
+  },
+  {
+   "note": "顶层数组",
+   "doc": "[{\"a\":1},{\"a\":2}]",
+   "path": "$[*].a",
+   "definite": false,
+   "string": "1\n2",
+   "list": [
+    "1",
+    "2"
+   ]
+  },
+  {
+   "note": "顶层数组下标",
+   "doc": "[{\"a\":1},{\"a\":2}]",
+   "path": "$[1]",
+   "definite": true,
+   "string": "{a=2}",
+   "list": [
+    "{a=2}"
+   ]
+  },
+  {
+   "note": "转义",
+   "doc": "{\"s\":\"a\\\"b\\\\c/d\\u4e2d\"}",
+   "path": "$.s",
+   "definite": true,
+   "string": "a\"b\\c/d中",
+   "list": [
+    "a\"b\\c/d中"
+   ]
+  },
+  {
+   "note": "对象序列化里的转义和 null",
+   "doc": "{\"o\":{\"s\":\"a\\\"b/c\",\"n\":null,\"l\":[1,\"x\",null]}}",
+   "path": "$.o",
+   "definite": true,
+   "string": "{s=a\"b/c, n=null, l=[1,\"x\",null]}",
+   "list": [
+    "{s=a\"b/c, n=null, l=[1,\"x\",null]}"
+   ]
+  },
+  {
+   "note": "对象上的过滤",
+   "doc": "{\"a\":{\"b\":{\"c\":1}}}",
+   "path": "$.*[?(@.c==1)]",
+   "definite": false,
+   "string": "",
+   "list": []
+  }
+ ]
+}

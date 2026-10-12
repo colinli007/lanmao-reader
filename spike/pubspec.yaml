@@ -13,6 +13,8 @@ dependencies:
     path: ../packages/quickjs_ng_ffi
   blocking_bridge:
     path: ../packages/blocking_bridge
+  rule_engine:
+    path: ../packages/rule_engine
 
 dev_dependencies:
   flutter_test:

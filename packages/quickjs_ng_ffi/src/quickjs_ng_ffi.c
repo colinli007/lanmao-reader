@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "quickjs/libregexp.h"
 #include "quickjs/quickjs.h"
 
 struct QjsEngine {
@@ -252,4 +253,96 @@ char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_
 
 void qjs_free_string(char *str) {
     free(str);
+}
+
+// lre_compile 和 lre_exec 把 ctx 作为 opaque 交给 lre_realloc、lre_check_stack_overflow、lre_check_timeout，
+// 后者最终调用引擎的 interrupt_handler，所以中止标志的设置方式和 qjs_eval 一样
+uint8_t *qjs_regexp_compile(QjsEngine *engine, const char *pattern, int32_t flags, int32_t *capture_count,
+                            char **group_names, char **error) {
+    *group_names = NULL;
+    *error = NULL;
+    sync_stack_top(engine);
+    char error_msg[64];
+    int bytecode_len = 0;
+    uint8_t *bytecode = lre_compile(&bytecode_len, error_msg, sizeof(error_msg), pattern, strlen(pattern),
+                                    flags, engine->ctx);
+    if (bytecode == NULL) {
+        *error = dup_literal(error_msg);
+        return NULL;
+    }
+    *capture_count = lre_get_capture_count(bytecode);
+
+    // 组名依次存放，每个后面跟 LRE_GROUP_NAME_TRAILER_LEN 字节（含结尾的 '\0'），未命名的组为空串
+    const char *names = lre_get_groupnames(bytecode);
+    if (names != NULL) {
+        size_t total = 0;
+        const char *p = names;
+        for (int i = 1; i < *capture_count; i++) {
+            size_t len = strlen(p);
+            total += len + 1;
+            p += len + LRE_GROUP_NAME_TRAILER_LEN;
+        }
+        char *out = malloc(total + 1);
+        if (out != NULL) {
+            char *q = out;
+            p = names;
+            for (int i = 1; i < *capture_count; i++) {
+                size_t len = strlen(p);
+                if (i > 1) *q++ = ',';
+                memcpy(q, p, len);
+                q += len;
+                p += len + LRE_GROUP_NAME_TRAILER_LEN;
+            }
+            *q = '\0';
+        }
+        *group_names = out;
+    }
+    return bytecode;
+}
+
+int32_t qjs_regexp_exec(QjsEngine *engine, const uint8_t *bytecode, const uint16_t *input, int32_t len,
+                        int32_t start, const int32_t *abort_flag, int32_t *captures) {
+    bool is_outermost = engine->depth == 0;
+    sync_stack_top(engine);
+    if (is_outermost) {
+        engine->deadline_ms = 0;
+        engine->abort_flag = abort_flag;
+    }
+
+    int32_t ret;
+    // 分组位置之外，执行器还要用寄存器，缓冲区按 alloc_count 分配（见 js_regexp_exec 的注释）
+    int alloc_count = lre_get_alloc_count(bytecode);
+    uint8_t **capture = alloc_count > 0 ? malloc(sizeof(capture[0]) * alloc_count) : NULL;
+    if (alloc_count > 0 && capture == NULL) {
+        ret = -2;
+    } else if (is_outermost && is_aborted(engine)) {
+        // 和 qjs_eval 一样先查一次：短输入在执行器第一次轮询之前就结束了
+        ret = -1;
+    } else {
+        const uint8_t *buf = (const uint8_t *)input;
+        int rc = lre_exec(capture, bytecode, buf, start, len, 1, engine->ctx);
+        if (rc == 1) {
+            int count = lre_get_capture_count(bytecode);
+            for (int i = 0; i < count; i++) {
+                uint8_t *from = capture[2 * i];
+                uint8_t *to = capture[2 * i + 1];
+                bool matched = from != NULL && to != NULL;
+                captures[2 * i] = matched ? (int32_t)((from - buf) >> 1) : -1;
+                captures[2 * i + 1] = matched ? (int32_t)((to - buf) >> 1) : -1;
+            }
+            ret = 1;
+        } else if (rc == 0) {
+            ret = 0;
+        } else {
+            ret = rc == LRE_RET_TIMEOUT ? -1 : -2;
+        }
+    }
+    free(capture);
+
+    if (is_outermost) engine->abort_flag = NULL;
+    return ret;
+}
+
+void qjs_regexp_free(QjsEngine *engine, uint8_t *bytecode) {
+    js_free_rt(engine->rt, bytecode);
 }

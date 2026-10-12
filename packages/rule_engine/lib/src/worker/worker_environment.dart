@@ -1,0 +1,37 @@
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:blocking_bridge/blocking_bridge.dart';
+
+import '../core/environment.dart';
+import '../core/http_frame.dart';
+
+/// 宿主请求的名字，主 isolate 侧由 `RuleHost` 处理。
+abstract final class RuleHostOps {
+  static const String http = 'http';
+  static const String httpBatch = 'httpBatch';
+}
+
+/// worker 里的 [RuleEnvironment]：网络通过阻塞桥交给主 isolate，取消和中止信号来自当前任务。
+///
+/// 只能在 `WorkerPool` 的任务里使用。
+final class WorkerRuleEnvironment implements RuleEnvironment {
+  const WorkerRuleEnvironment();
+
+  @override
+  HttpResult fetch(HttpRequest request) =>
+      decodeHttpResults(WorkerContext.current.callHost(RuleHostOps.http, request.toJson()) as Uint8List).single;
+
+  @override
+  List<HttpResult> fetchAll(List<HttpRequest> requests) {
+    if (requests.isEmpty) return [];
+    final payload = [for (final request in requests) request.toJson()];
+    return decodeHttpResults(WorkerContext.current.callHost(RuleHostOps.httpBatch, payload) as Uint8List);
+  }
+
+  @override
+  void checkCancelled() => WorkerContext.current.throwIfCancelled();
+
+  @override
+  Pointer<Int32> get abortSignal => WorkerContext.current.abortSignal;
+}

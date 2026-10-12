@@ -9,6 +9,7 @@
 | 路径 | 内容 |
 |---|---|
 | `packages/quickjs_ng_ffi` | 执行书源 JS 的引擎：quickjs-ng 源码（固定在 v0.17.0）+ C 胶水层 + ffigen 生成的绑定 + Dart 封装。支持 JS 同步调用宿主函数、嵌套求值、超时和内存上限 |
+| `packages/rule_engine` | 书源规则引擎：载入 Legado 书源，解析规则，执行搜索、详情、目录、正文四条链路。目前支持不需要 JS 的书源，行为对齐 legado-with-MD3 |
 | `packages/blocking_bridge` | 阻塞桥：worker isolate 池，任务可以同步等待主 isolate 的异步结果，支持截止时间、取消、故障恢复 |
 | `packages/native_synchronization` | 从 dart-lang/labs 拷贝进来自己维护的阻塞原语（Mailbox） |
 | `spike/` | 纯 Flutter 路线的前置验证 app 和集成测试 |
@@ -23,6 +24,10 @@
 cd packages/quickjs_ng_ffi
 ./tool/build_host.sh
 QUICKJS_NG_FFI_LIB=$PWD/build/host/libquickjs_ng_ffi.dylib dart test
+
+# 规则引擎单元测试和固定样例回放（开发机，需要上面编出来的 quickjs 动态库）
+cd packages/rule_engine
+QUICKJS_NG_FFI_LIB=$PWD/../quickjs_ng_ffi/build/host/libquickjs_ng_ffi.dylib dart test
 
 # 阻塞桥单元测试（开发机）
 cd packages/blocking_bridge

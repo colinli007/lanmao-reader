@@ -7,10 +7,13 @@ library;
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
 import 'quickjs_ng_ffi_bindings_generated.dart';
+
+part 'src/js_regexp.dart';
 
 /// 宿主函数：实参和返回值都必须能被 JSON 表示。抛出的异常会变成 JS 里的 Error。
 typedef HostFunction = Object? Function(List<Object?> args);
@@ -38,6 +41,8 @@ class JsEngine {
   late final NativeCallable<QjsHostCallbackFunction> _callback;
   late Pointer<QjsEngine> _engine;
   final List<HostFunction> _functions = [];
+  // 正则的字节码由引擎的分配器分配，必须在引擎释放之前释放
+  final Set<JsRegExp> _regExps = {};
   bool _disposed = false;
 
   /// 按路径注册宿主函数，如 `java.ajax`。
@@ -95,6 +100,9 @@ class JsEngine {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    for (final regExp in _regExps.toList()) {
+      regExp.dispose();
+    }
     _bindings.qjs_free(_engine);
     _engine = nullptr;
     _callback.close();
