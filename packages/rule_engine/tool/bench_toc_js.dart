@@ -9,7 +9,6 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:rule_engine/rule_engine.dart';
-import 'package:rule_engine/src/host/cookie_store.dart';
 
 void main(List<String> args) {
   final count = args.isEmpty ? 2000 : int.parse(args.single);

@@ -47,7 +47,7 @@ final content = await pool.run(contentTask(source, toc.book, chapters[0],
 - `host_api.dart`：宿主 API 的实现，语义照 MD3（见 add-js-runtime 的 `research/md3-host-api.md`）。
 - `codec.dart`、`crypto.dart`、`time_text.dart`：两套 Base64（Hutool 宽松、Android 严格）、表单编码、字符集、摘要、HMAC、AES/DES/DESede（`pointycastle`）、`SimpleDateFormat`、`toNumChapter`。期望值由 `tool/jsoup_oracle/CodecOracle.java` 用 JDK、Hutool 和 AOSP 的 `android.util.Base64` 生成。
 
-书源级状态（`cache.*`、书源变量、登录头、登录信息、Cookie）在主 isolate 的 `RuleHost` 上只有一份，worker 通过宿主请求 `store` 读写；`SourceStore` 只有内存实现，以后的存储层实现同一接口来落盘。登录头在每个任务第一次构造请求时取一次。
+书源级状态（`cache.*`、书源变量、登录头、登录信息、Cookie）在主 isolate 的 `RuleHost` 上只有一份，worker 通过宿主请求 `store` 读写。引擎只带内存实现：要落盘时，调用方给 `RuleHost` 传入自己的 `SourceStore`（app 的实现是启动时全部载入内存、写入后台落盘），以及带初始值和变更回调的 `CookieStore(persistent: 上次保存的持久 Cookie, onPersistentChanged: …)`：持久 Cookie 每次被改写后用这个域名的新值回调一次（删除时为 null），会话 Cookie 不落盘。登录头在每个任务第一次构造请求时取一次。
 
 开销（macOS，Apple M4，`tool/bench_toc_js.dart`）：2000 章的目录，章节名和地址都带 JS 时目录链路约 210 ms，再加 `formatJs` 约 260 ms；纯规则约 40 ms。
 
@@ -85,7 +85,7 @@ final content = await pool.run(contentTask(source, toc.book, chapters[0],
 - 编码只支持 UTF-8、GBK 一族（GBK、GB2312）、GB18030（按 WHATWG 的 gb18030）和 ISO-8859-1；Big5 等按没有声明处理。
 - 书源正则的 `\d`、`\w` 按 Android（ICU）的 Unicode 语义转换，限 BMP；字符类里的 `\D`、`\W` 和 `\b` 仍是 ASCII 语义。
 - JsoupXpath 在 `..` 和 `descendant` 轴上的结果顺序取决于对象哈希，本身不确定；这里按文档顺序。
-- Cookie 只存在内存里，没有 MD3 的 4096 字节上限；不做 HTTP 缓存、代理、`dnsIp`。
+- 没有 MD3 的 Cookie 4096 字节上限；不做 HTTP 缓存、代理、`dnsIp`。
 
 ## 测试
 

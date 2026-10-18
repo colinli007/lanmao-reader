@@ -1,0 +1,141 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:drift/drift.dart' show DatabaseConnection, driftRuntimeOptions;
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_reader/library/providers.dart';
+import 'package:novel_reader/online/batch.dart';
+import 'package:novel_reader/online/book_mapping.dart';
+import 'package:novel_reader/online/online_content_source.dart';
+import 'package:novel_reader/online/providers.dart';
+import 'package:novel_reader/online/source_engine.dart';
+import 'package:novel_reader/online/source_log.dart';
+import 'package:novel_reader/online/source_repository.dart';
+import 'package:novel_reader/storage/database.dart';
+import 'package:rule_engine/rule_engine.dart';
+
+/// 假的链路执行方：按书源地址给出结果，记录调用次数。
+final class FakeEngine implements SourceEngine {
+  Future<List<SearchBook>> Function(BookSource source, String key)? onSearch;
+  Future<Book> Function(BookSource source, Book book)? onBookInfo;
+  Future<TocResult> Function(BookSource source, Book book)? onChapterList;
+  Future<ChapterContent> Function(BookSource source, Book book, BookChapter chapter, String? next)? onContent;
+
+  final List<String> calls = [];
+
+  /// 每次批量调用收到的批次。
+  final List<Batch> batches = [];
+
+  @override
+  Future<List<SearchBook>> search(BookSource source, String key, Batch batch) {
+    calls.add('search ${source.bookSourceUrl}');
+    batches.add(batch);
+    return onSearch!(source, key);
+  }
+
+  @override
+  Future<Book> bookInfo(BookSource source, Book book) {
+    calls.add('info ${book.bookUrl}');
+    return onBookInfo!(source, book);
+  }
+
+  @override
+  Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch}) {
+    calls.add('toc ${book.bookUrl}');
+    if (batch != null) batches.add(batch);
+    return onChapterList!(source, book);
+  }
+
+  @override
+  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) {
+    calls.add('content ${chapter.url}');
+    return onContent!(source, book, chapter, nextChapterUrl);
+  }
+}
+
+/// app 的全部依赖：内存数据库、假的链路执行方，其余和正式启动一样。
+final class TestServices {
+  TestServices._(this.db, this.repository, this.log, this.engine);
+
+  final AppDatabase db;
+  final SourceRepository repository;
+  final SourceLogBuffer log;
+  final FakeEngine engine;
+
+  /// [file] 不为空时用文件数据库（关闭后重新 create 模拟重启），否则用内存数据库。
+  static Future<TestServices> create({File? file}) async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    // 关闭流时同步清理：否则 drift 在取消订阅时排一个零延时的定时器，widget 测试结束时会被当成泄漏
+    final executor = file == null ? NativeDatabase.memory() : NativeDatabase(file);
+    final db = AppDatabase(DatabaseConnection(executor, closeStreamsSynchronously: true));
+    return TestServices._(db, await SourceRepository.load(db), SourceLogBuffer(), FakeEngine());
+  }
+
+  List<Override> get overrides => [
+    databaseProvider.overrideWithValue(db),
+    contentSourceProvider.overrideWithValue(OnlineContentSource(engine, repository)),
+    sourceEngineProvider.overrideWithValue(engine),
+    sourceRepositoryProvider.overrideWith((ref) => repository),
+    sourceLogProvider.overrideWith((ref) => log),
+  ];
+
+  Widget app(Widget home) => ProviderScope(overrides: overrides, child: MaterialApp(home: home));
+
+  /// 导入书源：[sources] 是书源 JSON 对象。
+  Future<void> addSources(List<Map<String, Object?>> sources) => repository.import(loadBookSources(jsonEncode(sources)).sources);
+}
+
+/// 一个简单的书源和它上面的一本书：[chapters] 章，第 i 章的正文是「第 i 章正文」加若干段。
+extension SimpleBook on TestServices {
+  static const sourceUrl = 'https://a.com';
+  static const bookUrl = 'https://a.com/book/1';
+
+  Future<void> useSimpleBook({int chapters = 5, int paragraphs = 3, String name = '三体', String author = '刘慈欣'}) async {
+    await addSources([{'bookSourceUrl': sourceUrl, 'bookSourceName': '书源甲', 'searchUrl': '/s'}]);
+    engine
+      ..onSearch = ((source, key) async => [
+        SearchBook(bookUrl: bookUrl, origin: sourceUrl, originName: '书源甲')
+          ..name = name
+          ..author = author,
+      ])
+      ..onBookInfo = ((source, book) async => book
+        ..intro = '简介'
+        ..tocUrl = '$bookUrl/toc')
+      ..onChapterList = ((source, book) async => (
+        book: book,
+        chapters: [
+          for (var i = 0; i < chapters; i++)
+            BookChapter(bookUrl: book.bookUrl, baseUrl: '$bookUrl/toc')
+              ..index = i
+              ..title = '第$i章'
+              ..url = '/$i.html',
+        ],
+      ))
+      ..onContent = ((source, book, chapter, next) async =>
+          ChapterContent([for (var p = 0; p < paragraphs; p++) '${chapter.title}第$p段'].join('\n'), title: chapter.title));
+  }
+
+  /// 直接把这本书放上书架（不经过界面）。
+  Future<void> shelveSimpleBook({int chapters = 5}) async {
+    final toc = await engine.onChapterList!(repository[SimpleBook.sourceUrl]!.source, Book(bookUrl: bookUrl, origin: sourceUrl, originName: '书源甲'));
+    await db.saveBrowsingBook(
+      ShelfBook(
+        bookUrl: bookUrl,
+        origin: sourceUrl,
+        originName: '书源甲',
+        name: '三体',
+        author: '刘慈欣',
+        latestChapterTitle: toc.chapters.last.title,
+        durChapterIndex: 0,
+        durChapterPos: 0,
+        inShelf: false,
+        sourceData: bookData(toc.book),
+      ),
+      [for (final chapter in toc.chapters) tocChapterOf(chapter)],
+    );
+    await db.addToShelf(bookUrl, DateTime(2026));
+    engine.calls.clear();
+  }
+}

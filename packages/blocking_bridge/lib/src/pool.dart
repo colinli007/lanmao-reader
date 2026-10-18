@@ -76,7 +76,9 @@ enum _WorkerState {
 }
 
 final class WorkerPool {
-  /// [size]：最多同时执行的任务数，也是可用 worker 数的上限。
+  /// [size]：最多同时执行的任务数，也是可用 worker 数的上限。不要超过 6（同一进程里所有池加起来）：
+  /// 同一个 isolate group 里同时运行的 isolate 最多 8 个，阻塞在 [WorkerContext.callHost] 里的 worker 也占一个，
+  /// 占满之后主 isolate 处理宿主请求要等 VM 的抢占超时，越多越慢，最后卡死（见 README 的「约束」）。
   /// [defaultTimeout]：任务的默认截止时间，从任务开始执行时计时。
   /// [cancelGracePeriod]：任务取消或超时后，worker 停下来的宽限期，超过就放弃它并补位。
   WorkerPool(

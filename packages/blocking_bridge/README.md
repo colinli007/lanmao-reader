@@ -28,6 +28,7 @@ Object? Function() searchTask(Source source, String key) => () {
 
 ## 约束
 
+- **池大小不超过 6（同一进程里所有池加起来）。** 同一个 isolate group 里同时运行的 isolate 最多 8 个（Dart VM 的 `MaxMutatorThreadCount`：16MB 新生代 / 512KB TLAB / 4，与核数无关），阻塞在 `callHost` 里的 worker 也占一个。主 isolate 每处理一条宿主请求都要进入 isolate；位置被阻塞的 worker 占满时，它要等 120ms 的抢占超时才能抢到一个，worker 越多越慢，16 个时会卡死。6 = 8 − 主 isolate − 一个别的后台 isolate（例如数据库）。只阻塞一次的压测发现不了，要让 worker 反复阻塞（见 app 的 add-app-shell 设计 D6）。
 - **任务闭包要能跨 isolate 传递。** 不能捕获 `ReceivePort`、`WorkerPool` 这类对象。Dart 闭包会捕获整个外层上下文（dartbug 36983），所以任务都用顶层函数构造，例如上面的 `searchTask`。
 - **跨任务复用的代码通过 `WorkerContext.current` 取上下文。** 例如 JS 引擎的宿主函数只在创建引擎时注册一次，不能捕获某个任务的上下文。
 - **不要吞掉 `TaskCancelledException`。** 吞掉了也只能继续执行到下一次碰到桥（`callHost`、`eval`、`throwIfCancelled`）为止，而且结果会被丢弃。

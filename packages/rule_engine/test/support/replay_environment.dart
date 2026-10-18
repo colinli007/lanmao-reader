@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:rule_engine/rule_engine.dart';
-import 'package:rule_engine/src/host/cookie_store.dart';
 
 /// 回放 `tool/smoke.dart --record` 录下的响应：按方法、地址、请求体匹配。没录到的请求直接失败，说明链路的行为变了。
 final class ReplayEnvironment implements RuleEnvironment {

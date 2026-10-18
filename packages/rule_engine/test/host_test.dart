@@ -6,8 +6,8 @@ import 'dart:io';
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
 import 'package:rule_engine/src/core/source_task.dart';
-import 'package:rule_engine/src/host/cookie_store.dart';
 import 'package:rule_engine/src/host/rate_limiter.dart';
+import 'package:rule_engine/src/net/public_suffix.dart';
 import 'package:rule_engine/src/request/analyze_url.dart';
 import 'package:rule_engine/src/request/response_decoder.dart';
 import 'package:test/test.dart';
@@ -178,6 +178,25 @@ void main() {
       final store = CookieStore()
         ..saveResponse(Uri.parse('https://a.com/'), ['x=1; Domain=b.com', 'y=1; Domain=com', 'z=1; Domain=.a.com']);
       expect(store.getCookie('https://a.com/'), 'z=1');
+    });
+
+    test('初始的持久 Cookie 随请求发送', () async {
+      final host = RuleHost(cookieStore: CookieStore(persistent: {cookieDomain(base): 'sid=7'}));
+      final result = await host.execute(HttpRequest(url: '$base/echo', sourceUrl: base));
+      expect(decodeResponseBody(result), 'GET|sid=7|');
+    });
+
+    test('持久 Cookie 每次改写回调一次新值，只改会话 Cookie 时不回调', () {
+      final changes = <(String, String?)>[];
+      final store = CookieStore(persistent: {'a.com': 'p=0'}, onPersistentChanged: (domain, cookie) => changes.add((domain, cookie)));
+      store.saveResponse(Uri.parse('https://www.a.com/'), ['s=1']);
+      expect(changes, isEmpty);
+      store.saveResponse(Uri.parse('https://www.a.com/'), ['p=1; Max-Age=60', 's=2']);
+      store.setCookie('https://b.com', 'x=1');
+      store.replaceCookie('https://m.b.com', 'y=2');
+      store.removeCookie('https://a.com');
+      expect(changes, [('a.com', 'p=1'), ('b.com', 'x=1'), ('b.com', 'x=1; y=2'), ('a.com', null)]);
+      expect(store.getCookie('https://a.com'), '');
     });
   });
 

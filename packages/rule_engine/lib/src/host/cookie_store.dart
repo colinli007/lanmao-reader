@@ -2,10 +2,16 @@ import '../net/public_suffix.dart';
 
 /// MD3 的 `CookieStore` + `CookieManager`：按注册域名分组，只保存名和值。
 ///
-/// 只存在主 isolate 的内存里，所有 worker 的请求共用。持久 Cookie（带 Expires 或 Max-Age）和会话 Cookie 分开存，
+/// 在主 isolate 的内存里只有一份，所有 worker 的请求共用。持久 Cookie（带 Expires 或 Max-Age）和会话 Cookie 分开存，
 /// 读取时合并，同名时会话 Cookie 优先；过期时间、路径都不看。值为空白的 Cookie 被丢弃，所以「删除 Cookie」不会生效。
+///
+/// 落盘由调用方负责：[persistent] 是上次保存的持久 Cookie（注册域名到 `a=1; b=2`），持久 Cookie 每次被改写后，
+/// 用这个域名的新值调用 [onPersistentChanged]（删除时为 null）。会话 Cookie 不落盘。
 final class CookieStore {
-  final Map<String, String> _persistent = {};
+  CookieStore({Map<String, String> persistent = const {}, this.onPersistentChanged}) : _persistent = {...persistent};
+
+  final void Function(String domain, String? cookie)? onPersistentChanged;
+  final Map<String, String> _persistent;
   final Map<String, String> _session = {};
 
   /// [url] 所属注册域名的 Cookie，形如 `a=1; b=2`，没有时为空串。
@@ -24,20 +30,20 @@ final class CookieStore {
   }
 
   /// 直接写入（JS 的 `cookie.setCookie`），覆盖原有的持久 Cookie。
-  void setCookie(String url, String cookie) => _persistent[cookieDomain(url)] = cookie;
+  void setCookie(String url, String cookie) => _setPersistent(cookieDomain(url), cookie);
 
   /// 和原有的持久 Cookie 按名合并后写入（JS 的 `cookie.replaceCookie`、`source.putLoginHeader`）；地址或 Cookie 为空时不做事。
   void replaceCookie(String url, String cookie) {
     if (url.isEmpty || cookie.isEmpty) return;
     final domain = cookieDomain(url);
     final existing = _persistent[domain] ?? '';
-    _persistent[domain] = existing.isEmpty ? cookie : (mergeCookies([existing, cookie]) ?? '');
+    _setPersistent(domain, existing.isEmpty ? cookie : (mergeCookies([existing, cookie]) ?? ''));
   }
 
   /// 删除持久和会话 Cookie（JS 的 `cookie.removeCookie`、`source.removeLoginHeader`）。
   void removeCookie(String url) {
     final domain = cookieDomain(url);
-    _persistent.remove(domain);
+    _setPersistent(domain, null);
     _session.remove(domain);
   }
 
@@ -55,11 +61,20 @@ final class CookieStore {
     if (cookies.isEmpty) return;
     final existing = _persistent[domain] ?? '';
     if (existing.isEmpty) {
-      _persistent[domain] = cookies;
+      _setPersistent(domain, cookies);
       return;
     }
     final map = cookieToMap(existing)..addAll(cookieToMap(cookies));
-    _persistent[domain] = mapToCookie(map) ?? '';
+    _setPersistent(domain, mapToCookie(map) ?? '');
+  }
+
+  void _setPersistent(String domain, String? cookie) {
+    if (cookie == null) {
+      _persistent.remove(domain);
+    } else {
+      _persistent[domain] = cookie;
+    }
+    onPersistentChanged?.call(domain, cookie);
   }
 
   static String _cookieString(Iterable<_Cookie> cookies) => cookies.map((c) => '${c.name}=${c.value}').join('; ');

@@ -17,6 +17,7 @@ export 'src/chain/chains.dart' show chapterAbsoluteUrl, getBookInfo, getChapterL
 export 'src/chain/models.dart';
 export 'src/core/environment.dart';
 export 'src/core/errors.dart';
+export 'src/host/cookie_store.dart' show CookieStore;
 export 'src/host/rule_host.dart';
 export 'src/host/source_store.dart' show MemorySourceStore, SourceStore, runStoreRequest;
 export 'src/source/book_source.dart';

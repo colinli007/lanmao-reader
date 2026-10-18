@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:rule_engine/rule_engine.dart';
-import 'package:rule_engine/src/host/cookie_store.dart';
 
 /// 测试用的环境：按地址返回预设的响应，记录收到的请求；取消时抛出 [CancelledForTest]。
 final class FakeEnvironment implements RuleEnvironment {

@@ -23,18 +23,22 @@ import 'source_store.dart';
 /// 持有全部 worker 共用的 Cookie、书源级状态（[SourceStore]）和限速记录。用 `dart:io` 的 `HttpClient`：
 /// 手动跟随重定向（每一跳合并和保存 Cookie），接受无效证书，连接超时 15 秒，单次请求总超时 60 秒，非 2xx 响应照常返回。
 ///
+/// 要落盘时传入自己的 [SourceStore] 和带初始值、变更回调的 [CookieStore]。
+///
 /// 书源 JS 的调试日志在写入时交给 [onLog]，没有设置时丢弃。
 final class RuleHost {
   RuleHost({
     this.connectionTimeout = const Duration(seconds: 15),
     this.callTimeout = const Duration(seconds: 60),
     SourceStore? store,
+    CookieStore? cookieStore,
     this.onLog,
-  }) : store = store ?? MemorySourceStore();
+  }) : store = store ?? MemorySourceStore(),
+       cookieStore = cookieStore ?? CookieStore();
 
   final Duration connectionTimeout;
   final Duration callTimeout;
-  final CookieStore cookieStore = CookieStore();
+  final CookieStore cookieStore;
   final RateLimiter rateLimiter = RateLimiter();
   final SourceStore store;
   final void Function(SourceLog log)? onLog;

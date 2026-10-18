@@ -1,0 +1,33 @@
+name: novel_reader
+description: "跨端开源小说阅读器，兼容 Legado 书源（社区版）。"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  drift: ^2.31.0
+  drift_flutter: ^0.2.8
+  file_selector: ^1.0.4
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  blocking_bridge:
+    path: ../packages/blocking_bridge
+  rule_engine:
+    path: ../packages/rule_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.31.0
+  build_runner: ^2.15.1
+
+flutter:
+  uses-material-design: true
