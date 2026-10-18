@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/content_source.dart';
@@ -233,39 +234,47 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     });
     final book = _book;
     final theme = settings.theme;
-    return Scaffold(
-      key: _scaffold,
-      backgroundColor: theme.background,
-      drawer: book == null
-          ? null
-          : Drawer(
-              child: SafeArea(
-                child: ChapterList(
-                  chapters: _chapters,
-                  current: _index,
-                  onSelect: (index) {
-                    Navigator.pop(context);
-                    _go(index);
-                  },
+    // 正文背景铺到状态栏后面，状态栏图标的深浅跟着它；菜单打开时盖在上面的 AppBar 用它自己的
+    final background = ThemeData.estimateBrightnessForColor(theme.background);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarBrightness: background,
+        statusBarIconBrightness: background == Brightness.dark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        key: _scaffold,
+        backgroundColor: theme.background,
+        drawer: book == null
+            ? null
+            : Drawer(
+                child: SafeArea(
+                  child: ChapterList(
+                    chapters: _chapters,
+                    current: _index,
+                    onSelect: (index) {
+                      Navigator.pop(context);
+                      _go(index);
+                    },
+                  ),
                 ),
               ),
+        body: Stack(
+          // 铺满整页：章节很短时正文只有几行，点中部也要能打开菜单
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) {
+                final size = MediaQuery.sizeOf(context);
+                final p = details.localPosition;
+                final central = p.dx > size.width / 3 && p.dx < size.width * 2 / 3 && p.dy > size.height / 3 && p.dy < size.height * 2 / 3;
+                if (central) setState(() => _menu = !_menu);
+              },
+              child: SafeArea(child: _content(settings)),
             ),
-      body: Stack(
-        // 铺满整页：章节很短时正文只有几行，点中部也要能打开菜单
-        fit: StackFit.expand,
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: (details) {
-              final size = MediaQuery.sizeOf(context);
-              final p = details.localPosition;
-              final central = p.dx > size.width / 3 && p.dx < size.width * 2 / 3 && p.dy > size.height / 3 && p.dy < size.height * 2 / 3;
-              if (central) setState(() => _menu = !_menu);
-            },
-            child: SafeArea(child: _content(settings)),
-          ),
-          if (_menu && book != null) ..._menuBars(book),
-        ],
+            if (_menu && book != null) ..._menuBars(book),
+          ],
+        ),
       ),
     );
   }

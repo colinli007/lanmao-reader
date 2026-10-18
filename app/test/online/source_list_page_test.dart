@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_reader/online/source_list_page.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../support/test_app.dart';
 
@@ -131,4 +136,50 @@ void main() {
     expect(clipboard, contains('"enabled": false'));
     expect(clipboard, contains('"ruleSearch": {\n      "name": "h1"\n    }'));
   });
+
+  testWidgets(
+    '从文件导入：Android 按 MIME 过滤（含识别不出类型的文件），其它平台按扩展名和 UTI；文件按 UTF-8 解码后进入预览',
+    (tester) async {
+      final original = FileSelectorPlatform.instance;
+      final picker = FileSelectorPlatform.instance = _FakeFileSelector(
+        XFile.fromData(utf8.encode('{"bookSourceUrl":"https://a.com","bookSourceName":"书源甲"}'), name: 'a.json'),
+      );
+      addTearDown(() => FileSelectorPlatform.instance = original);
+      await tester.pumpWidget(services.app(const SourceListPage()));
+      await tester.tap(find.byTooltip('导入'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('从文件导入'));
+      await tester.pumpAndSettle();
+
+      final group = picker.typeGroups!.single;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        expect(group.mimeTypes, ['application/json', 'text/plain', 'application/octet-stream']);
+        expect(group.extensions, isNull);
+      } else {
+        // macOS 会把 MIME 换成 UTType，octet-stream 会放开所有文件
+        expect(group.mimeTypes, isNull);
+        expect(group.extensions, ['json', 'txt']);
+        expect(group.uniformTypeIdentifiers, ['public.json', 'public.plain-text']);
+      }
+      expect(find.text('新增 1 个，更新 0 个，跳过 0 个'), findsOneWidget);
+      await tester.tap(find.text('导入').last);
+      await tester.pumpAndSettle();
+      // 按 UTF-8 解码：Android 上的 XFile 是内存字节，它自己的 readAsString 会把中文解成乱码
+      expect(find.text('书源甲'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant({TargetPlatform.android, TargetPlatform.macOS, TargetPlatform.iOS}),
+  );
+}
+
+class _FakeFileSelector extends FileSelectorPlatform with MockPlatformInterfaceMixin {
+  _FakeFileSelector(this.file);
+
+  final XFile file;
+  List<XTypeGroup>? typeGroups;
+
+  @override
+  Future<XFile?> openFile({List<XTypeGroup>? acceptedTypeGroups, String? initialDirectory, String? confirmButtonText}) async {
+    typeGroups = acceptedTypeGroups;
+    return file;
+  }
 }

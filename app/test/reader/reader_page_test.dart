@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_reader/reader/reader_page.dart';
@@ -207,6 +208,26 @@ void main() {
     await open(tester, startAt: 1);
     final scaffold = tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first);
     expect(scaffold.backgroundColor, ReaderTheme.dark.background);
+  });
+
+  testWidgets('状态栏图标的深浅跟着正文背景：暗主题用浅色图标，亮、护眼用深色', (tester) async {
+    await open(tester, startAt: 0);
+    Brightness? icons() => tester
+        .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.descendant(of: find.byType(ReaderPage), matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>)).first,
+        )
+        .value
+        .statusBarIconBrightness;
+    expect(icons(), Brightness.dark);
+    await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('阅读设置'));
+    await tester.pumpAndSettle();
+    for (final (theme, expected) in [(ReaderTheme.dark, Brightness.light), (ReaderTheme.sepia, Brightness.dark)]) {
+      await tester.tap(find.text(theme.label));
+      await tester.pumpAndSettle();
+      expect(icons(), expected, reason: theme.label);
+    }
   });
 
   testWidgets('离开时保存进度；换了窗口尺寸重新打开，同一段落回到顶部', (tester) async {

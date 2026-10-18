@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The INTERNET permission is required for development. Specifically,
+         the Flutter tool needs it to communicate with the running application
+         to allow setting breakpoints, to provide hot reload, etc.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 会冻结不在前台的 app，模拟器息屏后集成测试就连不上、外网请求失败。
+         只在 debug 构建里启动时点亮屏幕、显示在锁屏之上（Android 8.1 起）；不息屏见 MainActivity。 -->
+    <application>
+        <activity
+            android:name=".MainActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+    </application>
+</manifest>

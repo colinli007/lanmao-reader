@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -163,12 +166,15 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
   }
 
   Future<String?> _pickFile() async {
-    final file = await openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(label: '书源', extensions: ['json', 'txt'], uniformTypeIdentifiers: ['public.json', 'public.plain-text']),
-      ],
-    );
-    return file?.readAsString();
+    // Android 只按 MIME 过滤，下载来的书源文件常被识别成 application/octet-stream，不列上就选不了。
+    // macOS 也会把 MIME 换成 UTType，octet-stream 在那里是 public.data（所有文件），所以只给 Android。
+    final group = defaultTargetPlatform == TargetPlatform.android
+        ? const XTypeGroup(label: '书源', mimeTypes: ['application/json', 'text/plain', 'application/octet-stream'])
+        : const XTypeGroup(label: '书源', extensions: ['json', 'txt'], uniformTypeIdentifiers: ['public.json', 'public.plain-text']);
+    final file = await openFile(acceptedTypeGroups: [group]);
+    if (file == null) return null;
+    // 自己按 UTF-8 解码（和从网址导入一致）：Android 上的 XFile 是内存里的字节，它的 readAsString 不认编码，按 Latin-1 解出来中文是乱码
+    return utf8.decode(await file.readAsBytes(), allowMalformed: true);
   }
 
   Future<String?> _askUrl() => _askInput(title: '从网址导入', hint: 'https://…', maxLines: 1);

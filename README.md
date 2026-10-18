@@ -8,13 +8,13 @@
 
 | 路径 | 内容 |
 |---|---|
-| `app/` | 阅读器 app（社区版，iOS、macOS）：书源管理、搜索、详情与目录、书架、滚动阅读；数据存在本机 SQLite 里。书源相关的代码都在 `app/lib/online/`，书架、阅读器、存储层不依赖规则引擎 |
+| `app/` | 阅读器 app（社区版，Android、iOS、macOS）：书源管理、搜索、详情与目录、书架、滚动阅读；数据存在本机 SQLite 里。书源相关的代码都在 `app/lib/online/`，书架、阅读器、存储层不依赖规则引擎 |
 | `packages/quickjs_ng_ffi` | 执行书源 JS 的引擎：quickjs-ng 源码（固定在 v0.17.0）+ C 胶水层 + ffigen 生成的绑定 + Dart 封装。支持 JS 同步调用宿主函数、嵌套求值、超时和内存上限 |
 | `packages/rule_engine` | 书源规则引擎：载入 Legado 书源，解析规则，执行搜索、详情、目录、正文四条链路，书源 JS 在 quickjs-ng 上执行，注入常用宿主 API；行为对齐 legado-with-MD3 |
 | `packages/blocking_bridge` | 阻塞桥：worker isolate 池，任务可以同步等待主 isolate 的异步结果，支持截止时间、取消、故障恢复 |
 | `packages/native_synchronization` | 从 dart-lang/labs 拷贝进来自己维护的阻塞原语（Mailbox） |
 | `spike/` | 纯 Flutter 路线的前置验证 app 和集成测试 |
-| `docs/` | 技术选型、复核报告 |
+| `docs/` | 产品需求（第一版的范围和验收标准）、技术选型、复核报告 |
 
 选型依据和验证结果见 [docs/技术选型与验证-2026-09-28.md](docs/技术选型与验证-2026-09-28.md)。
 
@@ -22,18 +22,27 @@
 
 ```bash
 cd app
-flutter run -d macos            # 或 iOS 模拟器
+flutter run -d macos            # 或 iOS 模拟器、Android 模拟器（-d emulator-5554）
 dart run build_runner build     # 改了 lib/storage/database.dart 的表之后重新生成
 
 # 单元测试和 widget 测试；其中落盘的测试要执行书源 JS，需要开发机上编出来的 quickjs 动态库（见下一节）
 QUICKJS_NG_FFI_LIB=$PWD/../packages/quickjs_ng_ffi/build/host/libquickjs_ng_ffi.dylib flutter test
 
 # 端到端集成测试：本地 HTTP 服务器上的假书源，走完导入、搜索、详情、加书架、阅读
-flutter test integration_test/app_flow_test.dart -d macos
+flutter test integration_test/app_flow_test.dart -d macos     # 或 -d emulator-5554
 
 # 真实书源走查（联网，见文件里的说明）
 flutter test integration_test/real_sources_test.dart -d macos --dart-define=WALKTHROUGH_SOURCES=<书源文件网址>
+
+# Android release 包：只出 arm64-v8a 一个 APK（不支持 32 位 ARM），暂用 debug 签名
+flutter build apk --release --split-per-abi --target-platform android-arm64
 ```
+
+Android 模拟器上：
+
+- debug 构建启动时点亮屏幕、显示在锁屏之上、运行期间不息屏（Android 会冻结不在前台的 app），模拟器息屏时也能直接跑集成测试；release 包没有这些设置。
+- 模拟器访问开发机用 `10.0.2.2`。真实书源走查的书源文件放在开发机的本地 HTTP 服务器上，例如在书源文件目录里执行 `python3 -m http.server 8765 --bind 127.0.0.1`，再传 `--dart-define=WALKTHROUGH_SOURCES=http://10.0.2.2:8765/<文件名>`。
+- 模拟器的数据分区至少留 1GB 空闲：debug 包约 100MB（带 JIT 内核快照），空间低于系统门槛时装不上（`INSTALL_FAILED_INSUFFICIENT_STORAGE`）。
 
 ## 运行验证
 
