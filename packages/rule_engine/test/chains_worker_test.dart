@@ -58,20 +58,27 @@ void main() {
     final book = await pool.run(bookInfoTask(s, Book.of(s, '$base/b/1')));
     expect(book.name, '三体');
     expect(book.tocHtml, isNotNull);
-    final chapters = await pool.run(chapterListTask(s, book));
+    final (book: tocBook, :chapters) = await pool.run(chapterListTask(s, book));
     expect(chapters.map((c) => c.title), ['第一章', '第二章']);
-    final content = await pool.run(contentTask(s, book, chapters.first, nextChapterUrl: chapters[1].url));
+    expect(tocBook.totalChapterNum, 2);
+    final content = await pool.run(contentTask(s, tocBook, chapters.first, nextChapterUrl: chapters[1].url));
     expect(content.content, '　　正文一');
   });
 
   test('链路的错误能传回提交方，带着书源名和字段', () async {
     final pool = WorkerPool(RuleHost().handle, size: 1);
     addTearDown(pool.close);
-    final json = '{"bookSourceUrl":"$base","bookSourceName":"本地","ruleBookInfo":{"name":"tag.h1@text@js:result"}}';
+    final json =
+        '{"bookSourceUrl":"$base","bookSourceName":"本地","ruleBookInfo":{"name":"tag.h1@text@js:java.getVerificationCode(result)"}}';
     final s = loadBookSources(json).sources.single;
     await expectLater(
       pool.run(bookInfoTask(s, Book.of(s, '$base/b/1'))),
-      throwsA(isA<NeedsJsException>().having((e) => e.field, 'field', 'ruleBookInfo.name').having((e) => e.sourceName, 'source', '本地')),
+      throwsA(
+        isA<UnsupportedHostApiException>()
+            .having((e) => e.api, 'api', 'java.getVerificationCode')
+            .having((e) => e.field, 'field', 'ruleBookInfo.name')
+            .having((e) => e.sourceName, 'source', '本地'),
+      ),
     );
   });
 }

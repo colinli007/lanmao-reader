@@ -11,6 +11,7 @@ dependencies:
     path: ../blocking_bridge
   ffi: ^2.1.3
   html: ^0.15.6
+  pointycastle: ^4.0.0
   quickjs_ng_ffi:
     path: ../quickjs_ng_ffi
 

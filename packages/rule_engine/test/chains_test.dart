@@ -251,13 +251,14 @@ void main() {
       expect(getChapterList(env, s, book(s)).map((c) => c.title), ['首', '分页1', '分页2', '分页3', '分页4']);
     });
 
-    test('需要 JS 的字段指出位置', () {
+    test('JS 语法错误指出位置', () {
       env.respond('https://a.com/toc', '<ul><li><a href="1">一</a></li></ul>');
-      final s = toc({'chapterName': 'tag.a@text@js:result.trim()'});
+      final s = toc({'chapterName': 'tag.a@text@js:result.('});
       expect(
         () => getChapterList(env, s, book(s)),
         throwsA(
-          isA<NeedsJsException>()
+          isA<JsEvalException>()
+              .having((e) => e.message, 'message', contains('SyntaxError'))
               .having((e) => e.sourceName, 'source', '测试源')
               .having((e) => e.field, 'field', 'ruleToc.chapterName'),
         ),

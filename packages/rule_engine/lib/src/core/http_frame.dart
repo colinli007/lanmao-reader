@@ -15,6 +15,7 @@ Uint8List encodeHttpResults(List<HttpResult> results) {
         'headers': result.headers,
         'length': result.body.length,
         'redirected': result.redirected,
+        'setCookies': result.setCookies,
       }),
     );
     out
@@ -42,6 +43,7 @@ List<HttpResult> decodeHttpResults(Uint8List frame) {
         headers: (meta['headers'] as Map).cast<String, String>(),
         body: Uint8List.sublistView(frame, pos, pos + length),
         redirected: meta['redirected'] as bool,
+        setCookies: (meta['setCookies'] as List).cast<String>(),
       ),
     );
     pos += length;

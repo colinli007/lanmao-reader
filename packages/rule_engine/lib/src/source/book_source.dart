@@ -41,6 +41,9 @@ final class BookSource {
       concurrentRate = _string(json['concurrentRate']),
       bookUrlPattern = _string(json['bookUrlPattern']),
       searchUrl = _string(json['searchUrl']),
+      jsLib = _string(json['jsLib']),
+      loginUi = _string(json['loginUi']),
+      loginCheckJs = _string(json['loginCheckJs']),
       ruleSearch = _group(json, 'ruleSearch'),
       ruleBookInfo = _group(json, 'ruleBookInfo'),
       ruleToc = _group(json, 'ruleToc'),
@@ -56,6 +59,15 @@ final class BookSource {
   final String? concurrentRate;
   final String? bookUrlPattern;
   final String? searchUrl;
+
+  /// 书源共用的 JS（代码；JSON 对象形式按地址引用外部脚本，本引擎不支持）。
+  final String? jsLib;
+
+  /// 登录界面的定义（JSON 数组或 JS），`source.getLoginInfoMap` 用它取默认值。
+  final String? loginUi;
+
+  /// 每次链路请求得到响应后执行的 JS。
+  final String? loginCheckJs;
   final RuleGroup ruleSearch;
   final RuleGroup ruleBookInfo;
   final RuleGroup ruleToc;

@@ -339,7 +339,8 @@ final class _PathParser {
       } else if (char == '.') {
         pos++;
         if (atEnd) fail('路径不能以 . 结尾');
-        tokens.add(_readDotted());
+        // Jayway：`.` 后面紧跟 `[` 时按方括号读（`$.[*]` 等于 `$[*]`）
+        tokens.add(text[pos] == '[' ? _readBracket() : _readDotted());
       } else if (char == '[') {
         tokens.add(_readBracket());
       } else {

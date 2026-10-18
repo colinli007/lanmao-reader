@@ -17,7 +17,8 @@ void main() {
   });
 
   test('错误带上书源和字段', () {
-    final error = NeedsJsException('@js:result.trim()', sourceName: '某书源', field: 'ruleSearch.name');
-    expect(error.toString(), '需要 JS 引擎：@js:result.trim()（某书源 ruleSearch.name）');
+    final error = UnsupportedHostApiException('java.getVerificationCode', sourceName: '某书源', field: 'ruleSearch.name');
+    expect(error.toString(), '不支持的宿主 API：java.getVerificationCode（某书源 ruleSearch.name）');
+    expect(JsEvalException('ReferenceError: x is not defined').toString(), 'JS 错误：ReferenceError: x is not defined');
   });
 }

@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'gbk.dart';
 
-/// 按 Java 的字符集名找编码器，支持 UTF-8、GBK 一族（GBK 兼容 GB2312，GB18030 只支持双字节部分）
-/// 和 ISO-8859-1。不支持的名字返回 null。
+/// 按 Java 的字符集名找编码器，支持 UTF-8、GBK 一族（GBK 兼容 GB2312）、GB18030 和 ISO-8859-1。
+/// 不支持的名字返回 null。
 Encoding? charsetByName(String name) => switch (name.trim().toLowerCase()) {
   'utf-8' || 'utf8' => utf8,
-  'gbk' || 'gb2312' || 'gb18030' || 'x-gbk' || 'cp936' || 'windows-936' || 'euc-cn' => gbk,
+  'gbk' || 'gb2312' || 'x-gbk' || 'cp936' || 'windows-936' || 'euc-cn' => gbk,
+  'gb18030' => gb18030,
   'iso-8859-1' || 'iso8859-1' || 'latin1' || 'us-ascii' || 'ascii' => latin1,
   _ => null,
 };
@@ -27,3 +28,42 @@ List<int> encodeLikeJava(String text, Encoding encoding) {
   }
   return encoding.encode(text);
 }
+
+const String _hexUpper = '0123456789ABCDEF';
+
+/// Java `URLEncoder.encode`：字母数字和 `.-*_` 保留，空格转成 `+`，其余按字符集转成大写的 `%XX`。
+String urlEncodeLikeJava(String text, Encoding encoding) {
+  final out = StringBuffer();
+  final runes = text.runes.toList();
+  var i = 0;
+  while (i < runes.length) {
+    final c = runes[i];
+    if (_isFormSafe(c)) {
+      out.writeCharCode(c);
+      i++;
+    } else if (c == 0x20) {
+      out.write('+');
+      i++;
+    } else {
+      // 连续的需要编码的字符一起转成字节
+      final start = i;
+      while (i < runes.length && !_isFormSafe(runes[i]) && runes[i] != 0x20) {
+        i++;
+      }
+      for (final b in encodeLikeJava(String.fromCharCodes(runes.sublist(start, i)), encoding)) {
+        out
+          ..write('%')
+          ..write(_hexUpper[b >> 4])
+          ..write(_hexUpper[b & 0xF]);
+      }
+    }
+  }
+  return out.toString();
+}
+
+bool _isFormSafe(int c) =>
+    (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c == 0x2E || c == 0x2D || c == 0x2A || c == 0x5F;
+
+/// Java 的 `new String(bytes, charset)`：解不了的字节换成 U+FFFD。
+String decodeLikeJava(List<int> bytes, Encoding encoding) =>
+    identical(encoding, utf8) ? utf8.decode(bytes, allowMalformed: true) : encoding.decode(bytes);

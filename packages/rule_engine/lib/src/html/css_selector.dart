@@ -208,11 +208,17 @@ final class _ClassEval extends _Evaluator {
   final String className;
 
   @override
-  bool matches(_MatchContext context, Node root, Node element) {
-    final classes = _attribute(element, 'class');
-    if (classes == null || classes.isEmpty) return false;
-    return classes.toLowerCase().split(_javaWhitespace).contains(className);
-  }
+  bool matches(_MatchContext context, Node root, Node element) => jsoupHasClass(element, className);
+}
+
+/// jsoup 的 `Element.hasClass`：不区分大小写；class 属性和要找的名字一样长时整个比较
+/// （所以 `class.a b` 能匹配 `class="a b"`），否则按空白切开逐个比较。
+bool jsoupHasClass(Node element, String className) {
+  final classes = _attribute(element, 'class');
+  if (classes == null || classes.isEmpty || classes.length < className.length) return false;
+  final wanted = className.toLowerCase();
+  if (classes.length == className.length) return classes.toLowerCase() == wanted;
+  return classes.toLowerCase().split(_javaWhitespace).contains(wanted);
 }
 
 final class _AttributeEval extends _Evaluator {

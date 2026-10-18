@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/src/core/source_task.dart';
 import 'package:rule_engine/src/host/cookie_store.dart';
 import 'package:rule_engine/src/host/rate_limiter.dart';
+import 'package:rule_engine/src/request/analyze_url.dart';
 import 'package:rule_engine/src/request/response_decoder.dart';
 import 'package:test/test.dart';
 
@@ -42,6 +45,18 @@ void main() {
         case '/login':
           response.headers.add('set-cookie', 'sid=1; Path=/');
           response.headers.add('set-cookie', 'keep=2; Max-Age=3600');
+          response.write('ok');
+        case '/go':
+          response
+            ..statusCode = 302
+            ..headers.set('location', '/book/1');
+        case '/forbidden':
+          response
+            ..statusCode = 403
+            ..write('no');
+        case '/set-cookies':
+          response.headers.add('set-cookie', 'a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/');
+          response.headers.add('set-cookie', 'b=2; Expires=Thu, 22 Oct 2037 07:28:00 GMT');
           response.write('ok');
         case '/echo':
           final body = await utf8.decodeStream(request);
@@ -166,6 +181,126 @@ void main() {
     });
   });
 
+  group('书源级状态', () {
+    test('过期时间，saveTime 为 0 不过期', () {
+      var now = DateTime(2026);
+      final store = MemorySourceStore(now: () => now);
+      final cookies = CookieStore();
+      runStoreRequest(const StoreRequest(StoreOp.put, 'k', value: 'v', saveSeconds: 10), store, cookies);
+      runStoreRequest(const StoreRequest(StoreOp.put, 'forever', value: 'f'), store, cookies);
+      now = now.add(const Duration(seconds: 9));
+      expect(runStoreRequest(const StoreRequest(StoreOp.get, 'k'), store, cookies), 'v');
+      now = now.add(const Duration(seconds: 1));
+      expect(runStoreRequest(const StoreRequest(StoreOp.get, 'k'), store, cookies), isNull);
+      now = now.add(const Duration(days: 3650));
+      expect(runStoreRequest(const StoreRequest(StoreOp.get, 'forever'), store, cookies), 'f');
+      runStoreRequest(const StoreRequest(StoreOp.delete, 'forever'), store, cookies);
+      expect(runStoreRequest(const StoreRequest(StoreOp.get, 'forever'), store, cookies), isNull);
+    });
+
+    test('内存值是任意 JSON 值', () {
+      final store = MemorySourceStore();
+      final cookies = CookieStore();
+      runStoreRequest(const StoreRequest(StoreOp.putMemory, 'm', value: {'a': [1, 2]}), store, cookies);
+      expect(runStoreRequest(const StoreRequest(StoreOp.getMemory, 'm'), store, cookies), {'a': [1, 2]});
+      expect(runStoreRequest(const StoreRequest(StoreOp.get, 'm'), store, cookies), isNull);
+    });
+
+    test('replaceCookie 按名合并，setCookie 覆盖，removeCookie 全删', () {
+      final store = MemorySourceStore();
+      final cookies = CookieStore();
+      Object? run(StoreOp op, String key, [String? value]) => runStoreRequest(StoreRequest(op, key, value: value), store, cookies);
+      run(StoreOp.setCookie, 'https://www.a.com', 'x=1; y=2');
+      run(StoreOp.replaceCookie, 'https://m.a.com/path', 'y=3; z=4');
+      expect(run(StoreOp.getCookie, 'https://a.com'), 'x=1; y=3; z=4');
+      run(StoreOp.setCookie, 'https://a.com', 'w=0');
+      expect(run(StoreOp.getCookie, 'https://a.com'), 'w=0');
+      run(StoreOp.removeCookie, 'https://www.a.com');
+      expect(run(StoreOp.getCookie, 'https://a.com'), '');
+    });
+
+    test('不是 http 地址时整段文本就是键', () {
+      final store = MemorySourceStore();
+      final cookies = CookieStore();
+      runStoreRequest(const StoreRequest(StoreOp.setCookie, 'abc', value: 'k=v'), store, cookies);
+      expect(runStoreRequest(const StoreRequest(StoreOp.getCookie, 'abc'), store, cookies), 'k=v');
+      expect(runStoreRequest(const StoreRequest(StoreOp.getCookie, 'https://abc.com'), store, cookies), '');
+    });
+
+    test('不同 worker 读到同一份；日志带书源地址实时到达接收方', () async {
+      final logs = <SourceLog>[];
+      final host = RuleHost(onLog: logs.add);
+      final pool = WorkerPool(host.handle, size: 2);
+      addTearDown(pool.close);
+      await pool.run(_storePut('k', 'v'));
+      final reads = await Future.wait([pool.run(_storeGet('k')), pool.run(_storeGet('k'))]);
+      expect(reads, ['v', 'v']);
+      await pool.run(_log('https://a.com', 'ruleSearch.name', '3'));
+      expect(logs.single.sourceUrl, 'https://a.com');
+      expect(logs.single.field, 'ruleSearch.name');
+      expect(logs.single.message, '3');
+    });
+
+    test('登录头叠加到请求头里，任务里写入后立即生效', () {
+      final env = _MemoryEnvironment();
+      final task = SourceTask(env, _source({'header': '{"Referer":"https://a.com/","X-A":"1"}'}));
+      expect(buildSourceRequest(task, '/x').http.headers.containsKey('Authorization'), isFalse);
+      task.putLoginHeader('{"Authorization":"Bearer t","X-A":"2","Cookie":"sid=9"}');
+      final headers = buildSourceRequest(task, '/x').http.headers;
+      expect(headers['Authorization'], 'Bearer t');
+      expect(headers['X-A'], '2');
+      expect(headers['Referer'], 'https://a.com/');
+      expect(env.cookies.getCookie('https://a.com'), 'sid=9');
+      // 另一个任务从书源级状态里读到同一个登录头
+      expect(buildSourceRequest(SourceTask(env, task.source), '/x').http.headers['Authorization'], 'Bearer t');
+      task.removeLoginHeader();
+      expect(buildSourceRequest(task, '/x').http.headers.containsKey('Authorization'), isFalse);
+      expect(env.cookies.getCookie('https://a.com'), '');
+    });
+  });
+
+  group('直连请求', () {
+    Future<HttpResult> direct(String path, {String method = 'GET'}) =>
+        RuleHost().execute(HttpRequest(url: '$base$path', method: method, sourceUrl: base, direct: true));
+
+    test('不跟随重定向，拿到 Location', () async {
+      final result = await direct('/go');
+      expect(result.statusCode, 302);
+      expect(result.headers['location'], '/book/1');
+    });
+
+    test('状态码 >= 400 时报错', () async {
+      await expectLater(direct('/forbidden'), throwsA(isA<HttpException>()));
+    });
+
+    test('不带书源域名的 Cookie', () async {
+      final host = RuleHost();
+      host.cookieStore.setCookie(base, 'sid=1');
+      final result = await host.execute(HttpRequest(url: '$base/echo', sourceUrl: base, direct: true));
+      expect(utf8.decode(result.body), 'GET||');
+    });
+
+    test('Set-Cookie 含逗号日期时逐条保留，并能经 worker 传回', () async {
+      final result = await direct('/set-cookies');
+      expect(result.setCookies, [
+        'a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/',
+        'b=2; Expires=Thu, 22 Oct 2037 07:28:00 GMT',
+      ]);
+      final pool = WorkerPool(RuleHost().handle, size: 1);
+      addTearDown(pool.close);
+      expect(await pool.run(_setCookies('$base/set-cookies')), hasLength(2));
+    });
+
+    test('单次请求超时', () async {
+      final watch = Stopwatch()..start();
+      await expectLater(
+        RuleHost().execute(HttpRequest(url: '$base/slow?ms=5000', sourceUrl: base, timeout: const Duration(milliseconds: 300))),
+        throwsA(isA<TimeoutException>()),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+    });
+  });
+
   group('书源限速', () {
     test('间隔限速：两个 worker 同时请求', () async {
       final pool = WorkerPool(RuleHost().handle, size: 2);
@@ -221,3 +356,42 @@ List<String> Function() _fetchAll(List<String> urls, {bool cookieJar = false}) =
   }
   return env.fetchAll(requests).map(decodeResponseBody).toList();
 };
+
+String? Function() _storeGet(String key) =>
+    () => const WorkerRuleEnvironment().store(StoreRequest(StoreOp.get, key)) as String?;
+
+void Function() _storePut(String key, String value) =>
+    () => const WorkerRuleEnvironment().store(StoreRequest(StoreOp.put, key, value: value));
+
+void Function() _log(String sourceUrl, String field, String message) =>
+    () => const WorkerRuleEnvironment().log(SourceLog(sourceUrl: sourceUrl, field: field, message: message));
+
+List<String> Function() _setCookies(String url) => () =>
+    const WorkerRuleEnvironment().fetch(HttpRequest(url: url, sourceUrl: url, direct: true)).setCookies;
+
+BookSource _source(Map<String, Object?> extra) =>
+    loadBookSources(jsonEncode({'bookSourceUrl': 'https://a.com', 'bookSourceName': 'A', ...extra})).sources.single;
+
+/// 只有书源级状态的环境：登录头的用例不发请求。
+final class _MemoryEnvironment implements RuleEnvironment {
+  final MemorySourceStore sourceStore = MemorySourceStore();
+  final CookieStore cookies = CookieStore();
+
+  @override
+  Object? store(StoreRequest request) => runStoreRequest(request, sourceStore, cookies);
+
+  @override
+  void log(SourceLog log) {}
+
+  @override
+  HttpResult fetch(HttpRequest request) => throw UnimplementedError();
+
+  @override
+  List<HttpResult> fetchAll(List<HttpRequest> requests) => throw UnimplementedError();
+
+  @override
+  void checkCancelled() {}
+
+  @override
+  Pointer<Int32> get abortSignal => throw UnimplementedError();
+}

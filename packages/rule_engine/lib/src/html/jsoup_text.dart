@@ -82,18 +82,23 @@ String jsoupData(Node root) {
 
 /// `Element.outerHtml()`，按 jsoup 的默认输出设置格式化。`Document` 输出它的全部子节点（jsoup 的 `Document.outerHtml()`）。
 String jsoupOuterHtml(Node node) {
+  if (node is Document) return jsoupInnerHtml(node);
   final out = StringBuffer();
   final writer = _HtmlWriter(out, xml: isXmlNode(node));
-  if (node is Document) {
-    final children = node.nodes;
-    for (var i = 0; i < children.length; i++) {
-      writer.write(children[i], 0, children, i);
-    }
-    return writer.xml ? out.toString() : _trimJava(out.toString());
-  }
   final siblings = node.parentNode?.nodes;
   writer.write(node, 0, siblings ?? [node], siblings?.indexOf(node) ?? 0);
   return out.toString();
+}
+
+/// `Element.html()`：子节点的 outerHtml 依次拼接，按 jsoup 的默认设置去掉首尾空白（XML 文档不去）。
+String jsoupInnerHtml(Node node) {
+  final out = StringBuffer();
+  final writer = _HtmlWriter(out, xml: isXmlNode(node));
+  final children = node.nodes;
+  for (var i = 0; i < children.length; i++) {
+    writer.write(children[i], 0, children, i);
+  }
+  return writer.xml ? out.toString() : _trimJava(out.toString());
 }
 
 /// `Elements.outerHtml()`：各元素的 outerHtml 用换行连接。

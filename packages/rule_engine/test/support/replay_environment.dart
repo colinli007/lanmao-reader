@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/src/host/cookie_store.dart';
 
 /// 回放 `tool/smoke.dart --record` 录下的响应：按方法、地址、请求体匹配。没录到的请求直接失败，说明链路的行为变了。
 final class ReplayEnvironment implements RuleEnvironment {
@@ -15,6 +16,7 @@ final class ReplayEnvironment implements RuleEnvironment {
         headers: (record['headers'] as Map).cast<String, String>(),
         body: Uint8List.fromList(base64Decode(record['response'] as String)),
         redirected: record['redirected'] as bool,
+        setCookies: (record['setCookies'] as List?)?.cast<String>() ?? const [],
       );
     }
   }
@@ -23,6 +25,19 @@ final class ReplayEnvironment implements RuleEnvironment {
 
   @override
   final Pointer<Int32> abortSignal = calloc<Int32>();
+
+  /// 书源级状态和 Cookie，与主 isolate 上的 `RuleHost` 用同一套语义。
+  final SourceStore sourceStore = MemorySourceStore();
+  final CookieStore cookieStore = CookieStore();
+
+  /// 收到的书源日志。
+  final List<SourceLog> logs = [];
+
+  @override
+  Object? store(StoreRequest request) => runStoreRequest(request, sourceStore, cookieStore);
+
+  @override
+  void log(SourceLog log) => logs.add(log);
 
   void dispose() => calloc.free(abortSignal);
 

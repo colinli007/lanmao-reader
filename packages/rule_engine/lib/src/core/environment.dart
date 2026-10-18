@@ -1,9 +1,13 @@
 import 'dart:ffi';
 import 'dart:typed_data';
 
-/// 规则引擎核心层对外部的全部依赖：网络和取消。
+import 'source_state.dart';
+
+export 'source_state.dart';
+
+/// 规则引擎核心层对外部的全部依赖：网络、书源级状态、日志和取消。
 ///
-/// 核心层是同步代码，不感知 isolate。worker 端用阻塞桥实现（网络交给主 isolate），
+/// 核心层是同步代码，不感知 isolate。worker 端用阻塞桥实现（交给主 isolate），
 /// 测试用回放录制样例的实现，不用起 isolate，也不连网。
 abstract interface class RuleEnvironment {
   /// 同步执行一个请求。
@@ -11,6 +15,12 @@ abstract interface class RuleEnvironment {
 
   /// 同步执行一批请求，由执行方并发，结果按提交顺序返回。
   List<HttpResult> fetchAll(List<HttpRequest> requests);
+
+  /// 读写一项书源级状态（缓存、书源变量、登录头、登录信息、Cookie），所有任务共用同一份。
+  Object? store(StoreRequest request);
+
+  /// 写一条书源调试日志，写入时就交给日志接收方。
+  void log(SourceLog log);
 
   /// 任务被取消或超时时抛出取消错误。
   void checkCancelled();
@@ -30,6 +40,8 @@ final class HttpRequest {
     this.enabledCookieJar = false,
     this.concurrentRate,
     this.retry = 0,
+    this.direct = false,
+    this.timeout,
   });
 
   factory HttpRequest.fromJson(Map<String, Object?> json) => HttpRequest(
@@ -41,6 +53,11 @@ final class HttpRequest {
     enabledCookieJar: json['enabledCookieJar'] as bool,
     concurrentRate: json['concurrentRate'] as String?,
     retry: json['retry'] as int,
+    direct: json['direct'] as bool,
+    timeout: switch (json['timeoutMs']) {
+      final int ms => Duration(milliseconds: ms),
+      _ => null,
+    },
   );
 
   final String url;
@@ -58,6 +75,13 @@ final class HttpRequest {
   /// 非 2xx 响应的重试次数。
   final int retry;
 
+  /// 直连（JS 的 `java.get`、`java.post`、`java.head`，MD3 用 Jsoup 发出）：不带书源域名的 Cookie、不保存响应的 Cookie、
+  /// 不跟随重定向，没有 [timeout] 时 30 秒超时；状态码大于等于 400 时以错误结束。
+  final bool direct;
+
+  /// 这一个请求的总超时，为 null 时用执行方的默认值。
+  final Duration? timeout;
+
   Map<String, Object?> toJson() => {
     'url': url,
     'method': method,
@@ -67,6 +91,8 @@ final class HttpRequest {
     'enabledCookieJar': enabledCookieJar,
     'concurrentRate': concurrentRate,
     'retry': retry,
+    'direct': direct,
+    'timeoutMs': timeout?.inMilliseconds,
   };
 
   @override
@@ -81,6 +107,7 @@ final class HttpResult {
     this.headers = const {},
     required this.body,
     this.redirected = false,
+    this.setCookies = const [],
   });
 
   final int statusCode;
@@ -94,4 +121,7 @@ final class HttpResult {
 
   /// 发生过重定向（OkHttp 的 `priorResponse?.isRedirect`）。
   final bool redirected;
+
+  /// 最后一个响应的 `Set-Cookie` 原文，逐条保留（[headers] 里用逗号连接后，含逗号的日期就分不开了）。
+  final List<String> setCookies;
 }

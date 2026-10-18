@@ -279,6 +279,7 @@ final Map<String, _Check> _checks = {
     return '新 worker ${takeoverMs}ms 后接手';
   },
   '规则引擎：真实书源四条链路（外网）': (f) => runRuleEngineChains(),
+  '规则引擎：C 类书源四条链路（java.ajax，外网）': (f) => runRuleEngineJsChains(),
 };
 
 void _expect(bool condition, String message) {

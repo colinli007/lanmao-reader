@@ -13,8 +13,14 @@ List<SearchBook> Function() searchTask(BookSource source, String key, {int page 
 Book Function() bookInfoTask(BookSource source, Book book, {bool canReName = true}) =>
     () => getBookInfo(const WorkerRuleEnvironment(), source, book, canReName: canReName);
 
-List<BookChapter> Function() chapterListTask(BookSource source, Book book) =>
-    () => getChapterList(const WorkerRuleEnvironment(), source, book);
+/// 目录任务的结果：章节，以及目录链路更新过的书籍（章节数、当前章节名、JS 写入的变量等）。
+/// 任务在 worker 里执行的是书籍的副本，所以要把它一并交回。
+typedef TocResult = ({Book book, List<BookChapter> chapters});
+
+TocResult Function() chapterListTask(BookSource source, Book book) => () {
+  final chapters = getChapterList(const WorkerRuleEnvironment(), source, book);
+  return (book: book, chapters: chapters);
+};
 
 ChapterContent Function() contentTask(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
     () => getContent(const WorkerRuleEnvironment(), source, book, chapter, nextChapterUrl: nextChapterUrl);

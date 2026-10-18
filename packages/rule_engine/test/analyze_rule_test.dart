@@ -1,4 +1,5 @@
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/src/core/source_task.dart';
 import 'package:rule_engine/src/rule/analyze_rule.dart';
 import 'package:rule_engine/src/rule/rule_data.dart';
 import 'package:test/test.dart';
@@ -12,7 +13,7 @@ void main() {
   tearDown(() => env.dispose());
 
   AnalyzeRule analyze(Object content, {String? baseUrl, RuleData? data}) {
-    final rule = AnalyzeRule(env, ruleData: data)..setContent(content, baseUrl: baseUrl);
+    final rule = AnalyzeRule(SourceTask(env, testSource()), ruleData: data)..setContent(content, baseUrl: baseUrl);
     if (baseUrl != null) rule.setRedirectUrl(baseUrl);
     return rule;
   }
@@ -42,6 +43,12 @@ void main() {
   });
 
   group('JSoup 默认语法', () {
+    test('class 名带空格：class 属性完全相同时匹配（jsoup 的 hasClass）', () {
+      const html = '<ul class="float-list fill-block"><li>甲</li></ul><ul class="fill-block float-list"><li>乙</li></ul>';
+      expect(analyze(html).getStringList('class.float-list fill-block@li@text'), ['甲']);
+      expect(analyze(html).getStringList('class.fill-block@li@text'), ['甲', '乙']);
+    });
+
     const list = '<div class="list"><a href="/1">一</a><a href="/2">二</a></div>';
     const items = '<ul><li>a</li><li>b</li><li>c</li></ul>';
 
@@ -147,6 +154,11 @@ void main() {
   });
 
   group('JSONPath', () {
+    test('规则末尾的 {\$.x} 取不到值时不越界', () {
+      // 取不到值时跳过 {\$. 的位置会超出末尾，MD3 里 Java 的 indexOf 返回 -1
+      expect(analyze('{"id":1}').getString(r'/b/{$.nope}'), '');
+    });
+
     test('数组结果用换行连接', () {
       expect(analyze('{"tags":["玄幻","完本"]}').getString(r'$.tags[*]'), '玄幻\n完本');
     });
@@ -276,27 +288,12 @@ void main() {
     });
   });
 
-  group('需要 JS 时明确报错', () {
-    test('规则里有 @js:', () {
+  group('需要 WebView 时明确报错', () {
+    test('规则里有 @webjs:', () {
       expect(
-        () => analyze('<h1>x</h1>').getString('tag.h1@text@js:result.trim()'),
-        throwsA(isA<NeedsJsException>().having((e) => e.snippet, 'snippet', '@js:result.trim()')),
+        () => analyze('<p></p>').getString('@webjs:document.body.innerText'),
+        throwsA(isA<NeedsWebViewException>().having((e) => e.snippet, 'snippet', '@webjs:document.body.innerText')),
       );
-    });
-
-    test('<js> 片段', () {
-      expect(() => analyze('<h1>x</h1>').getString('<js>1</js>tag.h1@text'), throwsA(isA<NeedsJsException>()));
-    });
-
-    test('{{}} 里是表达式', () {
-      expect(
-        () => analyze('<p></p>').getString('a{{1+1}}'),
-        throwsA(isA<NeedsJsException>().having((e) => e.snippet, 'snippet', '{{1+1}}')),
-      );
-    });
-
-    test('@webjs:', () {
-      expect(() => analyze('<p></p>').getString('@webjs:document.title'), throwsA(isA<NeedsWebViewException>()));
     });
   });
 

@@ -188,13 +188,6 @@ class JsRegExp {
     out[bytes.length] = 0;
     return out;
   }
-
-  static String? _takeString(Pointer<Char> pointer) {
-    if (pointer == nullptr) return null;
-    final text = pointer.cast<Utf8>().toDartString();
-    _bindings.qjs_free_string(pointer);
-    return text;
-  }
 }
 
 /// [JsRegExp] 的一次匹配。下标都是 UTF-16 单元的下标。

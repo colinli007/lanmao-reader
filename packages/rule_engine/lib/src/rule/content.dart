@@ -2,6 +2,7 @@ import 'package:html/dom.dart';
 
 import '../html/jsoup_text.dart';
 import '../html/xpath.dart';
+import '../js/js_values.dart';
 import '../json/json_text.dart';
 
 /// AllInOne 正则列表的一项：一个匹配的全部分组，未参与匹配的组为空串。
@@ -39,11 +40,11 @@ final class XPathNodeList {
 }
 
 /// MD3 里 `content.toString()` 的结果：元素是 jsoup 的 `outerHtml`（XPath 取到的文本伪元素取文本），
-/// JSON 值照 json-path 的输出，正则项是 Kotlin 列表的格式。
+/// JSON 值照 json-path 的输出，正则项是 Kotlin 列表的格式，JS 交回的值按 JS 的 `String()`。
 String contentToString(Object? content) => switch (content) {
   String() => content,
   Node() => xpathNodeString(content),
-  RegexMatchGroups() || ElementList() || XPathNodeList() => content.toString(),
+  RegexMatchGroups() || ElementList() || XPathNodeList() || JsObject() || JsArray() || JsNumber() => content.toString(),
   _ => jaywayString(content),
 };
 

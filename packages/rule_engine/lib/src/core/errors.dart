@@ -29,14 +29,30 @@ final class RuleException extends RuleEngineException {
   String get _kind => '规则错误';
 }
 
-/// 规则需要 JS 引擎。[snippet] 是出错的规则片段。
+/// 用到了本引擎不支持的 JS 用法，如 JSON 形式的 jsLib（按地址引用外部脚本）。
 final class NeedsJsException extends RuleEngineException {
   NeedsJsException(super.message, {super.sourceName, super.field});
 
-  String get snippet => message;
+  @override
+  String get _kind => '不支持的 JS 用法';
+}
+
+/// 书源 JS 出错：抛出了异常、语法错误、嵌套求值过深等。[message] 是 JS 的错误消息。
+final class JsEvalException extends RuleEngineException {
+  JsEvalException(super.message, {super.sourceName, super.field});
 
   @override
-  String get _kind => '需要 JS 引擎';
+  String get _kind => 'JS 错误';
+}
+
+/// 书源 JS 调用了本引擎不支持的宿主 API（需要界面、WebView、设备、文件等）。[api] 是 API 名，如 `java.getVerificationCode`。
+final class UnsupportedHostApiException extends RuleEngineException {
+  UnsupportedHostApiException(super.message, {super.sourceName, super.field});
+
+  String get api => message;
+
+  @override
+  String get _kind => '不支持的宿主 API';
 }
 
 /// 规则需要 WebView。[snippet] 是出错的规则片段。

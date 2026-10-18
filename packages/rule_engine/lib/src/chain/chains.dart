@@ -7,10 +7,12 @@ library;
 
 import '../core/environment.dart';
 import '../core/errors.dart';
+import '../core/source_task.dart';
+import '../js/source_js.dart';
 import '../net/java_url.dart';
 import '../regex/source_regex.dart';
 import '../request/analyze_url.dart';
-import '../request/response_decoder.dart';
+import '../request/str_response.dart';
 import '../rule/analyze_rule.dart';
 import '../rule/rule_data.dart';
 import '../source/book_source.dart';
@@ -22,35 +24,41 @@ import 'models.dart';
 
 /// 搜索：请求搜索地址，解析结果列表。搜索响应本身就是详情页时，返回一个结果并保存这个页面。
 List<SearchBook> searchBooks(RuleEnvironment env, BookSource source, String key, {int page = 1}) {
-  return _withSource(source, 'searchUrl', () {
-    final searchUrl = source.searchUrl;
+  return _withTask(env, source, 'searchUrl', (task) {
+    final searchUrl = task.source.searchUrl;
     if (searchUrl == null || searchUrl.trim().isEmpty) throw RuleException('搜索url不能为空');
     final ruleData = ChainData();
-    final request = buildSourceRequest(searchUrl, key: key, page: page, baseUrl: source.bookSourceUrl, source: source);
-    final response = _fetch(env, request);
-    return _analyzeBookList(env, source, ruleData, request, response);
+    final request = buildSourceRequest(
+      task,
+      searchUrl,
+      key: key,
+      page: page,
+      baseUrl: task.source.bookSourceUrl,
+      ruleData: ruleData,
+    );
+    final response = _fetch(task, request, loginCheck: true);
+    return _analyzeBookList(task, ruleData, request, response);
   });
 }
 
 List<SearchBook> _analyzeBookList(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   ChainData ruleData,
   SourceRequest request,
   _Response response,
 ) {
   final baseUrl = response.url;
   final body = response.body;
-  final rules = source.ruleSearch;
-  final analyzeRule = AnalyzeRule(env, ruleData: ruleData)
+  final rules = task.source.ruleSearch;
+  final analyzeRule = AnalyzeRule(task, ruleData: ruleData)
     ..setContent(body, baseUrl: baseUrl)
     ..setRedirectUrl(baseUrl);
 
-  final pattern = source.bookUrlPattern;
+  final pattern = task.source.bookUrlPattern;
   if (pattern != null) {
-    final regex = _field('bookUrlPattern', () => SourceRegex.tryCompile(pattern) ?? (throw RuleException('正则无法编译：$pattern')));
-    if (regex.matchesEntire(env, baseUrl)) {
-      final item = _infoItem(env, source, analyzeRule, request, body, baseUrl, ruleData, response.redirected);
+    final regex = task.inField('bookUrlPattern', () => SourceRegex.tryCompile(pattern) ?? (throw RuleException('正则无法编译：$pattern')));
+    if (regex.matchesEntire(task.env, baseUrl)) {
+      final item = _infoItem(task, analyzeRule, request, body, baseUrl, ruleData, response.redirected);
       return [?item?..infoHtml = body];
     }
   }
@@ -62,11 +70,11 @@ List<SearchBook> _analyzeBookList(
     listRule = listRule.substring(1);
   }
   if (listRule.startsWith('+')) listRule = listRule.substring(1);
-  final collections = _field(rules.field('bookList'), () => analyzeRule.getElements(listRule));
-  env.checkCancelled();
+  final collections = task.inField(rules.field('bookList'), () => analyzeRule.getElements(listRule));
+  task.env.checkCancelled();
 
   if (collections.isEmpty && (pattern == null || pattern.isEmpty)) {
-    final item = _infoItem(env, source, analyzeRule, request, body, baseUrl, ruleData, response.redirected);
+    final item = _infoItem(task, analyzeRule, request, body, baseUrl, ruleData, response.redirected);
     return [?item?..infoHtml = body];
   }
 
@@ -83,31 +91,31 @@ List<SearchBook> _analyzeBookList(
   final books = <SearchBook>[];
   final seen = <String>{};
   for (final item in collections) {
-    env.checkCancelled();
+    task.env.checkCancelled();
     final book = SearchBook(
       bookUrl: '',
-      origin: source.bookSourceUrl,
-      originName: source.bookSourceName,
+      origin: task.source.bookSourceUrl,
+      originName: task.source.bookSourceName,
       variables: ruleData.variables,
     );
     analyzeRule
       ..ruleData = book
       ..setContent(item);
-    book.name = formatBookName(_field(rules.field('name'), () => analyzeRule.getStringOf(ruleName)));
+    book.name = formatBookName(task.inField(rules.field('name'), () => analyzeRule.getStringOf(ruleName)));
     if (book.name.isEmpty) continue;
-    book.author = formatBookAuthor(_field(rules.field('author'), () => analyzeRule.getStringOf(ruleAuthor)));
-    _optional(rules.field('kind'), () {
+    book.author = formatBookAuthor(task.inField(rules.field('author'), () => analyzeRule.getStringOf(ruleAuthor)));
+    _optional(task, rules.field('kind'), () {
       final kind = analyzeRule.getStringListOf(ruleKind)?.join(',');
       book.kind = kind == null ? null : _take(kind, 1000);
     });
-    _optional(rules.field('wordCount'), () => book.wordCount = wordCountFormat(analyzeRule.getStringOf(ruleWordCount)));
-    _optional(rules.field('lastChapter'), () => book.latestChapterTitle = analyzeRule.getStringOf(ruleLastChapter));
-    _optional(rules.field('intro'), () => book.intro = _take(formatHtml(analyzeRule.getStringOf(ruleIntro)), 5000));
-    _optional(rules.field('coverUrl'), () {
+    _optional(task, rules.field('wordCount'), () => book.wordCount = wordCountFormat(analyzeRule.getStringOf(ruleWordCount)));
+    _optional(task, rules.field('lastChapter'), () => book.latestChapterTitle = analyzeRule.getStringOf(ruleLastChapter));
+    _optional(task, rules.field('intro'), () => book.intro = _take(formatHtml(analyzeRule.getStringOf(ruleIntro)), 5000));
+    _optional(task, rules.field('coverUrl'), () {
       final cover = analyzeRule.getStringOf(ruleCoverUrl);
       if (cover.isNotEmpty) book.coverUrl = absoluteUrlFrom(baseUrl, cover);
     });
-    book.bookUrl = _field(rules.field('bookUrl'), () => analyzeRule.getStringOf(ruleBookUrl, isUrl: true));
+    book.bookUrl = task.inField(rules.field('bookUrl'), () => analyzeRule.getStringOf(ruleBookUrl, isUrl: true));
     if (book.bookUrl.isEmpty) book.bookUrl = baseUrl;
     if (baseUrl == book.bookUrl) book.infoHtml = body;
     // 按书籍地址去重，保留第一次出现的
@@ -118,8 +126,7 @@ List<SearchBook> _analyzeBookList(
 
 /// 搜索页当作详情页解析：书籍地址是最终地址（发生过重定向时）或搜索地址（带着选项）。书名为空时没有结果。
 SearchBook? _infoItem(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   AnalyzeRule analyzeRule,
   SourceRequest request,
   String body,
@@ -129,12 +136,12 @@ SearchBook? _infoItem(
 ) {
   final book = Book(
     bookUrl: redirected ? baseUrl : absoluteUrlFrom(request.url, request.ruleUrl),
-    origin: source.bookSourceUrl,
-    originName: source.bookSourceName,
+    origin: task.source.bookSourceUrl,
+    originName: task.source.bookSourceName,
     variables: ruleData.variables,
   );
   analyzeRule.ruleData = book;
-  _analyzeBookInfo(env, source, book, body, analyzeRule, baseUrl: baseUrl, redirectUrl: baseUrl, canReName: false);
+  _analyzeBookInfo(task, book, body, analyzeRule, baseUrl: baseUrl, redirectUrl: baseUrl, canReName: false);
   if (book.name.trim().isEmpty) return null;
   return SearchBook(bookUrl: book.bookUrl, origin: book.origin, originName: book.originName, variables: book.variables)
     ..name = book.name
@@ -150,28 +157,27 @@ SearchBook? _infoItem(
 
 /// 详情：已有保存的详情页时直接解析，否则请求书籍地址。目录地址等于书籍地址时保存详情页给目录链路。
 Book getBookInfo(RuleEnvironment env, BookSource source, Book book, {bool canReName = true}) {
-  return _withSource(source, 'bookUrl', () {
+  return _withTask(env, source, 'bookUrl', (task) {
     final infoHtml = book.infoHtml;
     if (infoHtml != null && infoHtml.isNotEmpty) {
-      final analyzeRule = AnalyzeRule(env, ruleData: book)
+      final analyzeRule = AnalyzeRule(task, ruleData: book)
         ..setContent(infoHtml, baseUrl: book.bookUrl)
         ..setRedirectUrl(book.bookUrl);
-      _analyzeBookInfo(env, source, book, infoHtml, analyzeRule, baseUrl: book.bookUrl, redirectUrl: book.bookUrl, canReName: canReName);
+      _analyzeBookInfo(task, book, infoHtml, analyzeRule, baseUrl: book.bookUrl, redirectUrl: book.bookUrl, canReName: canReName);
       return book;
     }
-    final request = buildSourceRequest(book.bookUrl, baseUrl: source.bookSourceUrl, source: source);
-    final response = _fetch(env, request);
-    final analyzeRule = AnalyzeRule(env, ruleData: book)
+    final request = buildSourceRequest(task, book.bookUrl, baseUrl: task.source.bookSourceUrl, ruleData: book);
+    final response = _fetch(task, request, loginCheck: true);
+    final analyzeRule = AnalyzeRule(task, ruleData: book)
       ..setContent(response.body, baseUrl: book.bookUrl)
       ..setRedirectUrl(response.url);
-    _analyzeBookInfo(env, source, book, response.body, analyzeRule, baseUrl: book.bookUrl, redirectUrl: response.url, canReName: canReName);
+    _analyzeBookInfo(task, book, response.body, analyzeRule, baseUrl: book.bookUrl, redirectUrl: response.url, canReName: canReName);
     return book;
   });
 }
 
 void _analyzeBookInfo(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   Book book,
   String body,
   AnalyzeRule analyzeRule, {
@@ -179,34 +185,34 @@ void _analyzeBookInfo(
   required String redirectUrl,
   required bool canReName,
 }) {
-  final rules = source.ruleBookInfo;
+  final rules = task.source.ruleBookInfo;
   final init = rules['init'];
   if (init != null && init.trim().isNotEmpty) {
-    env.checkCancelled();
-    final element = _field(rules.field('init'), () => analyzeRule.getElement(init));
+    task.env.checkCancelled();
+    final element = task.inField(rules.field('init'), () => analyzeRule.getElement(init));
     // MD3 在这里 setContent(null) 抛 AssertionError（D12）
     if (element == null) throw RuleException('详情 init 取不到', field: rules.field('init'));
     analyzeRule.setContent(element);
   }
   final mCanReName = canReName && (rules['canReName']?.trim().isNotEmpty ?? false);
-  env.checkCancelled();
-  final name = formatBookName(_field(rules.field('name'), () => analyzeRule.getString(rules['name'])));
+  task.env.checkCancelled();
+  final name = formatBookName(task.inField(rules.field('name'), () => analyzeRule.getString(rules['name'])));
   if (name.isNotEmpty && (mCanReName || book.name.isEmpty)) book.name = name;
-  final author = formatBookAuthor(_field(rules.field('author'), () => analyzeRule.getString(rules['author'])));
+  final author = formatBookAuthor(task.inField(rules.field('author'), () => analyzeRule.getString(rules['author'])));
   if (author.isNotEmpty && (mCanReName || book.author.isEmpty)) book.author = author;
-  _optional(rules.field('kind'), () {
+  _optional(task, rules.field('kind'), () {
     final kind = analyzeRule.getStringList(rules['kind'])?.join(',');
     if (kind != null && kind.isNotEmpty) book.kind = _take(kind, 1000);
   });
-  _optional(rules.field('wordCount'), () {
+  _optional(task, rules.field('wordCount'), () {
     final wordCount = wordCountFormat(analyzeRule.getString(rules['wordCount']));
     if (wordCount.isNotEmpty) book.wordCount = wordCount;
   });
-  _optional(rules.field('lastChapter'), () {
+  _optional(task, rules.field('lastChapter'), () {
     final lastChapter = analyzeRule.getString(rules['lastChapter']);
     if (lastChapter.isNotEmpty) book.latestChapterTitle = lastChapter;
   });
-  _optional(rules.field('intro'), () {
+  _optional(task, rules.field('intro'), () {
     final intro = analyzeRule.getString(rules['intro']).trimLeft();
     if (intro.startsWith('<usehtml>') || intro.startsWith('<md>') || intro.startsWith('<useweb>')) {
       book.intro = intro;
@@ -215,17 +221,17 @@ void _analyzeBookInfo(
       if (formatted.isNotEmpty) book.intro = formatted;
     }
   });
-  _optional(rules.field('coverUrl'), () {
+  _optional(task, rules.field('coverUrl'), () {
     final cover = analyzeRule.getString(rules['coverUrl']);
     if (cover.isNotEmpty) book.coverUrl = absoluteUrlFrom(redirectUrl, cover);
   });
-  env.checkCancelled();
-  if (source.bookSourceType != BookSourceType.file) {
-    book.tocUrl = _field(rules.field('tocUrl'), () => analyzeRule.getString(rules['tocUrl'], isUrl: true));
+  task.env.checkCancelled();
+  if (task.source.bookSourceType != BookSourceType.file) {
+    book.tocUrl = task.inField(rules.field('tocUrl'), () => analyzeRule.getString(rules['tocUrl'], isUrl: true));
     if (book.tocUrl.isEmpty) book.tocUrl = baseUrl;
     if (book.tocUrl == baseUrl) book.tocHtml = body;
   } else {
-    book.downloadUrls = _field(rules.field('downloadUrls'), () => analyzeRule.getStringList(rules['downloadUrls'], isUrl: true));
+    book.downloadUrls = task.inField(rules.field('downloadUrls'), () => analyzeRule.getStringList(rules['downloadUrls'], isUrl: true));
     if (book.downloadUrls == null || book.downloadUrls!.isEmpty) {
       throw RuleException('下载链接为空', field: rules.field('downloadUrls'));
     }
@@ -236,29 +242,25 @@ void _analyzeBookInfo(
 
 /// 目录：目录就在详情页时直接解析保存的页面，否则请求目录地址。支持串行和并发两种多页目录。
 List<BookChapter> getChapterList(RuleEnvironment env, BookSource source, Book book) {
-  return _withSource(source, 'tocUrl', () {
-    final rules = source.ruleToc;
-    final formatJs = rules['formatJs'];
-    if (formatJs != null && formatJs.trim().isNotEmpty) throw NeedsJsException(formatJs, field: rules.field('formatJs'));
+  return _withTask(env, source, 'tocUrl', (task) {
     final tocHtml = book.tocHtml;
     if (book.bookUrl == book.tocUrl && tocHtml != null && tocHtml.isNotEmpty) {
-      return _analyzeChapterList(env, source, book, baseUrl: book.tocUrl, redirectUrl: book.tocUrl, body: tocHtml);
+      return _analyzeChapterList(task, book, baseUrl: book.tocUrl, redirectUrl: book.tocUrl, body: tocHtml);
     }
-    final request = buildSourceRequest(book.tocUrl, baseUrl: book.bookUrl, source: source);
-    final response = _fetch(env, request);
-    return _analyzeChapterList(env, source, book, baseUrl: book.tocUrl, redirectUrl: response.url, body: response.body);
+    final request = buildSourceRequest(task, book.tocUrl, baseUrl: book.bookUrl, ruleData: book);
+    final response = _fetch(task, request, loginCheck: true);
+    return _analyzeChapterList(task, book, baseUrl: book.tocUrl, redirectUrl: response.url, body: response.body);
   });
 }
 
 List<BookChapter> _analyzeChapterList(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   Book book, {
   required String baseUrl,
   required String redirectUrl,
   required String body,
 }) {
-  final rules = source.ruleToc;
+  final rules = task.source.ruleToc;
   var listRule = rules['chapterList'] ?? '';
   var reverse = false;
   if (listRule.startsWith('-')) {
@@ -269,48 +271,55 @@ List<BookChapter> _analyzeChapterList(
 
   final chapters = <BookChapter>[];
   final visited = <String>[redirectUrl];
-  var page = _tocPage(env, source, book, baseUrl, redirectUrl, body, listRule, getNextUrl: true);
+  var page = _tocPage(task, book, baseUrl, redirectUrl, body, listRule, getNextUrl: true);
   chapters.addAll(page.chapters);
   if (page.nextUrls.length == 1) {
     // 只有一个下一页：串行翻页，访问过的不再访问
     var nextUrl = page.nextUrls.single;
     while (nextUrl.isNotEmpty && !visited.contains(nextUrl)) {
       visited.add(nextUrl);
-      final response = _fetch(env, buildSourceRequest(nextUrl, source: source));
-      page = _tocPage(env, source, book, nextUrl, nextUrl, response.body, listRule, getNextUrl: true);
+      final response = _fetch(task, buildSourceRequest(task, nextUrl, ruleData: book));
+      page = _tocPage(task, book, nextUrl, nextUrl, response.body, listRule, getNextUrl: true);
       nextUrl = page.nextUrls.firstOrNull ?? '';
       chapters.addAll(page.chapters);
     }
   } else if (page.nextUrls.length > 1) {
     // 首页列出了全部分页：并发请求这一批，子页不再找下一页
-    final requests = [for (final url in page.nextUrls) buildSourceRequest(url, source: source)];
-    final responses = _fetchAll(env, requests);
+    final requests = [for (final url in page.nextUrls) buildSourceRequest(task, url, ruleData: book)];
+    final responses = _fetchAll(task, requests);
     for (final (index, response) in responses.indexed) {
-      final pageData = _tocPage(env, source, book, page.nextUrls[index], response.url, response.body, listRule, getNextUrl: false);
+      final pageData = _tocPage(task, book, page.nextUrls[index], response.url, response.body, listRule, getNextUrl: false);
       chapters.addAll(pageData.chapters);
     }
   }
   if (chapters.isEmpty) throw RuleException('目录为空', field: rules.field('chapterList'));
 
-  // 没有 - 时：倒过来去重再倒回来，重复的保留最后一次；有 - 时：去重后整体倒序
+  // 没有 - 时：倒过来去重再倒回来，重复的保留最后一次；有 - 时：去重后整体倒序。
+  // 书籍设置了目录倒序（JS 的 book.setReverseToc）时不再倒回来
   var list = reverse ? chapters : chapters.reversed.toList();
   final seen = <String>{};
   list = [
     for (final chapter in list)
       if (seen.add(chapter.url)) chapter,
   ];
-  list = list.reversed.toList();
+  if (!book.reverseToc) list = list.reversed.toList();
   for (final (index, chapter) in list.indexed) {
     chapter.index = index;
   }
+  final formatJs = rules['formatJs'];
+  if (formatJs != null && formatJs.trim().isNotEmpty) {
+    task.inField(rules.field('formatJs'), () => SourceJs.instance.formatChapterTitles(task, formatJs, list));
+  }
+  book
+    ..durChapterTitle = (book.durChapterIndex < list.length ? list[book.durChapterIndex] : list.last).title
+    ..totalChapterNum = list.length;
   return list;
 }
 
 typedef _TocPage = ({List<BookChapter> chapters, List<String> nextUrls});
 
 _TocPage _tocPage(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   Book book,
   String baseUrl,
   String redirectUrl,
@@ -318,20 +327,20 @@ _TocPage _tocPage(
   String listRule, {
   required bool getNextUrl,
 }) {
-  final rules = source.ruleToc;
-  final analyzeRule = AnalyzeRule(env, ruleData: book)
+  final rules = task.source.ruleToc;
+  final analyzeRule = AnalyzeRule(task, ruleData: book)
     ..setContent(body, baseUrl: baseUrl)
     ..setRedirectUrl(redirectUrl);
-  final elements = _field(rules.field('chapterList'), () => analyzeRule.getElements(listRule));
+  final elements = task.inField(rules.field('chapterList'), () => analyzeRule.getElements(listRule));
   final nextUrls = <String>[];
   final nextRule = rules['nextTocUrl'];
   if (getNextUrl && nextRule != null && nextRule.isNotEmpty) {
-    final urls = _field(rules.field('nextTocUrl'), () => analyzeRule.getStringList(nextRule, isUrl: true));
+    final urls = task.inField(rules.field('nextTocUrl'), () => analyzeRule.getStringList(nextRule, isUrl: true));
     for (final url in urls ?? const <String>[]) {
       if (url != redirectUrl) nextUrls.add(url);
     }
   }
-  env.checkCancelled();
+  task.env.checkCancelled();
   final chapters = <BookChapter>[];
   if (elements.isEmpty) return (chapters: chapters, nextUrls: nextUrls);
 
@@ -342,18 +351,18 @@ _TocPage _tocPage(
   final updateTimeRule = analyzeRule.prepare(rules['updateTime']);
   final volumeRule = analyzeRule.prepare(rules['isVolume']);
   for (final (index, item) in elements.indexed) {
-    env.checkCancelled();
+    task.env.checkCancelled();
     analyzeRule.setContent(item);
     final chapter = BookChapter(bookUrl: book.bookUrl, baseUrl: redirectUrl);
     analyzeRule.chapter = chapter;
-    chapter.title = _field(rules.field('chapterName'), () => analyzeRule.getStringOf(nameRule));
-    chapter.url = _field(rules.field('chapterUrl'), () => analyzeRule.getStringOf(urlRule));
-    chapter.tag = _field(rules.field('updateTime'), () => analyzeRule.getStringOf(updateTimeRule));
-    chapter.isVolume = isTrue(_field(rules.field('isVolume'), () => analyzeRule.getStringOf(volumeRule)));
+    chapter.title = task.inField(rules.field('chapterName'), () => analyzeRule.getStringOf(nameRule));
+    chapter.url = task.inField(rules.field('chapterUrl'), () => analyzeRule.getStringOf(urlRule));
+    chapter.tag = task.inField(rules.field('updateTime'), () => analyzeRule.getStringOf(updateTimeRule));
+    chapter.isVolume = isTrue(task.inField(rules.field('isVolume'), () => analyzeRule.getStringOf(volumeRule)));
     if (chapter.url.isEmpty) chapter.url = chapter.isVolume ? '${chapter.title}$index' : baseUrl;
     if (chapter.title.isEmpty) continue;
-    chapter.isVip = isTrue(_field(rules.field('isVip'), () => analyzeRule.getStringOf(vipRule)));
-    chapter.isPay = isTrue(_field(rules.field('isPay'), () => analyzeRule.getStringOf(payRule)));
+    chapter.isVip = isTrue(task.inField(rules.field('isVip'), () => analyzeRule.getStringOf(vipRule)));
+    chapter.isPay = isTrue(task.inField(rules.field('isPay'), () => analyzeRule.getStringOf(payRule)));
     chapters.add(chapter);
   }
   return (chapters: chapters, nextUrls: nextUrls);
@@ -383,9 +392,9 @@ ChapterContent getContent(
   BookChapter chapter, {
   String? nextChapterUrl,
 }) {
-  return _withSource(source, 'ruleContent.content', () {
-    if (source.bookSourceType == BookSourceType.file) throw RuleException('不支持的书源类型');
-    final rules = source.ruleContent;
+  return _withTask(env, source, 'ruleContent.content', (task) {
+    if (task.source.bookSourceType == BookSourceType.file) throw RuleException('不支持的书源类型');
+    final rules = task.source.ruleContent;
     final contentRule = rules['content'];
     if (contentRule == null || contentRule.isEmpty) return ChapterContent(chapter.url, title: chapter.title);
     if (chapter.isVolume && chapter.url.startsWith(chapter.title)) {
@@ -394,16 +403,16 @@ ChapterContent getContent(
     final absoluteUrl = chapterAbsoluteUrl(chapter);
     final tocHtml = book.tocHtml;
     if (chapter.url == book.bookUrl && tocHtml != null && tocHtml.isNotEmpty) {
-      return _analyzeContent(env, source, book, chapter, baseUrl: absoluteUrl, redirectUrl: absoluteUrl, body: tocHtml, nextChapterUrl: nextChapterUrl);
+      return _analyzeContent(task, book, chapter, baseUrl: absoluteUrl, redirectUrl: absoluteUrl, body: tocHtml, nextChapterUrl: nextChapterUrl);
     }
-    final response = _fetch(env, buildSourceRequest(absoluteUrl, baseUrl: book.tocUrl, source: source));
-    return _analyzeContent(env, source, book, chapter, baseUrl: absoluteUrl, redirectUrl: response.url, body: response.body, nextChapterUrl: nextChapterUrl);
+    final request = buildSourceRequest(task, absoluteUrl, baseUrl: book.tocUrl, ruleData: book, chapter: chapter);
+    final response = _fetch(task, request, loginCheck: true);
+    return _analyzeContent(task, book, chapter, baseUrl: absoluteUrl, redirectUrl: response.url, body: response.body, nextChapterUrl: nextChapterUrl);
   });
 }
 
 ChapterContent _analyzeContent(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   Book book,
   BookChapter chapter, {
   required String baseUrl,
@@ -411,14 +420,15 @@ ChapterContent _analyzeContent(
   required String body,
   String? nextChapterUrl,
 }) {
-  final rules = source.ruleContent;
+  final rules = task.source.ruleContent;
   final pages = <String>[];
   final visited = <String>[redirectUrl];
-  final analyzeRule = AnalyzeRule(env, ruleData: book, chapter: chapter)
+  final analyzeRule = AnalyzeRule(task, ruleData: book, chapter: chapter)
+    ..nextChapterUrl = nextChapterUrl
     ..setContent(body, baseUrl: baseUrl)
     ..setRedirectUrl(redirectUrl);
 
-  var page = _contentPage(env, source, book, chapter, baseUrl, redirectUrl, body, getNextUrl: true);
+  var page = _contentPage(task, book, chapter, baseUrl, redirectUrl, body, getNextUrl: true, nextChapterUrl: nextChapterUrl);
   pages.add(page.content);
   if (page.nextUrls.length == 1) {
     var nextUrl = page.nextUrls.single;
@@ -430,23 +440,26 @@ ChapterContent _analyzeContent(
         break;
       }
       visited.add(nextUrl);
-      final response = _fetch(env, buildSourceRequest(nextUrl, source: source));
-      page = _contentPage(env, source, book, chapter, nextUrl, response.url, response.body, getNextUrl: true);
+      final response = _fetch(task, buildSourceRequest(task, nextUrl, ruleData: book));
+      page = _contentPage(task, book, chapter, nextUrl, response.url, response.body, getNextUrl: true, nextChapterUrl: nextChapterUrl);
       nextUrl = page.nextUrls.firstOrNull ?? '';
       pages.add(page.content);
     }
   } else if (page.nextUrls.length > 1) {
-    final responses = _fetchAll(env, [for (final url in page.nextUrls) buildSourceRequest(url, source: source)]);
+    final responses = _fetchAll(task, [for (final url in page.nextUrls) buildSourceRequest(task, url, ruleData: book)]);
     for (final (index, response) in responses.indexed) {
-      pages.add(_contentPage(env, source, book, chapter, page.nextUrls[index], response.url, response.body, getNextUrl: false).content);
+      pages.add(
+        _contentPage(task, book, chapter, page.nextUrls[index], response.url, response.body, getNextUrl: false, nextChapterUrl: nextChapterUrl)
+            .content,
+      );
     }
   }
 
   final subRule = rules['subContent'];
   if (subRule != null && subRule.trim().isNotEmpty) {
-    final raw = _field(rules.field('subContent'), () => analyzeRule.getString(subRule, unescape: false)).trim();
-    final sub = raw.toLowerCase().startsWith('http') ? _fetch(env, buildSourceRequest(raw, source: source)).body : raw;
-    if (sub.trim().isNotEmpty && source.bookSourceType == BookSourceType.text) pages.add(sub);
+    final raw = task.inField(rules.field('subContent'), () => analyzeRule.getString(subRule, unescape: false)).trim();
+    final sub = raw.toLowerCase().startsWith('http') ? _fetch(task, buildSourceRequest(task, raw, ruleData: book)).body : raw;
+    if (sub.trim().isNotEmpty && task.source.bookSourceType == BookSourceType.text) pages.add(sub);
   }
   var content = pages.join('\n');
 
@@ -456,9 +469,11 @@ ChapterContent _analyzeContent(
   if (titleRule != null && titleRule.trim().isNotEmpty) {
     String? found;
     try {
-      found = analyzeRule.getString(titleRule);
+      found = task.inField(rules.field('title'), () => analyzeRule.getString(titleRule));
     } on RuleException {
       // MD3 用 runCatching 吞掉
+    } on JsEvalException {
+      // 同上
     }
     if (found != null && found.trim().isNotEmpty) {
       final match = _imgTitle.firstMatch(found);
@@ -473,7 +488,7 @@ ChapterContent _analyzeContent(
   final replaceRegex = rules['replaceRegex'];
   if (replaceRegex != null && replaceRegex.isNotEmpty) {
     content = content.split('\n').map((line) => line.trim()).join('\n');
-    content = _field(rules.field('replaceRegex'), () => analyzeRule.getString(replaceRegex, content: content));
+    content = task.inField(rules.field('replaceRegex'), () => analyzeRule.getString(replaceRegex, content: content));
     content = content.split('\n').map((line) => '$paragraphIndent$line').join('\n');
   }
   if (!chapter.isVolume && content.trim().isEmpty) throw RuleException('正文为空', field: rules.field('content'));
@@ -483,20 +498,22 @@ ChapterContent _analyzeContent(
 typedef _ContentPage = ({String content, List<String> nextUrls});
 
 _ContentPage _contentPage(
-  RuleEnvironment env,
-  BookSource source,
+  SourceTask task,
   Book book,
   BookChapter chapter,
   String baseUrl,
   String redirectUrl,
   String body, {
   required bool getNextUrl,
+  String? nextChapterUrl,
 }) {
-  final rules = source.ruleContent;
-  final analyzeRule = AnalyzeRule(env, ruleData: book, chapter: chapter)..setContent(body, baseUrl: baseUrl);
+  final rules = task.source.ruleContent;
+  final analyzeRule = AnalyzeRule(task, ruleData: book, chapter: chapter)
+    ..nextChapterUrl = nextChapterUrl
+    ..setContent(body, baseUrl: baseUrl);
   final redirect = analyzeRule.setRedirectUrl(redirectUrl);
-  var content = _field(rules.field('content'), () => analyzeRule.getString(rules['content'], unescape: false));
-  if (source.bookSourceType != BookSourceType.audio && source.bookSourceType != BookSourceType.video) {
+  var content = task.inField(rules.field('content'), () => analyzeRule.getString(rules['content'], unescape: false));
+  if (task.source.bookSourceType != BookSourceType.audio && task.source.bookSourceType != BookSourceType.video) {
     // 先用占位符保护 <usehtml>…</usehtml>（MD3 的 adaptSpecialStyle 默认开启）
     final kept = <String, String>{};
     content = content.replaceAllMapped(_useHtml, (match) {
@@ -513,9 +530,9 @@ _ContentPage _contentPage(
   final nextUrls = <String>[];
   final nextRule = rules['nextContentUrl'];
   if (getNextUrl && nextRule != null && nextRule.isNotEmpty) {
-    nextUrls.addAll(_field(rules.field('nextContentUrl'), () => analyzeRule.getStringList(nextRule, isUrl: true)) ?? const []);
+    nextUrls.addAll(task.inField(rules.field('nextContentUrl'), () => analyzeRule.getStringList(nextRule, isUrl: true)) ?? const []);
   }
-  env.checkCancelled();
+  task.env.checkCancelled();
   return (content: content, nextUrls: nextUrls);
 }
 
@@ -523,55 +540,50 @@ _ContentPage _contentPage(
 
 typedef _Response = ({String url, String body, bool redirected});
 
-/// 请求之前检查取消；选项 `type` 不为 null 时结果是响应字节的十六进制（地址是请求地址）。
-_Response _fetch(RuleEnvironment env, SourceRequest request) {
-  env.checkCancelled();
-  final result = env.fetch(request.http);
-  return _toResponse(request, result);
+/// 发出请求（请求之前检查取消），选项 `type`、`bodyJs` 在 [SourceRequest.fetch] 里处理。
+/// [loginCheck] 时执行书源的 `loginCheckJs`：MD3 只对每条链路的第一个请求执行。
+_Response _fetch(SourceTask task, SourceRequest request, {bool loginCheck = false}) {
+  var response = request.fetch();
+  if (loginCheck) response = _loginCheck(task, request, response);
+  return _toResponse(response);
 }
 
-List<_Response> _fetchAll(RuleEnvironment env, List<SourceRequest> requests) {
-  env.checkCancelled();
-  final results = env.fetchAll([for (final request in requests) request.http]);
-  return [for (final (index, result) in results.indexed) _toResponse(requests[index], result)];
+List<_Response> _fetchAll(SourceTask task, List<SourceRequest> requests) {
+  task.env.checkCancelled();
+  final results = task.env.fetchAll([for (final request in requests) request.http]);
+  return [for (final (index, result) in results.indexed) _toResponse(requests[index].response(result))];
 }
 
-_Response _toResponse(SourceRequest request, HttpResult result) {
-  if (request.type != null) return (url: request.url, body: hexResponseBody(result), redirected: false);
-  return (url: result.url, body: decodeResponseBody(result), redirected: result.redirected);
+_Response _toResponse(StrResponse response) => (url: response.url, body: response.body ?? '', redirected: response.redirected);
+
+/// `loginCheckJs`：`result` 是响应对象，`java` 是这次请求的 URL 上下文，返回的响应对象代替原响应。
+StrResponse _loginCheck(SourceTask task, SourceRequest request, StrResponse response) {
+  final js = task.source.loginCheckJs;
+  if (js == null || js.trim().isEmpty) return response;
+  return task.inField('loginCheckJs', () {
+    final checked = SourceJs.instance.evalUrl(request, js, result: response);
+    if (checked is! StrResponse) throw JsEvalException('loginCheckJs 的返回值不是响应对象');
+    return checked;
+  });
 }
 
-/// 给出错的规则补上字段。
-T _field<T>(String field, T Function() body) {
+/// 可选字段：规则错误和 JS 错误吞掉（MD3 的 try/catch，只记日志），本引擎不支持的能力（JS 用法、WebView、宿主 API）照常抛出。
+void _optional(SourceTask task, String field, void Function() body) {
   try {
-    return body();
-  } on RuleEngineException catch (e) {
-    e.field ??= field;
-    rethrow;
-  }
-}
-
-/// 可选字段：规则错误吞掉（MD3 的 try/catch），需要 JS、WebView 的错误照常抛出。
-void _optional(String field, void Function() body) {
-  try {
-    body();
+    task.inField(field, body);
   } on RuleException {
     // 和 MD3 一样只记日志
+  } on JsEvalException {
+    // 同上
   } on FormatException {
     // 字数超出范围等
-  } on NeedsJsException catch (e) {
-    e.field ??= field;
-    rethrow;
-  } on NeedsWebViewException catch (e) {
-    e.field ??= field;
-    rethrow;
   }
 }
 
-/// 给链路里的错误补上书源名，没有字段时补上 [field]。
-T _withSource<T>(BookSource source, String field, T Function() body) {
+/// 一次链路调用：建立任务的书源上下文，给链路里的错误补上书源名，没有字段时补上 [field]。
+T _withTask<T>(RuleEnvironment env, BookSource source, String field, T Function(SourceTask task) body) {
   try {
-    return body();
+    return body(SourceTask(env, source)..field = field);
   } on RuleEngineException catch (e) {
     e.sourceName ??= source.bookSourceName;
     e.field ??= field;

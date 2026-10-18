@@ -23,8 +23,23 @@ final class CookieStore {
     _replacePersistent(domain, _cookieString(cookies.where((cookie) => cookie.persistent)));
   }
 
-  /// 直接写入（测试和以后的登录、JS 的 `cookie.setCookie` 用），覆盖原有的持久 Cookie。
+  /// 直接写入（JS 的 `cookie.setCookie`），覆盖原有的持久 Cookie。
   void setCookie(String url, String cookie) => _persistent[cookieDomain(url)] = cookie;
+
+  /// 和原有的持久 Cookie 按名合并后写入（JS 的 `cookie.replaceCookie`、`source.putLoginHeader`）；地址或 Cookie 为空时不做事。
+  void replaceCookie(String url, String cookie) {
+    if (url.isEmpty || cookie.isEmpty) return;
+    final domain = cookieDomain(url);
+    final existing = _persistent[domain] ?? '';
+    _persistent[domain] = existing.isEmpty ? cookie : (mergeCookies([existing, cookie]) ?? '');
+  }
+
+  /// 删除持久和会话 Cookie（JS 的 `cookie.removeCookie`、`source.removeLoginHeader`）。
+  void removeCookie(String url) {
+    final domain = cookieDomain(url);
+    _persistent.remove(domain);
+    _session.remove(domain);
+  }
 
   void _updateSession(String domain, String cookies) {
     final existing = _session[domain];

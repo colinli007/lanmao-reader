@@ -26194,6 +26194,14 @@ static bool has_with_scope(JSFunctionDef *s, int scope_level)
                 scope_idx = vd->scope_next;
             }
         }
+        /* quickjs_ng_ffi patch: a direct eval inside `with` sees the
+           enclosing with objects as closure variables of the eval function */
+        if (s->is_eval) {
+            for (int i = 0; i < s->closure_var_count; i++) {
+                if (s->closure_var[i].var_name == JS_ATOM__with_)
+                    return true;
+            }
+        }
         /* check parent scopes */
         scope_level = s->parent_scope_level;
         s = s->parent;

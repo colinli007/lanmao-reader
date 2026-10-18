@@ -17,7 +17,75 @@ struct QjsEngine {
     const int32_t *abort_flag;
     // 求值嵌套深度：宿主函数里再次求值时大于 1
     int32_t depth;
+    // 预置 JS 里的 __qjs 对象：变量层、jsLib 和隔离求值的实现
+    JSValue state;
+    // jsLib 的 realm，下标是编号减 1，释放后置 NULL
+    JSContext **libs;
+    int32_t lib_count;
+    int32_t lib_capacity;
 };
+
+// 隔离求值和 jsLib 的 JS 部分，引擎创建时执行一次。
+//
+// run 用 Function 构造，所以它的作用域链上只有全局，书源代码看不到这里的局部变量；
+// 它不声明形参，代码和变量层都从 arguments 取。直接 eval 让 var 和函数声明落在 run 这次调用里，
+// let/const 落在 eval 自己的词法环境里；with 让代码按名字读写变量层，顶层 this 是变量层。
+// 未声明的赋值会落到全局对象上：enterScope 记下求值前的全局属性名，leaveScope 把新增的移到变量层上。
+// leaveScope 由 C 在求值后单独调用，而不是写在 finally 里：中止、超时和宿主要求的不可捕获错误展开时不进 finally。
+//
+// jsLib 的 Proxy：has / get 只认 jsLib 新增的全局名（和 Object.prototype 上的名字，与没有 jsLib 时一致），
+// set 把值定义到接收者（变量层）上，所以给 jsLib 的名字赋值只遮蔽、不修改。
+static const char PRELUDE[] =
+    "(function () {\n"
+    "  'use strict';\n"
+    "  var G = globalThis, ownKeys = Reflect.ownKeys, objectProto = Object.prototype;\n"
+    "  var run = Function('with (arguments[0]) return eval(arguments[1]);');\n"
+    "  var layers = new Map(), libs = new Map(), nextLayer = 1;\n"
+    "  function own(value) { return { value: value, writable: true, enumerable: true, configurable: true }; }\n"
+    "  var state = { revive: null, replacer: null };\n"
+    "  state.newLayer = function () { var id = nextLayer++; layers.set(id, {}); return id; };\n"
+    "  state.freeLayer = function (id) { layers.delete(id); };\n"
+    "  state.addLib = function (id, lib, before, after) {\n"
+    "    var known = new Set(before), names = new Set();\n"
+    "    for (var i = 0; i < after.length; i++) if (!known.has(after[i])) names.add(after[i]);\n"
+    "    libs.set(id, new Proxy({}, {\n"
+    "      has: function (target, key) { return names.has(key) || key in objectProto; },\n"
+    "      get: function (target, key, receiver) {\n"
+    "        return names.has(key) ? lib[key] : Reflect.get(objectProto, key, receiver);\n"
+    "      },\n"
+    "      set: function (target, key, value, receiver) { return Reflect.defineProperty(receiver, key, own(value)); }\n"
+    "    }));\n"
+    "  };\n"
+    "  state.freeLib = function (id) { libs.delete(id); };\n"
+    "  state.enterScope = function (layerId, libId, vars) {\n"
+    "    var layer = layers.get(layerId);\n"
+    "    if (layer === undefined) throw new Error('变量层不存在：' + layerId);\n"
+    "    var proto = objectProto;\n"
+    "    if (libId !== 0) {\n"
+    "      proto = libs.get(libId);\n"
+    "      if (proto === undefined) throw new Error('jsLib 不存在：' + libId);\n"
+    "    }\n"
+    "    if (Reflect.getPrototypeOf(layer) !== proto) Reflect.setPrototypeOf(layer, proto);\n"
+    "    if (vars != null) {\n"
+    "      if (typeof state.revive === 'function') vars = state.revive(vars);\n"
+    "      var names = Object.keys(vars);\n"
+    "      for (var i = 0; i < names.length; i++) Reflect.defineProperty(layer, names[i], own(vars[names[i]]));\n"
+    "    }\n"
+    "    return { layer: layer, before: new Set(ownKeys(G)) };\n"
+    "  };\n"
+    "  state.evalInScope = function (scope, code) { return run.call(scope.layer, scope.layer, code); };\n"
+    "  state.leaveScope = function (scope) {\n"
+    "    var after = ownKeys(G);\n"
+    "    for (var j = 0; j < after.length; j++) {\n"
+    "      var key = after[j];\n"
+    "      if (scope.before.has(key)) continue;\n"
+    "      var desc = Reflect.getOwnPropertyDescriptor(G, key);\n"
+    "      if (Reflect.deleteProperty(G, key)) Reflect.defineProperty(scope.layer, key, desc);\n"
+    "    }\n"
+    "  };\n"
+    "  Object.defineProperty(G, '__qjs', { value: state });\n"
+    "  return state;\n"
+    "})()";
 
 static int64_t now_ms(void) {
     struct timespec ts;
@@ -62,8 +130,10 @@ static char *dup_literal(const char *src) {
 }
 
 // 取出当前异常并格式化为「消息 + 调用栈」，同时清掉异常状态。
-static char *take_exception_message(JSContext *ctx) {
+// is_error 不为 NULL 时写入 1，不可捕获的异常（中止、宿主函数要求的）写入 2。
+static char *take_exception(JSContext *ctx, int32_t *is_error) {
     JSValue exception = JS_GetException(ctx);
+    if (is_error != NULL) *is_error = JS_IsUncatchableError(exception) ? 2 : 1;
     size_t len = 0;
     const char *message = JS_ToCStringLen(ctx, &len, exception);
     char *out = NULL;
@@ -92,13 +162,14 @@ static char *take_exception_message(JSContext *ctx) {
 }
 
 // 把 JS 值序列化成 JSON；undefined、函数等不可序列化的值返回 NULL。
+// __qjs.replacer 是函数时作为 JSON.stringify 的 replacer（预置 JS 用它表示 NaN 这类 JSON 没有的值）。
 static char *to_json(JSContext *ctx, JSValueConst value, int32_t *is_error) {
     if (JS_IsUndefined(value)) return NULL;
-    JSValue json = JS_JSONStringify(ctx, value, JS_UNDEFINED, JS_UNDEFINED);
-    if (JS_IsException(json)) {
-        *is_error = 1;
-        return take_exception_message(ctx);
-    }
+    QjsEngine *engine = JS_GetContextOpaque(ctx);
+    JSValue replacer = JS_GetPropertyStr(ctx, engine->state, "replacer");
+    JSValue json = JS_JSONStringify(ctx, value, JS_IsFunction(ctx, replacer) ? replacer : JS_UNDEFINED, JS_UNDEFINED);
+    JS_FreeValue(ctx, replacer);
+    if (JS_IsException(json)) return take_exception(ctx, is_error);
     char *out = NULL;
     if (!JS_IsUndefined(json)) {
         size_t len = 0;
@@ -143,6 +214,12 @@ static JSValue host_function(JSContext *ctx, JSValueConst this_val, int argc, JS
     if (is_error) {
         JSValue error = JS_ThrowPlainError(ctx, "%s", result != NULL ? result : "host error");
         free(result);
+        if (is_error == 2) {
+            // 取出刚抛出的错误对象，标记为不可捕获后重新抛出
+            JSValue exception = JS_GetException(ctx);
+            JS_SetUncatchableError(ctx, exception);
+            return JS_Throw(ctx, exception);
+        }
         return error;
     }
     if (result == NULL) return JS_UNDEFINED;
@@ -167,14 +244,27 @@ QjsEngine *qjs_new(QjsHostCallback callback, int64_t memory_limit_bytes) {
         return NULL;
     }
     engine->callback = callback;
-    if (memory_limit_bytes > 0) JS_SetMemoryLimit(engine->rt, (size_t)memory_limit_bytes);
     JS_SetContextOpaque(engine->ctx, engine);
     JS_SetInterruptHandler(engine->rt, interrupt_handler, engine);
+    engine->state = JS_Eval(engine->ctx, PRELUDE, strlen(PRELUDE), "<prelude>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(engine->state)) {
+        JS_FreeContext(engine->ctx);
+        JS_FreeRuntime(engine->rt);
+        free(engine);
+        return NULL;
+    }
+    // 预置 JS 执行完再设内存上限，上限很小时也不会在这里失败
+    if (memory_limit_bytes > 0) JS_SetMemoryLimit(engine->rt, (size_t)memory_limit_bytes);
     return engine;
 }
 
 void qjs_free(QjsEngine *engine) {
     if (engine == NULL) return;
+    for (int32_t i = 0; i < engine->lib_count; i++) {
+        if (engine->libs[i] != NULL) JS_FreeContext(engine->libs[i]);
+    }
+    free(engine->libs);
+    JS_FreeValue(engine->ctx, engine->state);
     JS_FreeContext(engine->ctx);
     JS_FreeRuntime(engine->rt);
     free(engine);
@@ -210,18 +300,15 @@ char *qjs_set_global(QjsEngine *engine, const char *name, const char *json) {
     sync_stack_top(engine);
     JSContext *ctx = engine->ctx;
     JSValue value = JS_ParseJSON(ctx, json, strlen(json), "<global>");
-    if (JS_IsException(value)) return take_exception_message(ctx);
+    if (JS_IsException(value)) return take_exception(ctx, NULL);
     JSValue global = JS_GetGlobalObject(ctx);
     int status = JS_SetPropertyStr(ctx, global, name, value);
     JS_FreeValue(ctx, global);
-    return status < 0 ? take_exception_message(ctx) : NULL;
+    return status < 0 ? take_exception(ctx, NULL) : NULL;
 }
 
-char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_t timeout_ms,
-               const int32_t *abort_flag, int32_t *is_error) {
-    JSContext *ctx = engine->ctx;
-    *is_error = 0;
-
+// 从 Dart 进入求值：最外层设置截止时间和中止标志，嵌套调用沿用外层的。返回是否最外层。
+static bool enter_eval(QjsEngine *engine, int32_t timeout_ms, const int32_t *abort_flag) {
     bool is_outermost = engine->depth == 0;
     sync_stack_top(engine);
     if (is_outermost) {
@@ -229,26 +316,189 @@ char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_
         engine->abort_flag = abort_flag;
     }
     engine->depth++;
+    return is_outermost;
+}
 
-    // 中断回调只在循环回边和函数调用处轮询，没有循环的代码可能一次都不检查，所以先查一次
-    JSValue value = is_outermost && is_aborted(engine)
-                        ? throw_interrupted(ctx)
-                        : JS_Eval(ctx, code, strlen(code), filename, JS_EVAL_TYPE_GLOBAL);
-    char *out;
-    if (JS_IsException(value)) {
-        *is_error = 1;
-        out = take_exception_message(ctx);
-    } else {
-        out = to_json(ctx, value, is_error);
-    }
-    JS_FreeValue(ctx, value);
-
+static void leave_eval(QjsEngine *engine, bool is_outermost) {
     engine->depth--;
     if (is_outermost) {
         engine->deadline_ms = 0;
         engine->abort_flag = NULL;
     }
+}
+
+// 中断回调只在循环回边和函数调用处轮询，没有循环的代码可能一次都不检查，所以最外层先查一次
+static bool aborted_before_start(QjsEngine *engine, bool is_outermost) {
+    return is_outermost && is_aborted(engine);
+}
+
+// 把求值结果（或异常）转成返回给 Dart 的字符串，并释放 value
+static char *finish_eval(JSContext *ctx, JSValue value, int32_t *is_error) {
+    char *out = JS_IsException(value) ? take_exception(ctx, is_error) : to_json(ctx, value, is_error);
+    JS_FreeValue(ctx, value);
     return out;
+}
+
+char *qjs_eval(QjsEngine *engine, const char *code, const char *filename, int32_t timeout_ms,
+               const int32_t *abort_flag, int32_t *is_error) {
+    JSContext *ctx = engine->ctx;
+    *is_error = 0;
+    bool is_outermost = enter_eval(engine, timeout_ms, abort_flag);
+    JSValue value = aborted_before_start(engine, is_outermost)
+                        ? throw_interrupted(ctx)
+                        : JS_Eval(ctx, code, strlen(code), filename, JS_EVAL_TYPE_GLOBAL);
+    char *out = finish_eval(ctx, value, is_error);
+    leave_eval(engine, is_outermost);
+    return out;
+}
+
+// 调用 __qjs 上的方法，argv 由调用方持有
+static JSValue call_state(QjsEngine *engine, const char *method, int argc, JSValueConst *argv) {
+    JSValue fn = JS_GetPropertyStr(engine->ctx, engine->state, method);
+    JSValue result = JS_Call(engine->ctx, fn, engine->state, argc, argv);
+    JS_FreeValue(engine->ctx, fn);
+    return result;
+}
+
+int32_t qjs_layer_new(QjsEngine *engine) {
+    sync_stack_top(engine);
+    JSValue id = call_state(engine, "newLayer", 0, NULL);
+    int32_t out = 0;
+    if (JS_IsException(id)) {
+        free(take_exception(engine->ctx, NULL));
+    } else {
+        JS_ToInt32(engine->ctx, &out, id);
+    }
+    JS_FreeValue(engine->ctx, id);
+    return out;
+}
+
+void qjs_layer_free(QjsEngine *engine, int32_t layer_id) {
+    sync_stack_top(engine);
+    JSValue arg = JS_NewInt32(engine->ctx, layer_id);
+    JS_FreeValue(engine->ctx, call_state(engine, "freeLayer", 1, &arg));
+}
+
+// 把求值期间新增的全局属性移到变量层，求值以异常结束时也要做。
+// 中止或超时后中断回调会立刻打断任何 JS，所以先取出未处理的异常、暂停截止时间和中止标志，移完恢复并重新抛出
+static void leave_scope(QjsEngine *engine, JSValueConst scope) {
+    JSContext *ctx = engine->ctx;
+    JSValue exception = JS_GetException(ctx);
+    int64_t deadline_ms = engine->deadline_ms;
+    const int32_t *abort_flag = engine->abort_flag;
+    engine->deadline_ms = 0;
+    engine->abort_flag = NULL;
+    JSValue result = call_state(engine, "leaveScope", 1, &scope);
+    // 移动本身失败（如内存不足）时丢掉它的异常，保留求值的结果或异常
+    if (JS_IsException(result)) JS_FreeValue(ctx, JS_GetException(ctx));
+    JS_FreeValue(ctx, result);
+    engine->deadline_ms = deadline_ms;
+    engine->abort_flag = abort_flag;
+    if (!JS_IsUninitialized(exception)) JS_Throw(ctx, exception);
+}
+
+char *qjs_eval_scoped(QjsEngine *engine, int32_t layer_id, int32_t lib_id, const char *vars_json, const char *code,
+                      int32_t timeout_ms, const int32_t *abort_flag, int32_t *is_error) {
+    JSContext *ctx = engine->ctx;
+    *is_error = 0;
+    bool is_outermost = enter_eval(engine, timeout_ms, abort_flag);
+    JSValue value;
+    if (aborted_before_start(engine, is_outermost)) {
+        value = throw_interrupted(ctx);
+    } else {
+        JSValue vars = vars_json != NULL ? JS_ParseJSON(ctx, vars_json, strlen(vars_json), "<vars>") : JS_NULL;
+        JSValue scope = JS_EXCEPTION;
+        if (!JS_IsException(vars)) {
+            JSValue argv[3] = {JS_NewInt32(ctx, layer_id), JS_NewInt32(ctx, lib_id), vars};
+            scope = call_state(engine, "enterScope", 3, argv);
+            JS_FreeValue(ctx, vars);
+        }
+        if (JS_IsException(scope)) {
+            value = JS_EXCEPTION;
+        } else {
+            JSValue argv[2] = {scope, JS_NewString(ctx, code)};
+            value = call_state(engine, "evalInScope", 2, argv);
+            JS_FreeValue(ctx, argv[1]);
+            leave_scope(engine, scope);
+            JS_FreeValue(ctx, scope);
+        }
+    }
+    char *out = finish_eval(ctx, value, is_error);
+    leave_eval(engine, is_outermost);
+    return out;
+}
+
+// 在 jsLib 的 realm 里取全局对象的自有属性名
+static JSValue global_names(JSContext *ctx) {
+    static const char code[] = "Object.getOwnPropertyNames(globalThis)";
+    return JS_Eval(ctx, code, sizeof(code) - 1, "<lib>", JS_EVAL_TYPE_GLOBAL);
+}
+
+static int32_t add_lib_slot(QjsEngine *engine, JSContext *lib) {
+    if (engine->lib_count == engine->lib_capacity) {
+        int32_t capacity = engine->lib_capacity == 0 ? 8 : engine->lib_capacity * 2;
+        JSContext **libs = realloc(engine->libs, sizeof(JSContext *) * (size_t)capacity);
+        if (libs == NULL) return 0;
+        engine->libs = libs;
+        engine->lib_capacity = capacity;
+    }
+    engine->libs[engine->lib_count++] = lib;
+    return engine->lib_count;
+}
+
+int32_t qjs_lib_new(QjsEngine *engine, const char *code, const char *filename, int32_t timeout_ms,
+                    const int32_t *abort_flag, char **error, int32_t *is_error) {
+    *error = NULL;
+    *is_error = 0;
+    bool is_outermost = enter_eval(engine, timeout_ms, abort_flag);
+    int32_t lib_id = 0;
+
+    JSContext *lib = JS_NewContext(engine->rt);
+    if (lib == NULL) {
+        *is_error = 1;
+        *error = dup_literal("创建 jsLib 的 JSContext 失败");
+    } else if (aborted_before_start(engine, is_outermost)) {
+        JS_FreeValue(lib, throw_interrupted(lib));
+        *error = take_exception(lib, is_error);
+        JS_FreeContext(lib);
+    } else {
+        JS_SetContextOpaque(lib, engine);
+        JSValue global = JS_GetGlobalObject(lib);
+        JSValue before = global_names(lib);
+        JSValue result = JS_IsException(before) ? JS_EXCEPTION : JS_Eval(lib, code, strlen(code), filename,
+                                                                           JS_EVAL_TYPE_GLOBAL);
+        JSValue after = JS_IsException(result) ? JS_EXCEPTION : global_names(lib);
+        if (JS_IsException(after) || JS_PreventExtensions(lib, global) < 0) {
+            // 同一个运行时里的异常只有一份，用哪个 JSContext 取都一样
+            *error = take_exception(lib, is_error);
+        } else {
+            lib_id = add_lib_slot(engine, lib);
+            JSValue argv[4] = {JS_NewInt32(engine->ctx, lib_id), global, before, after};
+            JSValue added = lib_id == 0 ? JS_ThrowOutOfMemory(engine->ctx) : call_state(engine, "addLib", 4, argv);
+            if (JS_IsException(added)) {
+                *error = take_exception(engine->ctx, is_error);
+                if (lib_id != 0) engine->libs[lib_id - 1] = NULL;
+                lib_id = 0;
+            }
+            JS_FreeValue(engine->ctx, added);
+        }
+        JS_FreeValue(lib, result);
+        JS_FreeValue(lib, before);
+        JS_FreeValue(lib, after);
+        JS_FreeValue(lib, global);
+        if (lib_id == 0) JS_FreeContext(lib);
+    }
+    leave_eval(engine, is_outermost);
+    return lib_id;
+}
+
+void qjs_lib_free(QjsEngine *engine, int32_t lib_id) {
+    if (lib_id <= 0 || lib_id > engine->lib_count || engine->libs[lib_id - 1] == NULL) return;
+    sync_stack_top(engine);
+    JSValue arg = JS_NewInt32(engine->ctx, lib_id);
+    JS_FreeValue(engine->ctx, call_state(engine, "freeLib", 1, &arg));
+    JS_FreeContext(engine->libs[lib_id - 1]);
+    engine->libs[lib_id - 1] = NULL;
 }
 
 void qjs_free_string(char *str) {

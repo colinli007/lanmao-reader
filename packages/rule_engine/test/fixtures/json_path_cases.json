@@ -447,6 +447,37 @@
    "definite": false,
    "string": "",
    "list": []
+  },
+  {
+   "note": "点后面紧跟方括号",
+   "doc": "[{\"t\":\"a\"},{\"t\":\"b\"}]",
+   "path": "$.[*]",
+   "definite": false,
+   "string": "{t=a}\n{t=b}",
+   "list": [
+    "{t=a}",
+    "{t=b}"
+   ]
+  },
+  {
+   "note": "点后面紧跟负下标",
+   "doc": "[{\"t\":\"a\"},{\"t\":\"b\"}]",
+   "path": "$.[-1].t",
+   "definite": true,
+   "string": "b",
+   "list": [
+    "b"
+   ]
+  },
+  {
+   "note": "属性后面点加方括号",
+   "doc": "{\n  \"code\": 0,\n  \"data\": {\n    \"total\": 3,\n    \"book-name\": \"连字符\",\n    \"list\": [\n      {\"id\": 1, \"name\": \"三体\", \"author\": \"刘慈欣\", \"tags\": [\"科幻\", \"完本\"], \"score\": 9.5, \"format\": 3, \"intro\": null},\n      {\"id\": 2, \"name\": \"球状闪电\", \"author\": \"刘慈欣\", \"tags\": [], \"score\": 8.0, \"format\": 1},\n      {\"id\": 3, \"name\": \"流浪地球\", \"tags\": [\"短篇\"], \"format\": 3, \"extra\": {\"a\": 1, \"b\": \"x\"}}\n    ],\n    \"search\": [{\"title\": \"深层\"}],\n    \"nested\": {\"search\": [{\"title\": \"更深\"}]}\n  },\n  \"empty\": [],\n  \"flag\": true,\n  \"big\": 1e20,\n  \"dot\": 1.0\n}",
+   "path": "$.data.['list'][0].name",
+   "definite": true,
+   "string": "三体",
+   "list": [
+    "三体"
+   ]
   }
  ]
 }

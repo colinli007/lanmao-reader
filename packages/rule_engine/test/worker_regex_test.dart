@@ -1,7 +1,10 @@
 import 'package:blocking_bridge/blocking_bridge.dart';
+import 'package:rule_engine/src/core/source_task.dart';
 import 'package:rule_engine/src/rule/analyze_rule.dart';
 import 'package:rule_engine/src/worker/worker_environment.dart';
 import 'package:test/test.dart';
+
+import 'support/fake_environment.dart';
 
 // 「书源正则可以被中止」：在 worker 池里执行灾难性回溯的净化规则，取消后 worker 不被放弃
 void main() {
@@ -31,4 +34,4 @@ void main() {
 }
 
 String Function() _purify(String content, String rule) =>
-    () => (AnalyzeRule(const WorkerRuleEnvironment())..setContent(content)).getString(rule);
+    () => (AnalyzeRule(SourceTask(const WorkerRuleEnvironment(), testSource()))..setContent(content)).getString(rule);

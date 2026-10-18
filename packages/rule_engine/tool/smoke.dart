@@ -17,6 +17,7 @@ import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
 import 'package:rule_engine/src/core/http_frame.dart';
 import 'package:rule_engine/src/request/response_decoder.dart';
+import 'package:rule_engine/src/worker/worker_environment.dart';
 
 Future<void> main(List<String> args) async {
   final options = _parse(args);
@@ -39,7 +40,12 @@ Future<void> main(List<String> args) async {
   final concurrency = int.parse(options['concurrency'] ?? '4');
   final recordDir = options['record'];
 
-  final host = RuleHost();
+  // 书源 JS 的日志按书源地址收集，每个书源最多留 20 条，写进结果便于排查
+  final logs = <String, List<String>>{};
+  final host = RuleHost(onLog: (log) {
+    final list = logs.putIfAbsent(log.sourceUrl, () => []);
+    if (list.length < 20) list.add('${log.field ?? ''} ${log.message}'.trim());
+  });
   final recorder = _Recorder(host, recording: recordDir != null);
   final pool = WorkerPool(recorder.handle, size: concurrency, defaultTimeout: const Duration(seconds: 90));
   stderr.writeln('测试 ${sources.length} 个书源，搜索词「$key」');
@@ -50,6 +56,7 @@ Future<void> main(List<String> args) async {
     while (next < sources.length) {
       final source = sources[next++];
       final report = await _run(pool, source, key);
+      report.logs.addAll(logs.remove(source.bookSourceUrl) ?? const []);
       reports.add(report);
       stderr.writeln('${reports.length}/${sources.length} ${report.line}');
       if (recordDir != null) {
@@ -117,6 +124,9 @@ final class _Report {
   final List<String> passed = [];
   final Map<String, Object?> result = {};
 
+  /// 书源 JS 写的日志（java.log、toast、请求头 JS 的错误）。
+  final List<String> logs = [];
+
   bool get completed => passed.length == _stages.length;
 
   String get line {
@@ -131,6 +141,7 @@ final class _Report {
     'passed': passed,
     'failures': failures,
     'result': result,
+    if (logs.isNotEmpty) 'logs': logs,
   };
 }
 
@@ -164,8 +175,9 @@ Future<_Report> _run(WorkerPool pool, BookSource source, String key) async {
     ..['bookUrl'] = book.bookUrl
     ..['tocUrl'] = book.tocUrl;
 
-  final chapters = await stage('目录', () => pool.run(chapterListTask(source, book)));
-  if (chapters == null) return report;
+  final toc = await stage('目录', () => pool.run(chapterListTask(source, book)));
+  if (toc == null) return report;
+  final chapters = toc.chapters;
   report.result
     ..['chapterCount'] = chapters.length
     ..['firstChapter'] = chapters.first.title
@@ -174,7 +186,7 @@ Future<_Report> _run(WorkerPool pool, BookSource source, String key) async {
   final first = chapters.firstWhere((c) => !c.isVolume, orElse: () => chapters.first);
   final index = chapters.indexOf(first);
   final nextUrl = index + 1 < chapters.length ? chapterAbsoluteUrl(chapters[index + 1]) : null;
-  final content = await stage('正文', () => pool.run(contentTask(source, book, first, nextChapterUrl: nextUrl)));
+  final content = await stage('正文', () => pool.run(contentTask(source, toc.book, first, nextChapterUrl: nextUrl)));
   if (content == null) return report;
   report.result
     ..['chapter'] = first.title
@@ -234,8 +246,13 @@ String _category(String reason) {
     if (reason.contains('Handshake') || reason.contains('TLS')) return 'TLS 握手失败';
     return '网络错误';
   }
-  if (reason.startsWith('需要 JS 引擎')) return '需要 JS 引擎';
   if (reason.startsWith('需要 WebView')) return '需要 WebView';
+  if (reason.startsWith('不支持的 JS 用法')) return '不支持的 JS 用法';
+  // 不支持的宿主 API 按 API 名归类，JS 错误按错误类型归类
+  final api = RegExp(r'^不支持的宿主 API：(\S+?)（').firstMatch(reason);
+  if (api != null) return '不支持的宿主 API：${api.group(1)}';
+  final jsError = RegExp(r'^JS 错误：(\w*Error)').firstMatch(reason);
+  if (jsError != null) return 'JS 错误：${jsError.group(1)}';
   return reason.replaceAll(RegExp(r'（.*）$'), '');
 }
 
@@ -249,7 +266,8 @@ final class _Recorder {
 
   Future<Object?> handle(HostCall call) async {
     final reply = await _host.handle(call);
-    if (!recording) return reply;
+    // 只录网络请求，书源级状态和日志不录（回放环境自己有一份内存状态）
+    if (!recording || (call.op != RuleHostOps.http && call.op != RuleHostOps.httpBatch)) return reply;
     final requests = switch (call.payload) {
       final List<Object?> list => [for (final json in list) HttpRequest.fromJson((json as Map).cast())],
       final Map<Object?, Object?> json => [HttpRequest.fromJson(json.cast())],
@@ -267,6 +285,7 @@ final class _Recorder {
         'finalUrl': result.url,
         'redirected': result.redirected,
         'headers': result.headers,
+        if (result.setCookies.isNotEmpty) 'setCookies': result.setCookies,
         'response': base64Encode(result.body),
         // 方便人工核对：解码后的前 200 个字符
         'preview': _preview(decodeResponseBody(result)),

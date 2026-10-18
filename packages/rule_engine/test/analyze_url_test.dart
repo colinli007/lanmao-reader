@@ -1,16 +1,25 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/src/core/source_task.dart';
+import 'package:rule_engine/src/js/codec.dart';
+import 'package:rule_engine/src/js/crypto.dart';
 import 'package:rule_engine/src/request/analyze_url.dart';
 import 'package:test/test.dart';
 
+import 'support/fake_environment.dart';
+
 // source-request 规格里请求构造部分的场景，行为对照 MD3 的 AnalyzeUrl
+String md5Hex(String text) => hexEncode(digest('MD5', utf8.encode(text)));
+
 void main() {
-  BookSource source([Map<String, Object?> extra = const {}]) =>
-      loadBookSources(jsonEncode({'bookSourceUrl': 'https://a.com', 'bookSourceName': 'A', ...extra})).sources.single;
+  late FakeEnvironment env;
+  setUp(() => env = FakeEnvironment());
+  tearDown(() => env.dispose());
 
   SourceRequest build(String url, {String? key, int? page, Map<String, Object?> extra = const {}}) =>
-      buildSourceRequest(url, key: key, page: page, baseUrl: 'https://a.com', source: source(extra));
+      buildSourceRequest(SourceTask(env, testSource(extra)), url, key: key, page: page, baseUrl: 'https://a.com');
 
   group('URL 模板', () {
     test('搜索地址', () {
@@ -31,14 +40,24 @@ void main() {
     });
 
     test('模板里有表达式', () {
-      expect(
-        () => build('/s?p={{page*10}}', page: 1),
-        throwsA(isA<NeedsJsException>().having((e) => e.snippet, 'snippet', '{{page*10}}')),
-      );
+      expect(build('/s?p={{(page-1)*10}}', page: 3).url, 'https://a.com/s?p=20');
     });
 
-    test('地址里有 @js:', () {
-      expect(() => build('/s@js:result+1'), throwsA(isA<NeedsJsException>()));
+    test('地址整体由 JS 生成', () {
+      final request = build(r'''@js:'/s/' + encodeURIComponent(key) + ',{"method":"POST","body":"k=' + key + '"}' ''', key: 'a');
+      expect(request.http.method, 'POST');
+      expect(request.url, 'https://a.com/s/a');
+      expect(request.http.body, 'k=a');
+    });
+
+    test('JS 段之间的 @result 和 null', () {
+      expect(build('<js>"/a"</js>@result/b<js>result + "/c"</js>').url, 'https://a.com/a/b/c');
+      expect(build('@js:null').url, 'https://a.com/null');
+    });
+
+    test('{{}} 到第一个 }} 为止，null 替换成空串，整数不带小数点', () {
+      expect(build('/s?a={{null}}&b={{1+1}}&c={{1/2}}').url, 'https://a.com/s?a=&b=2&c=0.5');
+      expect(build("/s?q={{ JSON.stringify({a:1}).length }}").url, 'https://a.com/s?q=7');
     });
 
     test('baseUrl 和没有搜索词时的 key', () {
@@ -62,9 +81,21 @@ void main() {
       expect(build('/s,{"webView": "false"}').http.method, 'GET');
     });
 
-    test('js 和 bodyJs 选项需要 JS', () {
-      expect(() => build('/s,{"js": "result"}'), throwsA(isA<NeedsJsException>()));
-      expect(() => build('/s,{"bodyJs": "result"}'), throwsA(isA<NeedsJsException>()));
+    test('js 选项改请求头和地址', () {
+      final request = build('''/s,{"js":"java.headerMap.put('X-Sign', java.md5Encode(result)); result + '?x=1'"}''');
+      expect(request.http.headers['X-Sign'], md5Hex('https://a.com/s'));
+      expect(request.url, 'https://a.com/s?x=1');
+      // 返回 null 时地址不变
+      expect(build('/s,{"js":"null"}').url, 'https://a.com/s');
+    });
+
+    test('bodyJs 选项留到拿到响应之后执行', () {
+      final request = build('/s,{"bodyJs":"java.base64Decode(result)"}');
+      expect(request.bodyJs, 'java.base64Decode(result)');
+      final response = request.response(HttpResult(statusCode: 200, url: 'https://a.com/s', body: Uint8List.fromList(utf8.encode('5LiJ5L2T'))));
+      expect(response.body, '三体');
+      final nullBody = build('/s,{"bodyJs":"null"}');
+      expect(nullBody.response(HttpResult(statusCode: 200, url: 'https://a.com/s', body: Uint8List(0))).body, 'null');
     });
 
     test('对象形式的 body 带缩进发送', () {
@@ -152,8 +183,17 @@ void main() {
       expect(build('/s', extra: {'header': '{"User-Agent":"null"}'}).http.headers.containsKey('User-Agent'), isFalse);
     });
 
-    test('JS 请求头', () {
-      expect(() => build('/s', extra: {'header': '@js:({})'}), throwsA(isA<NeedsJsException>()));
+    test('请求头由 JS 生成', () {
+      final headers = build('/s', extra: {'header': "@js:JSON.stringify({'X-Src': source.getKey()})"}).http.headers;
+      expect(headers['X-Src'], 'https://a.com');
+      expect(build('/s', extra: {'header': "<JS>JSON.stringify({'X-B': baseUrl})</js>"}).http.headers['X-B'], 'https://a.com');
+    });
+
+    test('请求头 JS 出错时只记日志', () {
+      final headers = build('/s', extra: {'header': '@js:throw 1'}).http.headers;
+      expect(headers, {'User-Agent': defaultUserAgent});
+      expect(env.logs.single.message, contains('执行请求头规则出错'));
+      expect(env.logs.single.sourceUrl, 'https://a.com');
     });
 
     test('书源的 Cookie 设置和限速带到请求上', () {

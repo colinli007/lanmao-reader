@@ -3,8 +3,12 @@
         android:label="spike"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- spike 是集成测试的宿主，flutter drive 可能在息屏、锁屏时启动它：不在前台的 App 会被系统冻结、限制外网，
+             所以启动时点亮屏幕、显示在锁屏之上（Android 8.1 起），运行期间不息屏见 MainActivity -->
         <activity
             android:name=".MainActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

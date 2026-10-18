@@ -4,10 +4,13 @@
 /// 在应用里：主 isolate 用 [RuleHost] 处理网络，worker 里用任务工厂执行链路：
 ///
 /// ```dart
-/// final host = RuleHost();
+/// final host = RuleHost(onLog: (log) => print(log)); // 书源 JS 的调试日志
 /// final pool = WorkerPool(host.handle, size: 4);
 /// final books = await pool.run(searchTask(source, '三体'));
 /// ```
+///
+/// 书源里的 JS 在 worker 内的 quickjs-ng 上执行；缓存、书源变量、登录头和 Cookie 放在主 isolate 的 [RuleHost] 上，
+/// 由 [SourceStore] 保存（默认只在内存里）。
 library;
 
 export 'src/chain/chains.dart' show chapterAbsoluteUrl, getBookInfo, getChapterList, getContent, searchBooks;
@@ -15,6 +18,7 @@ export 'src/chain/models.dart';
 export 'src/core/environment.dart';
 export 'src/core/errors.dart';
 export 'src/host/rule_host.dart';
+export 'src/host/source_store.dart' show MemorySourceStore, SourceStore, runStoreRequest;
 export 'src/source/book_source.dart';
 export 'src/worker/tasks.dart';
 export 'src/worker/worker_environment.dart' show WorkerRuleEnvironment;

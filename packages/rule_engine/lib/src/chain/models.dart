@@ -69,6 +69,18 @@ final class Book implements BookData {
   /// 目录就在详情页时保存详情页，目录链路不再请求。
   String? tocHtml;
 
+  /// 自定义简介（JS 的 `book.upCustomIntro()` 把当前简介存到这里）。
+  String? customIntro;
+
+  /// 目录倒序（JS 的 `book.setReverseToc`），目录链路按它决定最终顺序。
+  bool reverseToc = false;
+
+  /// 章节数、当前阅读的章节序号和章节名：目录链路结束时更新章节数和当前章节名（MD3 的 BookChapterList），
+  /// 书源 JS 会读它们（如按章节序号算正文地址）。
+  int totalChapterNum = 0;
+  int durChapterIndex = 0;
+  String? durChapterTitle;
+
   @override
   final Map<String, String> variables;
 

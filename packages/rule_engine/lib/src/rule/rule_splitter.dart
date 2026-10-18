@@ -49,6 +49,8 @@ final class RuleSplitter {
 
   bool _consumeTo(String seq) {
     _start = _pos;
+    // Java 的 indexOf 在起点超出末尾时返回 -1，Dart 会抛 RangeError
+    if (_pos > _queue.length) return false;
     final offset = _queue.indexOf(seq, _pos);
     if (offset == -1) return false;
     _pos = offset;

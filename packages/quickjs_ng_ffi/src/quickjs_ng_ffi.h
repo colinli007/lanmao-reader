@@ -22,7 +22,8 @@ typedef struct QjsEngine QjsEngine;
 // 宿主回调。
 // fn_id：注册时给的编号；args_json：实参数组的 JSON。
 // 返回值：用 malloc 分配的 JSON 字符串（C 侧负责 free），NULL 表示 undefined。
-// 把 *is_error 置 1 表示抛出异常，此时返回值是错误消息。
+// 把 *is_error 置 1 表示抛出异常，此时返回值是错误消息；置 2 表示抛出不可捕获的异常，
+// 它和中止一样穿过 JS 的 try/catch，一直到最外层求值。
 typedef char *(*QjsHostCallback)(int32_t fn_id, const char *args_json, int32_t *is_error);
 
 // memory_limit_bytes <= 0 表示不限制。
@@ -37,8 +38,9 @@ FFI_PLUGIN_EXPORT int32_t qjs_register(QjsEngine *engine, const char *path, int3
 // 成功返回 NULL，失败返回错误消息（用 qjs_free_string 释放）。
 FFI_PLUGIN_EXPORT char *qjs_set_global(QjsEngine *engine, const char *name, const char *json);
 
-// 求值。返回结果的 JSON（undefined 或不可序列化的值返回 NULL）。
-// 出错时 *is_error 置 1，返回错误消息。返回的字符串用 qjs_free_string 释放。
+// 求值。返回结果的 JSON（undefined 或不可序列化的值返回 NULL）。全局变量 __qjs 上设置了 replacer 函数时，
+// 序列化结果和宿主函数的实参都用它作为 JSON.stringify 的 replacer。
+// 出错时 *is_error 置 1（不可捕获的异常，包括中止，置 2），返回错误消息。返回的字符串用 qjs_free_string 释放。
 // timeout_ms <= 0 表示不限时。abort_flag 可为 NULL；指向的值被其它线程置为非 0 时中止求值，
 // 宿主函数返回时也会检查它，所以中止能穿过宿主函数边界，JS 的 try/catch 拦不住。
 // 嵌套调用沿用最外层的截止时间和中止标志。
@@ -46,6 +48,36 @@ FFI_PLUGIN_EXPORT char *qjs_eval(QjsEngine *engine, const char *code, const char
                                  int32_t timeout_ms, const int32_t *abort_flag, int32_t *is_error);
 
 FFI_PLUGIN_EXPORT void qjs_free_string(char *str);
+
+// 隔离作用域求值。
+//
+// 变量层是 JS 里的一个普通对象，代码在非严格模式下以 `with (变量层) { eval(代码) }` 执行（直接 eval），
+// 顶层 this 是变量层：var、函数声明、let/const 留在这次调用里，未声明的赋值在求值结束后（包括出错、超时和中止）从全局对象移到变量层上。
+// 新建的变量层用完就释放，等于什么都不泄漏；多次求值用同一个变量层时，层上的属性在它们之间保留。
+//
+// 创建变量层，返回编号（大于 0）。
+FFI_PLUGIN_EXPORT int32_t qjs_layer_new(QjsEngine *engine);
+
+FFI_PLUGIN_EXPORT void qjs_layer_free(QjsEngine *engine, int32_t layer_id);
+
+// 在变量层 layer_id 上求值。vars_json 是对象的 JSON（可为 NULL），求值前逐个写到变量层上；
+// 全局变量 __qjs 上设置了 revive 函数时，先用它转换这个对象。
+// lib_id 不为 0 时，jsLib 的顶层名字对代码可见（见 qjs_lib_new）。
+// 返回值、错误、超时和中止的约定与 qjs_eval 相同。
+FFI_PLUGIN_EXPORT char *qjs_eval_scoped(QjsEngine *engine, int32_t layer_id, int32_t lib_id, const char *vars_json,
+                                        const char *code, int32_t timeout_ms, const int32_t *abort_flag,
+                                        int32_t *is_error);
+
+// 在同一个运行时里新建一个 JSContext（独立的 realm），把 code 当作全局脚本执行一次，
+// 然后禁止扩展它的全局对象。脚本新增的全局名字经过一个只读的 Proxy 挂到变量层的原型上：
+// 读到的是 jsLib 的当前值，赋值只在本次的变量层上新建同名属性（遮蔽，不修改 jsLib）。
+// 成功返回编号（大于 0）；失败返回 0，*error 写入错误消息（用 qjs_free_string 释放），
+// *is_error 的取值与 qjs_eval 相同。超时和中止的约定与 qjs_eval 相同。
+FFI_PLUGIN_EXPORT int32_t qjs_lib_new(QjsEngine *engine, const char *code, const char *filename, int32_t timeout_ms,
+                                      const int32_t *abort_flag, char **error, int32_t *is_error);
+
+// 释放 jsLib。之后用这个编号求值以错误结束。
+FFI_PLUGIN_EXPORT void qjs_lib_free(QjsEngine *engine, int32_t lib_id);
 
 // 正则：直接调用 libregexp，和 JS 求值无关，但内存分配和中止检查用同一个引擎。
 // 编译 UTF-8 的 pattern，flags 是 libregexp.h 里 LRE_FLAG_* 的组合（不含 g、y）。

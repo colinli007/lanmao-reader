@@ -11,6 +11,7 @@ import '../net/public_suffix.dart';
 import '../worker/worker_environment.dart';
 import 'cookie_store.dart';
 import 'rate_limiter.dart';
+import 'source_store.dart';
 
 /// 主 isolate 上执行规则引擎的网络请求，交给 `WorkerPool` 作为宿主请求的处理方：
 ///
@@ -19,15 +20,24 @@ import 'rate_limiter.dart';
 /// final pool = WorkerPool(host.handle, size: 4);
 /// ```
 ///
-/// 持有全部 worker 共用的 Cookie 和限速记录。用 `dart:io` 的 `HttpClient`：手动跟随重定向（每一跳合并和保存 Cookie），
-/// 接受无效证书，连接超时 15 秒，单次请求总超时 60 秒，非 2xx 响应照常返回。
+/// 持有全部 worker 共用的 Cookie、书源级状态（[SourceStore]）和限速记录。用 `dart:io` 的 `HttpClient`：
+/// 手动跟随重定向（每一跳合并和保存 Cookie），接受无效证书，连接超时 15 秒，单次请求总超时 60 秒，非 2xx 响应照常返回。
+///
+/// 书源 JS 的调试日志在写入时交给 [onLog]，没有设置时丢弃。
 final class RuleHost {
-  RuleHost({this.connectionTimeout = const Duration(seconds: 15), this.callTimeout = const Duration(seconds: 60)});
+  RuleHost({
+    this.connectionTimeout = const Duration(seconds: 15),
+    this.callTimeout = const Duration(seconds: 60),
+    SourceStore? store,
+    this.onLog,
+  }) : store = store ?? MemorySourceStore();
 
   final Duration connectionTimeout;
   final Duration callTimeout;
   final CookieStore cookieStore = CookieStore();
   final RateLimiter rateLimiter = RateLimiter();
+  final SourceStore store;
+  final void Function(SourceLog log)? onLog;
 
   /// `WorkerPool` 的宿主请求处理方。不认识的请求抛出 [UnsupportedError]。
   Future<Object?> handle(HostCall call) async {
@@ -40,17 +50,23 @@ final class RuleHost {
           for (final json in call.payload as List) HttpRequest.fromJson((json as Map).cast<String, Object?>()),
         ];
         return encodeHttpResults(await Future.wait([for (final r in requests) execute(r, cancelled: call.cancelled)]));
+      case RuleHostOps.store:
+        return runStoreRequest(StoreRequest.fromJson((call.payload as Map).cast<String, Object?>()), store, cookieStore);
+      case RuleHostOps.log:
+        onLog?.call(SourceLog.fromJson((call.payload as Map).cast<String, Object?>()));
+        return null;
       default:
         throw UnsupportedError('未知的宿主请求：${call.op}');
     }
   }
 
   /// 执行一个请求：限速、附加书源域名的 Cookie、非 2xx 时按 `retry` 重试。[cancelled] 完成时中断请求。
+  /// 直连请求（[HttpRequest.direct]）不带 Cookie、不跟随重定向，状态码大于等于 400 时抛出 [HttpException]。
   Future<HttpResult> execute(HttpRequest request, {Future<void>? cancelled}) async {
     await rateLimiter.acquire(request.sourceUrl, request.concurrentRate);
     final headers = {...request.headers};
     // 每个请求都带上书源域名的 Cookie，请求头里已有的值优先（MD3 的 AnalyzeUrl.setCookie）
-    final stored = cookieStore.getCookie(cookieDomain(request.sourceUrl));
+    final stored = request.direct ? '' : cookieStore.getCookie(cookieDomain(request.sourceUrl));
     if (stored.isNotEmpty) {
       final merged = mergeCookies([stored, headers['Cookie']]);
       if (merged != null) headers['Cookie'] = merged;
@@ -60,17 +76,25 @@ final class RuleHost {
       ..connectionTimeout = connectionTimeout
       ..badCertificateCallback = ((cert, host, port) => true);
     unawaited(cancelled?.then((_) => client.close(force: true)));
+    final timeout = request.timeout ?? (request.direct ? _directTimeout : callTimeout);
     try {
       late HttpResult result;
       for (var attempt = 0; attempt <= request.retry; attempt++) {
-        result = await _send(client, request, headers).timeout(callTimeout);
+        result = await _send(client, request, headers).timeout(timeout);
         if (result.statusCode >= 200 && result.statusCode < 300) break;
+      }
+      if (request.direct && result.statusCode >= 400) {
+        // Jsoup 的 HttpStatusException
+        throw HttpException('HTTP error fetching URL. Status=${result.statusCode}, URL=[${result.url}]');
       }
       return result;
     } finally {
       client.close(force: true);
     }
   }
+
+  /// Jsoup 的默认超时。
+  static const Duration _directTimeout = Duration(seconds: 30);
 
   static const int _maxFollowUps = 20;
 
@@ -81,7 +105,7 @@ final class RuleHost {
     final requestHeaders = {...headers};
     for (var followUps = 0; ; followUps++) {
       final hopHeaders = {...requestHeaders};
-      if (request.enabledCookieJar) {
+      if (request.enabledCookieJar && !request.direct) {
         // 每一跳按实际请求的域名再合并一次，这次已保存的值优先（MD3 的 CookieManager.loadRequest）
         final merged = mergeCookies([hopHeaders['Cookie'], cookieStore.getCookie(cookieDomain(url.toString()))]);
         if (merged != null) hopHeaders['Cookie'] = merged;
@@ -97,10 +121,12 @@ final class RuleHost {
         httpRequest.add(bytes);
       }
       final response = await httpRequest.close();
-      if (request.enabledCookieJar) cookieStore.saveResponse(url, response.headers['set-cookie'] ?? const []);
+      if (request.enabledCookieJar && !request.direct) {
+        cookieStore.saveResponse(url, response.headers['set-cookie'] ?? const []);
+      }
 
       final location = response.headers.value(HttpHeaders.locationHeader);
-      if (_isRedirect(response.statusCode) && location != null) {
+      if (_isRedirect(response.statusCode) && location != null && !request.direct) {
         await response.drain<void>();
         if (followUps >= _maxFollowUps) throw HttpException('重定向次数超过 $_maxFollowUps', uri: url);
         final next = url.resolve(location);
@@ -133,6 +159,7 @@ final class RuleHost {
       headers: headers,
       body: body,
       redirected: redirected,
+      setCookies: response.headers['set-cookie'] ?? const [],
     );
   }
 }

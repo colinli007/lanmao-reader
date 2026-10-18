@@ -161,6 +161,161 @@ void main() {
   });
 
   group('可中断的正则', _regExpTests);
+  group('隔离求值', _scopedTests);
+}
+
+void _scopedTests() {
+  late JsEngine engine;
+
+  setUp(() => engine = JsEngine());
+  tearDown(() => engine.dispose());
+
+  Object? evalOnce(String code, {Map<String, Object?>? vars, JsLib? lib}) {
+    final layer = JsLayer(engine);
+    try {
+      return engine.evalScoped(code, layer: layer, lib: lib, vars: vars);
+    } finally {
+      layer.dispose();
+    }
+  }
+
+  test('声明不泄漏', () {
+    expect(evalOnce('var a = 1; function f() {} b = 2; let c = 3; a'), 1);
+    expect(evalOnce('[typeof a, typeof f, typeof b, typeof c].join()'), 'undefined,undefined,undefined,undefined');
+    expect(engine.eval('typeof b'), 'undefined');
+  });
+
+  test('变量层上的变量，顶层 this 是变量层', () {
+    expect(evalOnce('this.result + result.length', vars: {'result': 'abc'}), 'abc3');
+  });
+
+  test('复用变量层', () {
+    final layer = JsLayer(engine);
+    addTearDown(layer.dispose);
+    expect(engine.evalScoped('g++; k = 1; g', layer: layer, vars: {'g': 0}), 1);
+    expect(engine.evalScoped('g++; [g, k].join()', layer: layer), '2,1');
+  });
+
+  test('非严格模式，看不到包装函数的形参和局部变量', () {
+    expect(evalOnce('for (i in [1, 2]) {}; i'), '1');
+    expect(evalOnce('[typeof layer, typeof code, typeof run, typeof layers].join()'),
+        'undefined,undefined,undefined,undefined');
+  });
+
+  test('嵌套求值里外层未声明的赋值不被内层搬走', () {
+    engine.register('host.nested', (args) => evalOnce(args[0] as String));
+    expect(evalOnce('x = 1; var inner = host.nested("y = 2; typeof x"); [inner, x, typeof y].join()'),
+        'number,1,undefined');
+  });
+
+  test('宿主函数抛出不可捕获的错误，外层 try/catch 拦不住', () {
+    engine.register('host.deep', (args) => throw JsException('嵌套太深', uncatchable: true));
+    engine.register('host.nested', (args) => evalOnce(args[0] as String));
+    expect(
+      () => evalOnce('try { host.nested("try { host.deep() } catch (e) {} 1") } catch (e) {} "continued"'),
+      throwsA(isA<JsException>()
+          .having((e) => e.message, 'message', contains('嵌套太深'))
+          .having((e) => e.uncatchable, 'uncatchable', isTrue)),
+    );
+    expect(evalOnce('1 + 1'), 2);
+  });
+
+  test('以超时或不可捕获的错误结束时，未声明的赋值也移到变量层', () {
+    engine.register('host.deep', (args) => throw JsException('嵌套太深', uncatchable: true));
+    engine.register('host.nested', (args) => evalOnce(args[0] as String));
+    final layer = JsLayer(engine);
+    addTearDown(layer.dispose);
+    expect(() => engine.evalScoped('a = 1; while (true) {}', layer: layer, timeout: const Duration(milliseconds: 50)),
+        throwsA(isA<JsException>().having((e) => e.uncatchable, 'uncatchable', isTrue)));
+    expect(() => evalOnce('b = 1; host.nested("c = 1; host.deep()")'),
+        throwsA(isA<JsException>().having((e) => e.uncatchable, 'uncatchable', isTrue)));
+    expect(engine.eval('[typeof a, typeof b, typeof c].join()'), 'undefined,undefined,undefined');
+    expect(engine.evalScoped('a', layer: layer), 1);
+  });
+
+  test('__qjs.replacer 和 revive 钩子', () {
+    engine.eval('''__qjs.replacer = function (k, v) { return typeof v === 'number' && !isFinite(v) ? {n: String(v)} : v; };
+      __qjs.revive = function (vars) { vars.x = vars.x * 2; return vars; };''');
+    engine.register('host.echo', (args) => args);
+    expect(evalOnce('0 / 0'), {'n': 'NaN'});
+    expect(evalOnce('host.echo(1 / 0, 2)'), [{'n': 'Infinity'}, 2]);
+    expect(evalOnce('x + 1', vars: {'x': 20}), 41);
+  });
+
+  test('普通错误可以被 try/catch，不是不可捕获的', () {
+    expect(evalOnce('try { null.x } catch (e) { "caught" }'), 'caught');
+    expect(() => evalOnce('null.x'),
+        throwsA(isA<JsException>().having((e) => e.uncatchable, 'uncatchable', isFalse)));
+  });
+
+  group('jsLib', () {
+    test('共享作用域只读遮蔽', () {
+      final lib = JsLib(engine, 'var n = 5; function get() { return n; }');
+      addTearDown(lib.dispose);
+      expect(evalOnce('n = 9; get()', lib: lib), 5);
+      expect(evalOnce('n', lib: lib), 5);
+    });
+
+    test('jsLib 的函数改自己的顶层变量，后续求值可见', () {
+      final lib = JsLib(engine, 'var n = 0; function inc() { return ++n; }');
+      addTearDown(lib.dispose);
+      expect(evalOnce('inc()', lib: lib), 1);
+      expect(evalOnce('inc()', lib: lib), 2);
+    });
+
+    test('jsLib 函数以 f() 调用时 this 是变量层', () {
+      final lib = JsLib(engine, "function r() { return this.result + '!'; }");
+      addTearDown(lib.dispose);
+      expect(evalOnce('r()', lib: lib, vars: {'result': 'a'}), 'a!');
+    });
+
+    test('没有 jsLib 时看不到它的名字', () {
+      final lib = JsLib(engine, 'var only = 1;');
+      addTearDown(lib.dispose);
+      expect(evalOnce('typeof only'), 'undefined');
+      expect(evalOnce('typeof only', lib: lib), 'number');
+    });
+
+    test('jsLib 出错时带回原因', () {
+      expect(() => JsLib(engine, 'throw new Error("坏了")'),
+          throwsA(isA<JsException>().having((e) => e.message, 'message', contains('坏了'))));
+      expect(() => JsLib(engine, 'function ('),
+          throwsA(isA<JsException>().having((e) => e.message, 'message', contains('SyntaxError'))));
+    });
+
+    test('jsLib 里的死循环能被中止标志打断', () async {
+      final abort = calloc<Int32>();
+      addTearDown(() => calloc.free(abort));
+      final lib = JsLib(engine, 'function spin() { while (true) {} }');
+      addTearDown(lib.dispose);
+      await Isolate.spawn(_writeFlagLater, (abort.address, 200));
+      final layer = JsLayer(engine);
+      addTearDown(layer.dispose);
+      expect(
+        () => engine.evalScoped('try { spin() } catch (e) {} "continued"', layer: layer, lib: lib, abortSignal: abort),
+        throwsA(isA<JsException>().having((e) => e.message, 'message', contains('interrupted'))),
+      );
+      abort.value = 0;
+      expect(() => JsLib(engine, 'while (true) {}', timeout: const Duration(milliseconds: 100)),
+          throwsA(isA<JsException>().having((e) => e.message, 'message', contains('interrupted'))));
+    });
+
+    test('释放后再用以错误结束', () {
+      final lib = JsLib(engine, 'var n = 1;');
+      lib.dispose();
+      expect(() => evalOnce('n', lib: lib), throwsStateError);
+    });
+
+    test('引擎释放时一并释放', () {
+      final other = JsEngine();
+      final lib = JsLib(other, 'function f() { return 1; }');
+      final layer = JsLayer(other);
+      expect(other.evalScoped('f()', layer: layer, lib: lib), 1);
+      other.dispose();
+      lib.dispose();
+      layer.dispose();
+    });
+  });
 }
 
 void _regExpTests() {

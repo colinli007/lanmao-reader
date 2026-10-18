@@ -14,14 +14,20 @@ import 'package:ffi/ffi.dart';
 import 'quickjs_ng_ffi_bindings_generated.dart';
 
 part 'src/js_regexp.dart';
+part 'src/js_scope.dart';
 
-/// 宿主函数：实参和返回值都必须能被 JSON 表示。抛出的异常会变成 JS 里的 Error。
+/// 宿主函数：实参和返回值都必须能被 JSON 表示。抛出的异常会变成 JS 里的 Error；
+/// 抛出 [JsException.uncatchable] 为真的异常时，JS 的 try/catch 拦不住，一直传到最外层求值。
 typedef HostFunction = Object? Function(List<Object?> args);
 
 class JsException implements Exception {
-  JsException(this.message);
+  JsException(this.message, {this.uncatchable = false});
 
   final String message;
+
+  /// 不可捕获的错误：中止、超时，或宿主函数要求穿过 JS 的 try/catch。
+  /// 宿主函数里嵌套求值得到这种错误后原样抛出，它会继续穿过外层 JS。
+  final bool uncatchable;
 
   @override
   String toString() => 'JsException: $message';
@@ -30,7 +36,8 @@ class JsException implements Exception {
 class JsEngine {
   JsEngine({int memoryLimitBytes = 64 * 1024 * 1024}) {
     // 返回指针的回调不能设置 exceptionalReturn；_dispatch 自己捕获全部异常
-    _callback = NativeCallable<QjsHostCallbackFunction>.isolateLocal(_dispatch);
+    // 回调只在同步求值期间被调用，不需要让 isolate 一直活着（否则命令行工具用完引擎后进程不退出）
+    _callback = NativeCallable<QjsHostCallbackFunction>.isolateLocal(_dispatch)..keepIsolateAlive = false;
     _engine = _bindings.qjs_new(_callback.nativeFunction, memoryLimitBytes);
     if (_engine == nullptr) {
       _callback.close();
@@ -65,10 +72,7 @@ class JsEngine {
         name.toNativeUtf8(allocator: arena).cast(),
         jsonEncode(value).toNativeUtf8(allocator: arena).cast(),
       );
-      if (result == nullptr) return null;
-      final message = result.cast<Utf8>().toDartString();
-      _bindings.qjs_free_string(result);
-      return message;
+      return _takeString(result);
     });
     if (error != null) throw JsException('设置全局变量 $name 失败：$error');
   }
@@ -90,11 +94,43 @@ class JsEngine {
         abortSignal ?? nullptr,
         isError,
       );
-      final text = result == nullptr ? null : result.cast<Utf8>().toDartString();
-      _bindings.qjs_free_string(result);
-      if (isError.value != 0) throw JsException(text ?? 'unknown error');
-      return text == null ? null : jsonDecode(text);
+      return _takeResult(result, isError.value);
     });
+  }
+
+  /// 在变量层 [layer] 上隔离求值（见 [JsLayer]）：[vars] 先逐个写到变量层上，
+  /// [lib] 不为 null 时 jsLib 的顶层名字对代码可见。返回值、超时和中止与 [eval] 相同。
+  Object? evalScoped(
+    String code, {
+    required JsLayer layer,
+    JsLib? lib,
+    Map<String, Object?>? vars,
+    Duration? timeout,
+    Pointer<Int32>? abortSignal,
+  }) {
+    _checkAlive();
+    layer._checkOwner(this);
+    lib?._checkOwner(this);
+    return using((arena) {
+      final isError = arena<Int32>();
+      final result = _bindings.qjs_eval_scoped(
+        _engine,
+        layer._id,
+        lib?._id ?? 0,
+        vars == null ? nullptr : jsonEncode(vars).toNativeUtf8(allocator: arena).cast(),
+        code.toNativeUtf8(allocator: arena).cast(),
+        timeout?.inMilliseconds ?? 0,
+        abortSignal ?? nullptr,
+        isError,
+      );
+      return _takeResult(result, isError.value);
+    });
+  }
+
+  Object? _takeResult(Pointer<Char> result, int isError) {
+    final text = _takeString(result);
+    if (isError != 0) throw JsException(text ?? 'unknown error', uncatchable: isError == 2);
+    return text == null ? null : jsonDecode(text);
   }
 
   void dispose() {
@@ -116,7 +152,7 @@ class JsEngine {
       // C 侧用 free 释放，所以必须用 C 的 malloc 分配
       return jsonEncode(result).toNativeUtf8(allocator: malloc).cast();
     } catch (e) {
-      isError.value = 1;
+      isError.value = e is JsException && e.uncatchable ? 2 : 1;
       final message = e is JsException ? e.message : e.toString();
       return message.toNativeUtf8(allocator: malloc).cast();
     }
@@ -125,6 +161,14 @@ class JsEngine {
   void _checkAlive() {
     if (_disposed) throw StateError('JsEngine 已释放');
   }
+}
+
+/// 取出 C 侧分配的字符串并释放它。
+String? _takeString(Pointer<Char> pointer) {
+  if (pointer == nullptr) return null;
+  final text = pointer.cast<Utf8>().toDartString();
+  _bindings.qjs_free_string(pointer);
+  return text;
 }
 
 const String _libName = 'quickjs_ng_ffi';

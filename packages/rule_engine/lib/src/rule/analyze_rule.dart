@@ -1,5 +1,8 @@
 import '../core/environment.dart';
 import '../core/errors.dart';
+import '../core/source_task.dart';
+import '../js/js_values.dart';
+import '../js/source_js.dart';
 import '../net/java_url.dart';
 import '../regex/java_replace.dart';
 import '../text/html_unescape.dart';
@@ -17,17 +20,23 @@ enum RuleMode { xPath, json, jsoup, js, regex, webJs }
 /// MD3 的 `AnalyzeRule`：对一份内容按规则取字符串、字符串列表和元素列表。
 ///
 /// 照 MD3 源码移植，包括它的缓存和模式判定：规则按字符串缓存拆分结果，取值语法在第一次拆分时按当时的内容决定；
-/// AllInOne 正则一旦出现，之后拆分的规则都按正则模板处理。需要 JS 或 WebView 的地方以对应的错误结束。
+/// AllInOne 正则一旦出现，之后拆分的规则都按正则模板处理。JS 段交给 [SourceJs] 求值，`@webjs:` 以「需要 WebView」结束。
 final class AnalyzeRule {
-  AnalyzeRule(this.env, {RuleData? ruleData, this.chapter}) : ruleData = ruleData ?? ChainData();
+  AnalyzeRule(this.task, {RuleData? ruleData, this.chapter}) : ruleData = ruleData ?? ChainData();
 
-  final RuleEnvironment env;
+  /// 所在任务：环境、书源和任务里的状态。
+  final SourceTask task;
+
+  RuleEnvironment get env => task.env;
 
   /// `@put` 的存储：书籍或本次链路的临时数据。搜索列表里每一项换成这一项的书籍。
   RuleData ruleData;
 
-  /// 当前章节（正文链路）。
+  /// 当前章节（目录项、正文链路）。
   ChapterData? chapter;
+
+  /// 下一章的地址（正文链路，JS 里的 `nextChapterUrl`）。
+  String? nextChapterUrl;
 
   BookData? get book => ruleData is BookData ? ruleData as BookData : null;
 
@@ -98,25 +107,38 @@ final class AnalyzeRule {
     final current = content ?? _content;
     if (current != null && ruleList.isNotEmpty) {
       result = current;
-      for (final sourceRule in ruleList) {
+      if (result is JsObject) {
+        // JS 对象内容（MD3 的 NativeObject）：只用第一段规则
+        final sourceRule = ruleList.first;
         _putRule(sourceRule.putMap);
         sourceRule.makeUpRule(result);
-        if (result == null) continue;
-        final rule = sourceRule.rule;
-        if (rule.isNotEmpty) {
-          result = switch (sourceRule.mode) {
-            RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
-            RuleMode.js => throw NeedsJsException(sourceRule.snippet),
-            RuleMode.json => _analyzeByJsonPath(result).getStringList(rule),
-            RuleMode.xPath => _analyzeByXPath(result).getStringList(rule),
-            RuleMode.jsoup => _analyzeByJSoup(result).getStringList(rule),
-            RuleMode.regex => rule,
-          };
-        }
-        if (sourceRule.replaceRegex.isNotEmpty) {
+        result = _jsObjectValue(result, sourceRule, list: true);
+        if (result != null && sourceRule.replaceRegex.isNotEmpty) {
           result = result is List
               ? [for (final item in result) _replaceRegex(contentToString(item), sourceRule)]
               : _replaceRegex(contentToString(result), sourceRule);
+        }
+      } else {
+        for (final sourceRule in ruleList) {
+          _putRule(sourceRule.putMap);
+          sourceRule.makeUpRule(result);
+          if (result == null) continue;
+          final rule = sourceRule.rule;
+          if (rule.isNotEmpty) {
+            result = switch (sourceRule.mode) {
+              RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
+              RuleMode.js => evalJs(rule, result),
+              RuleMode.json => _analyzeByJsonPath(result).getStringList(rule),
+              RuleMode.xPath => _analyzeByXPath(result).getStringList(rule),
+              RuleMode.jsoup => _analyzeByJSoup(result).getStringList(rule),
+              RuleMode.regex => rule,
+            };
+          }
+          if (sourceRule.replaceRegex.isNotEmpty) {
+            result = result is List
+                ? [for (final item in result) _replaceRegex(contentToString(item), sourceRule)]
+                : _replaceRegex(contentToString(result), sourceRule);
+          }
         }
       }
     }
@@ -148,24 +170,33 @@ final class AnalyzeRule {
     final current = content ?? _content;
     if (current != null && ruleList.isNotEmpty) {
       result = current;
-      for (final sourceRule in ruleList) {
+      if (result is JsObject) {
+        // JS 对象内容（MD3 的 NativeObject）：只用第一段规则
+        final sourceRule = ruleList.first;
         _putRule(sourceRule.putMap);
         sourceRule.makeUpRule(result);
-        if (result == null) continue;
-        final rule = sourceRule.rule;
-        if (rule.trim().isNotEmpty || sourceRule.replaceRegex.isEmpty) {
-          result = switch (sourceRule.mode) {
-            RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
-            RuleMode.js => throw NeedsJsException(sourceRule.snippet),
-            RuleMode.json => _analyzeByJsonPath(result).getString(rule),
-            RuleMode.xPath => _analyzeByXPath(result).getString(rule),
-            RuleMode.jsoup =>
-              isUrl ? _analyzeByJSoup(result).getString0(rule) : _analyzeByJSoup(result).getString(rule),
-            RuleMode.regex => rule,
-          };
-        }
-        if (result != null && sourceRule.replaceRegex.isNotEmpty) {
-          result = _replaceRegex(contentToString(result), sourceRule);
+        final value = _jsObjectValue(result, sourceRule, list: false);
+        result = value == null ? null : _replaceRegex(contentToString(value), sourceRule);
+      } else {
+        for (final sourceRule in ruleList) {
+          _putRule(sourceRule.putMap);
+          sourceRule.makeUpRule(result);
+          if (result == null) continue;
+          final rule = sourceRule.rule;
+          if (rule.trim().isNotEmpty || sourceRule.replaceRegex.isEmpty) {
+            result = switch (sourceRule.mode) {
+              RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
+              RuleMode.js => evalJs(rule, result),
+              RuleMode.json => _analyzeByJsonPath(result).getString(rule),
+              RuleMode.xPath => _analyzeByXPath(result).getString(rule),
+              RuleMode.jsoup =>
+                isUrl ? _analyzeByJSoup(result).getString0(rule) : _analyzeByJSoup(result).getString(rule),
+              RuleMode.regex => rule,
+            };
+          }
+          if (result != null && sourceRule.replaceRegex.isNotEmpty) {
+            result = _replaceRegex(contentToString(result), sourceRule);
+          }
         }
       }
     }
@@ -199,7 +230,7 @@ final class AnalyzeRule {
         result = switch (sourceRule.mode) {
           RuleMode.regex => AnalyzeByRegex.getElement(env, contentToString(result), _splitNotBlank(rule)),
           RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
-          RuleMode.js => throw NeedsJsException(sourceRule.snippet),
+          RuleMode.js => evalJs(rule, result),
           RuleMode.json => _analyzeByJsonPath(result).getObject(rule),
           RuleMode.xPath => XPathNodeList(_analyzeByXPath(result).getElements(rule)),
           RuleMode.jsoup => ElementList(_analyzeByJSoup(result).getElements(rule)),
@@ -212,6 +243,7 @@ final class AnalyzeRule {
 
   /// 取元素列表（各链路的列表规则）。规则以 `:` 开头时按 AllInOne 正则取全部匹配。
   /// 和 MD3 一样，这里不替换 `##`、`{{}}`、`@get`，规则原样交给解析器。
+  /// JS 的结果是数组时作为列表，是 null 时为空列表，其他类型以错误结束（MD3 里是 ClassCastException）。
   List<Object> getElements(String rule) {
     Object? result;
     final current = _content;
@@ -225,15 +257,34 @@ final class AnalyzeRule {
         result = switch (sourceRule.mode) {
           RuleMode.regex => AnalyzeByRegex.getElements(env, contentToString(result), _splitNotBlank(rule)),
           RuleMode.webJs => throw NeedsWebViewException(sourceRule.snippet),
-          RuleMode.js => throw NeedsJsException(sourceRule.snippet),
+          RuleMode.js => evalJs(rule, result),
           RuleMode.json => _analyzeByJsonPath(result).getList(rule),
           RuleMode.xPath => _analyzeByXPath(result).getElements(rule),
           RuleMode.jsoup => _analyzeByJSoup(result).getElements(rule),
         };
       }
     }
-    if (result is List) return [for (final item in result) ?item];
-    return [];
+    return switch (result) {
+      null => [],
+      List() => [for (final item in result) ?item],
+      ElementList() => [...result.elements],
+      XPathNodeList() => [...result.items],
+      _ => throw JsEvalException('列表规则的结果不是数组：${contentToString(result)}'),
+    };
+  }
+
+  /// 规则里的 JS：`result` 是上一段的输出。
+  Object? evalJs(String code, Object? result) => SourceJs.instance.evalRule(this, code, result: result);
+
+  /// JS 对象内容上的一段规则：JS、JSONPath、`{{}}` 模板，或者按键取值。
+  Object? _jsObjectValue(JsObject object, _SourceRule sourceRule, {required bool list}) {
+    final rule = sourceRule.rule;
+    return switch (sourceRule.mode) {
+      RuleMode.js => evalJs(rule, object),
+      RuleMode.json => list ? _analyzeByJsonPath(object).getStringList(rule) : _analyzeByJsonPath(object).getString(rule),
+      _ when sourceRule.paramSize > 1 => rule,
+      _ => object[rule],
+    };
   }
 
   // ---------------------------------------------------------------- 变量
@@ -244,13 +295,13 @@ final class AnalyzeRule {
     }
   }
 
-  /// 写入第一个存在的存储：章节、书籍、本次链路。
+  /// 写入第一个存在的存储：章节、书籍（搜索列表阶段是当前结果项）、本次链路。
   String put(String key, String value) {
     (chapter ?? ruleData).variables[key] = value;
     return value;
   }
 
-  /// `bookName` 和 `title` 读书名和章节名；其余按章节、书籍、本次链路的顺序取第一个非空值，都没有时为空串。
+  /// `bookName` 和 `title` 读书名和章节名；其余按章节、书籍、本次链路、书源级变量的顺序取第一个非空值，都没有时为空串。
   String get(String key) {
     if (key == 'bookName' && book != null) return book!.name;
     if (key == 'title' && chapter != null) return chapter!.title;
@@ -258,7 +309,7 @@ final class AnalyzeRule {
       final value = holder?.variables[key];
       if (value != null && value.isNotEmpty) return value;
     }
-    return '';
+    return task.storeGet('${task.variableKeyPrefix}$key') ?? '';
   }
 
   // ---------------------------------------------------------------- 拆分
@@ -311,8 +362,9 @@ final class AnalyzeRule {
     return ruleList;
   }
 
-  String _replaceRegex(String result, _SourceRule rule) =>
-      replaceByRule(env, result, rule.replaceRegex, rule.replacement, firstOnly: rule.replaceFirst);
+  String _replaceRegex(String result, _SourceRule rule) => rule.replaceRegex.isEmpty
+      ? result
+      : replaceByRule(env, result, rule.replaceRegex, rule.replacement, firstOnly: rule.replaceFirst);
 
   static List<String> _splitNotBlank(String rule) => [
     for (final part in rule.split('&&'))
@@ -391,6 +443,9 @@ final class _SourceRule {
   final List<String> _ruleParam = [];
   final List<int> _ruleType = [];
 
+  /// 模板的段数（MD3 的 getParamSize）：大于 1 时规则是拼出来的模板。
+  int get paramSize => _ruleParam.length;
+
   static const int _getRuleType = -2;
   static const int _jsRuleType = -1;
   static const int _defaultRuleType = 0;
@@ -455,7 +510,7 @@ final class _SourceRule {
             parts[index] = contentToString(groups[type]);
           }
         } else if (type == _jsRuleType) {
-          parts[index] = _evalInner(param);
+          parts[index] = _evalInner(param, result);
         } else if (type == _getRuleType) {
           parts[index] = _owner.get(param);
         } else {
@@ -471,16 +526,14 @@ final class _SourceRule {
     if (parts.length > 3) replaceFirst = true;
   }
 
-  /// `{{x}}`：x 是规则时对当前内容求值；`baseUrl`、`title` 直接取值；其余需要 JS。
-  String _evalInner(String param) {
+  /// `{{x}}`：x 以 `@`、`$.`、`$[`、`//` 开头时是规则，对当前内容求值；其余按 JS 求值（`result` 是当前结果），
+  /// null 不拼入，数字按 JS 的格式（整数不带小数点）。
+  String _evalInner(String param, Object? result) {
     if (param.startsWith('@') || param.startsWith(r'$.') || param.startsWith(r'$[') || param.startsWith('//')) {
       return _owner._getString(_owner._singleRuleCached(param));
     }
-    return switch (param.trim()) {
-      'baseUrl' => _owner.baseUrl ?? '',
-      'title' => _owner.chapter?.title ?? '',
-      _ => throw NeedsJsException('{{$param}}'),
-    };
+    final value = _owner.evalJs(param, result);
+    return value == null ? '' : jsString(value);
   }
 }
 

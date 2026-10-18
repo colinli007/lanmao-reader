@@ -1,0 +1,1437 @@
+{
+ "generator": "JDK / Hutool 5.8.22 / AOSP android.util.Base64（tool/jsoup_oracle/CodecOracle.java）",
+ "cases": [
+  {
+   "note": "标准",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L2T"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "结尾换行",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L2T\n"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "中间空白",
+   "op": "base64Lenient",
+   "args": [
+    " 5LiJ\r\n5L2T\t"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "缺一个等号",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L2"
+   ],
+   "expected": "e4b889e4bd"
+  },
+  {
+   "note": "缺两个等号",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L"
+   ],
+   "expected": "e4b889e4"
+  },
+  {
+   "note": "两个字符",
+   "op": "base64Lenient",
+   "args": [
+    "YQ"
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "一个等号",
+   "op": "base64Lenient",
+   "args": [
+    "YQ="
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "两个等号",
+   "op": "base64Lenient",
+   "args": [
+    "YQ=="
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "多余等号",
+   "op": "base64Lenient",
+   "args": [
+    "YQ==="
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "单个字符",
+   "op": "base64Lenient",
+   "args": [
+    "Y"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "空串",
+   "op": "base64Lenient",
+   "args": [
+    ""
+   ],
+   "expected": ""
+  },
+  {
+   "note": "只有等号",
+   "op": "base64Lenient",
+   "args": [
+    "===="
+   ],
+   "expected": ""
+  },
+  {
+   "note": "URL 安全字符",
+   "op": "base64Lenient",
+   "args": [
+    "-_-_"
+   ],
+   "expected": "fbffbf"
+  },
+  {
+   "note": "标准字符",
+   "op": "base64Lenient",
+   "args": [
+    "+/+/"
+   ],
+   "expected": "fbffbf"
+  },
+  {
+   "note": "两种字符混用",
+   "op": "base64Lenient",
+   "args": [
+    "a-b_c+d/"
+   ],
+   "expected": "6be6ff73e77f"
+  },
+  {
+   "note": "中间有填充",
+   "op": "base64Lenient",
+   "args": [
+    "YQ==YWJj"
+   ],
+   "expected": "61061626"
+  },
+  {
+   "note": "结尾非法字符",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L2T!!"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "中间非法字符",
+   "op": "base64Lenient",
+   "args": [
+    "5L*iJ5L2T"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "长输入",
+   "op": "base64Lenient",
+   "args": [
+    "5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T5LiJ5L2T"
+   ],
+   "expected": "e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93e4b889e4bd93"
+  },
+  {
+   "note": "标准",
+   "op": "base64Decode",
+   "args": [
+    "5LiJ5L2T",
+    "0"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "结尾换行",
+   "op": "base64Decode",
+   "args": [
+    "5LiJ5L2T\n",
+    "0"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "中间空白",
+   "op": "base64Decode",
+   "args": [
+    " 5LiJ\r\n5L2T\t",
+    "0"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "缺等号",
+   "op": "base64Decode",
+   "args": [
+    "5LiJ5L2",
+    "0"
+   ],
+   "expected": "e4b889e4bd"
+  },
+  {
+   "note": "两个字符不带等号",
+   "op": "base64Decode",
+   "args": [
+    "YQ",
+    "0"
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "一个等号",
+   "op": "base64Decode",
+   "args": [
+    "YQ=",
+    "0"
+   ],
+   "error": "IllegalArgumentException"
+  },
+  {
+   "note": "两个等号",
+   "op": "base64Decode",
+   "args": [
+    "YQ==",
+    "0"
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "多余等号",
+   "op": "base64Decode",
+   "args": [
+    "YQ===",
+    "0"
+   ],
+   "error": "IllegalArgumentException"
+  },
+  {
+   "note": "单个字符",
+   "op": "base64Decode",
+   "args": [
+    "Y",
+    "0"
+   ],
+   "error": "IllegalArgumentException"
+  },
+  {
+   "note": "空串",
+   "op": "base64Decode",
+   "args": [
+    "",
+    "0"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "URL 安全字符但没有 URL_SAFE",
+   "op": "base64Decode",
+   "args": [
+    "-_-_",
+    "0"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "URL_SAFE",
+   "op": "base64Decode",
+   "args": [
+    "-_-_",
+    "8"
+   ],
+   "expected": "fbffbf"
+  },
+  {
+   "note": "URL_SAFE 下的标准字符",
+   "op": "base64Decode",
+   "args": [
+    "+/+/",
+    "8"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "中间有填充",
+   "op": "base64Decode",
+   "args": [
+    "YQ==YWJj",
+    "0"
+   ],
+   "error": "IllegalArgumentException"
+  },
+  {
+   "note": "非法字符",
+   "op": "base64Decode",
+   "args": [
+    "5LiJ5L2T!!",
+    "0"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "NO_WRAP 对解码无影响",
+   "op": "base64Decode",
+   "args": [
+    "5LiJ5L2T",
+    "2"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "NO_PADDING",
+   "op": "base64Decode",
+   "args": [
+    "YQ",
+    "1"
+   ],
+   "expected": "61"
+  },
+  {
+   "note": "DEFAULT 带结尾换行",
+   "op": "base64Encode",
+   "args": [
+    "e4b889e4bd93",
+    "0"
+   ],
+   "expected": "5LiJ5L2T\n"
+  },
+  {
+   "note": "NO_WRAP",
+   "op": "base64Encode",
+   "args": [
+    "e4b889e4bd93",
+    "2"
+   ],
+   "expected": "5LiJ5L2T"
+  },
+  {
+   "note": "NO_PADDING",
+   "op": "base64Encode",
+   "args": [
+    "61",
+    "1"
+   ],
+   "expected": "YQ\n"
+  },
+  {
+   "note": "NO_PADDING | NO_WRAP",
+   "op": "base64Encode",
+   "args": [
+    "61",
+    "3"
+   ],
+   "expected": "YQ"
+  },
+  {
+   "note": "URL_SAFE | NO_WRAP",
+   "op": "base64Encode",
+   "args": [
+    "fbfffe",
+    "10"
+   ],
+   "expected": "-__-"
+  },
+  {
+   "note": "同样字节的标准字符",
+   "op": "base64Encode",
+   "args": [
+    "fbfffe",
+    "2"
+   ],
+   "expected": "+//+"
+  },
+  {
+   "note": "DEFAULT 每 76 个字符换行",
+   "op": "base64Encode",
+   "args": [
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f60616263",
+    "0"
+   ],
+   "expected": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4\nOTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiYw==\n"
+  },
+  {
+   "note": "CRLF",
+   "op": "base64Encode",
+   "args": [
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f60616263",
+    "4"
+   ],
+   "expected": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4\r\nOTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiYw==\r\n"
+  },
+  {
+   "note": "长输入 NO_WRAP",
+   "op": "base64Encode",
+   "args": [
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f60616263",
+    "2"
+   ],
+   "expected": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiYw=="
+  },
+  {
+   "note": "空",
+   "op": "base64Encode",
+   "args": [
+    "",
+    "0"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "空 NO_WRAP",
+   "op": "base64Encode",
+   "args": [
+    "",
+    "2"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "UTF-8",
+   "op": "strToBytes",
+   "args": [
+    "三体",
+    "UTF-8"
+   ],
+   "expected": "e4b889e4bd93"
+  },
+  {
+   "note": "GBK",
+   "op": "strToBytes",
+   "args": [
+    "三体",
+    "GBK"
+   ],
+   "expected": "c8fdcce5"
+  },
+  {
+   "note": "GB2312",
+   "op": "strToBytes",
+   "args": [
+    "三体",
+    "GB2312"
+   ],
+   "expected": "c8fdcce5"
+  },
+  {
+   "note": "GB18030 四字节",
+   "op": "strToBytes",
+   "args": [
+    "𠀀a",
+    "GB18030"
+   ],
+   "expected": "9532823661"
+  },
+  {
+   "note": "GBK 无法表示的字符",
+   "op": "strToBytes",
+   "args": [
+    "𠀀a",
+    "GBK"
+   ],
+   "expected": "3f61"
+  },
+  {
+   "note": "ISO-8859-1 无法表示的字符",
+   "op": "strToBytes",
+   "args": [
+    "é三",
+    "ISO-8859-1"
+   ],
+   "expected": "e93f"
+  },
+  {
+   "note": "GBK 里的欧元符号",
+   "op": "strToBytes",
+   "args": [
+    "€",
+    "GBK"
+   ],
+   "expected": "a2e3"
+  },
+  {
+   "note": "UTF-8",
+   "op": "bytesToStr",
+   "args": [
+    "e4b889e4bd93",
+    "UTF-8"
+   ],
+   "expected": "三体"
+  },
+  {
+   "note": "GBK",
+   "op": "bytesToStr",
+   "args": [
+    "c8fdcce5",
+    "GBK"
+   ],
+   "expected": "三体"
+  },
+  {
+   "note": "GB2312",
+   "op": "bytesToStr",
+   "args": [
+    "c8fdcce5",
+    "GB2312"
+   ],
+   "expected": "三体"
+  },
+  {
+   "note": "非法 UTF-8",
+   "op": "bytesToStr",
+   "args": [
+    "ff41",
+    "UTF-8"
+   ],
+   "expected": "�A"
+  },
+  {
+   "note": "截断的 UTF-8",
+   "op": "bytesToStr",
+   "args": [
+    "e4b8",
+    "UTF-8"
+   ],
+   "expected": "�"
+  },
+  {
+   "note": "截断的 GBK",
+   "op": "bytesToStr",
+   "args": [
+    "c8",
+    "GBK"
+   ],
+   "expected": "�"
+  },
+  {
+   "note": "ISO-8859-1",
+   "op": "bytesToStr",
+   "args": [
+    "e9",
+    "ISO-8859-1"
+   ],
+   "expected": "é"
+  },
+  {
+   "note": "GB18030 四字节",
+   "op": "bytesToStr",
+   "args": [
+    "9532823341",
+    "GB18030"
+   ],
+   "expected": "🿽A"
+  },
+  {
+   "note": "空格和加号",
+   "op": "encodeURI",
+   "args": [
+    "a b+三",
+    "UTF-8"
+   ],
+   "expected": "a+b%2B%E4%B8%89"
+  },
+  {
+   "note": "保留字符",
+   "op": "encodeURI",
+   "args": [
+    "~!*'()-_.",
+    "UTF-8"
+   ],
+   "expected": "%7E%21*%27%28%29-_."
+  },
+  {
+   "note": "分隔符",
+   "op": "encodeURI",
+   "args": [
+    "&=?/#%:;,@$",
+    "UTF-8"
+   ],
+   "expected": "%26%3D%3F%2F%23%25%3A%3B%2C%40%24"
+  },
+  {
+   "note": "GBK",
+   "op": "encodeURI",
+   "args": [
+    "三体",
+    "GBK"
+   ],
+   "expected": "%C8%FD%CC%E5"
+  },
+  {
+   "note": "GB2312",
+   "op": "encodeURI",
+   "args": [
+    "三体",
+    "GB2312"
+   ],
+   "expected": "%C8%FD%CC%E5"
+  },
+  {
+   "note": "GB18030",
+   "op": "encodeURI",
+   "args": [
+    "𠀀",
+    "GB18030"
+   ],
+   "expected": "%95%32%82%36"
+  },
+  {
+   "note": "代理对",
+   "op": "encodeURI",
+   "args": [
+    "𠀀",
+    "UTF-8"
+   ],
+   "expected": "%F0%A0%80%80"
+  },
+  {
+   "note": "ISO-8859-1 无法表示的字符",
+   "op": "encodeURI",
+   "args": [
+    "三é",
+    "ISO-8859-1"
+   ],
+   "expected": "%3F%E9"
+  },
+  {
+   "note": "不认识的字符集",
+   "op": "encodeURI",
+   "args": [
+    "x",
+    "BAD-CHARSET"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "空串",
+   "op": "encodeURI",
+   "args": [
+    "",
+    "UTF-8"
+   ],
+   "expected": ""
+  },
+  {
+   "note": "控制字符",
+   "op": "encodeURI",
+   "args": [
+    "A1z\u0000\n",
+    "UTF-8"
+   ],
+   "expected": "A1z%00%0A"
+  },
+  {
+   "note": "MD5 空串",
+   "op": "digest",
+   "args": [
+    "MD5",
+    ""
+   ],
+   "expected": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+   "note": "MD5",
+   "op": "digest",
+   "args": [
+    "MD5",
+    "三体abc"
+   ],
+   "expected": "807ee2432f001e90c423a165fa31b928"
+  },
+  {
+   "note": "SHA-1 空串",
+   "op": "digest",
+   "args": [
+    "SHA-1",
+    ""
+   ],
+   "expected": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+  },
+  {
+   "note": "SHA-1",
+   "op": "digest",
+   "args": [
+    "SHA-1",
+    "三体abc"
+   ],
+   "expected": "ea68002fa397809feae365594565e3d42a4066ee"
+  },
+  {
+   "note": "SHA-224 空串",
+   "op": "digest",
+   "args": [
+    "SHA-224",
+    ""
+   ],
+   "expected": "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f"
+  },
+  {
+   "note": "SHA-224",
+   "op": "digest",
+   "args": [
+    "SHA-224",
+    "三体abc"
+   ],
+   "expected": "0ad121982280876957635fecc021abd368a99a3121ebe9c8bbbb451c"
+  },
+  {
+   "note": "SHA-256 空串",
+   "op": "digest",
+   "args": [
+    "SHA-256",
+    ""
+   ],
+   "expected": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "note": "SHA-256",
+   "op": "digest",
+   "args": [
+    "SHA-256",
+    "三体abc"
+   ],
+   "expected": "361474085fa9f7dda65fc1d5fec79f16239b79bd25e19db2914203072828d7ea"
+  },
+  {
+   "note": "SHA-384 空串",
+   "op": "digest",
+   "args": [
+    "SHA-384",
+    ""
+   ],
+   "expected": "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b"
+  },
+  {
+   "note": "SHA-384",
+   "op": "digest",
+   "args": [
+    "SHA-384",
+    "三体abc"
+   ],
+   "expected": "2678290b6b624c4d3a225d9b9a46158b73ffa43075e7154354c0485f8d8602edac98b0236de2e9daf682203d1f6dd6d9"
+  },
+  {
+   "note": "SHA-512 空串",
+   "op": "digest",
+   "args": [
+    "SHA-512",
+    ""
+   ],
+   "expected": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+  },
+  {
+   "note": "SHA-512",
+   "op": "digest",
+   "args": [
+    "SHA-512",
+    "三体abc"
+   ],
+   "expected": "b0e9f4e2391c1f72f895648f65034d720008244fa0b3622f1a11fea1bf86419fc3acd6742ea95d8cab76906faf0c4115c669da48cc790367cab10174313435d2"
+  },
+  {
+   "note": "HmacMD5",
+   "op": "hmac",
+   "args": [
+    "HmacMD5",
+    "key",
+    "三体abc"
+   ],
+   "expected": "9624b413a6c1040fa7f43bd118089a9b"
+  },
+  {
+   "note": "HmacSHA1",
+   "op": "hmac",
+   "args": [
+    "HmacSHA1",
+    "key",
+    "三体abc"
+   ],
+   "expected": "d67c256cc0d65cb38e5fa53a0d5abc93c6282b85"
+  },
+  {
+   "note": "HmacSHA224",
+   "op": "hmac",
+   "args": [
+    "HmacSHA224",
+    "key",
+    "三体abc"
+   ],
+   "expected": "2e4e34efab5a9d03be96989636e63f78962d622a48e1eef6645d818d"
+  },
+  {
+   "note": "HmacSHA256",
+   "op": "hmac",
+   "args": [
+    "HmacSHA256",
+    "key",
+    "三体abc"
+   ],
+   "expected": "ef8cd118e309be224b55f78d31ac072c171b1b0e446165ee3d6bfa4fcb3a9d07"
+  },
+  {
+   "note": "HmacSHA384",
+   "op": "hmac",
+   "args": [
+    "HmacSHA384",
+    "key",
+    "三体abc"
+   ],
+   "expected": "a2fb05e9a8823fc270f8efce13fc2dc46e4f4c06f3d528c40c2be0eddbcf12925fa060b4b44b48101b075f6b42b872ff"
+  },
+  {
+   "note": "HmacSHA512",
+   "op": "hmac",
+   "args": [
+    "HmacSHA512",
+    "key",
+    "三体abc"
+   ],
+   "expected": "8e3e9d9a26784754e2bebdcd09f1aad8652d4bf53455a142d73aa41f756c9c30a0903755f3a670b27387be18fbbb17701726ebb381ce0d1c914568a24deff11b"
+  },
+  {
+   "note": "hmacsha256",
+   "op": "hmac",
+   "args": [
+    "hmacsha256",
+    "key",
+    "三体abc"
+   ],
+   "expected": "ef8cd118e309be224b55f78d31ac072c171b1b0e446165ee3d6bfa4fcb3a9d07"
+  },
+  {
+   "note": "超过块长的密钥",
+   "op": "hmac",
+   "args": [
+    "HmacSHA256",
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "data"
+   ],
+   "expected": "0163658d479ec73f2b801df07141db1426aaae2c6b5e8e6d9e6789f92f5e2b4f"
+  },
+  {
+   "note": "空密钥",
+   "op": "hmac",
+   "args": [
+    "HmacSHA256",
+    "",
+    "data"
+   ],
+   "error": "IllegalArgumentException"
+  },
+  {
+   "note": "加密：只有算法名按 ECB/PKCS5Padding",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "0f76495416b38e0dae639a5d6a29b1df6e831dd539a43bcdef741fbd9035fcdd"
+  },
+  {
+   "note": "加密：AES 默认 ECB（规格场景）",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93"
+   ],
+   "expected": "a8a5edd00ddddac41e4ded39704f6c1e"
+  },
+  {
+   "note": "加密：AES-128 ECB",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "0f76495416b38e0dae639a5d6a29b1df6e831dd539a43bcdef741fbd9035fcdd"
+  },
+  {
+   "note": "加密：AES-192 ECB",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS5Padding",
+    "313233343536373839303132333435363738393031323334",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "47485c39d94e0d85c61f56193e327100f34e00c115443c08e70966c9a94c181f"
+  },
+  {
+   "note": "加密：AES-256 ECB",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS5Padding",
+    "3132333435363738393031323334353637383930313233343536373839303132",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "294cac44fe317d708048a67ef57b7ce032c8e3efc833178c35f461009b7aa15b"
+  },
+  {
+   "note": "加密：ECB 忽略 IV",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "6162636465666768696a6b6c6d6e6f70",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "0f76495416b38e0dae639a5d6a29b1df6e831dd539a43bcdef741fbd9035fcdd"
+  },
+  {
+   "note": "加密：PKCS7Padding 视同 PKCS5Padding",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS7Padding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "0f76495416b38e0dae639a5d6a29b1df6e831dd539a43bcdef741fbd9035fcdd"
+  },
+  {
+   "note": "加密：小写变换",
+   "op": "cipher",
+   "args": [
+    "aes/ecb/pkcs5padding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "0f76495416b38e0dae639a5d6a29b1df6e831dd539a43bcdef741fbd9035fcdd"
+  },
+  {
+   "note": "加密：AES CBC",
+   "op": "cipher",
+   "args": [
+    "AES/CBC/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "6162636465666768696a6b6c6d6e6f70",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "8247b173012ea6f859ed6e5e787291fc83fbd903bffc271705f61cefca42cd48"
+  },
+  {
+   "note": "加密：CBC 空明文",
+   "op": "cipher",
+   "args": [
+    "AES/CBC/PKCS5Padding",
+    "3132333435363738393031323334353637383930313233343536373839303132",
+    "6162636465666768696a6b6c6d6e6f70",
+    "encrypt",
+    ""
+   ],
+   "expected": "555cd47f9b274ee1004aa7b7f72ea8e1"
+  },
+  {
+   "note": "加密：整块明文多一块填充",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "30313233343536373839616263646566"
+   ],
+   "expected": "e8e1d7876194b0ae439d5e83943da284050187a0cde5a9872cbab091ab73e553"
+  },
+  {
+   "note": "加密：NoPadding 整块",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/NoPadding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "30313233343536373839616263646566"
+   ],
+   "expected": "e8e1d7876194b0ae439d5e83943da284"
+  },
+  {
+   "note": "加密：CBC NoPadding 两块",
+   "op": "cipher",
+   "args": [
+    "AES/CBC/NoPadding",
+    "31323334353637383930313233343536",
+    "6162636465666768696a6b6c6d6e6f70",
+    "encrypt",
+    "3031323334353637383961626364656630313233343536373839616263646566"
+   ],
+   "expected": "a9d299f4f87e0fee88a1609953c5f92b40efbda7763311e988a1020a9ef79f42"
+  },
+  {
+   "note": "加密：NoPadding 不足一块",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/NoPadding",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "616263"
+   ],
+   "error": "IllegalBlockSizeException"
+  },
+  {
+   "note": "加密：IV 长度不对",
+   "op": "cipher",
+   "args": [
+    "AES/CBC/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "6162636465666768",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "error": "InvalidAlgorithmParameterException"
+  },
+  {
+   "note": "加密：AES 密钥 15 字节",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "313233343536373839303132333435",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "error": "InvalidKeyException"
+  },
+  {
+   "note": "加密：AES 密钥 20 字节",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "3132333435363738393031323334353637383930",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "error": "InvalidKeyException"
+  },
+  {
+   "note": "加密：DES ECB",
+   "op": "cipher",
+   "args": [
+    "DES",
+    "3132333435363738",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "844470ce495c0a2778e337880e7570a1407c6e7dd9148ee9"
+  },
+  {
+   "note": "加密：DES 密钥截到 8 字节",
+   "op": "cipher",
+   "args": [
+    "DES",
+    "31323334353637383930616263",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "844470ce495c0a2778e337880e7570a1407c6e7dd9148ee9"
+  },
+  {
+   "note": "加密：DES 密钥不足 8 字节",
+   "op": "cipher",
+   "args": [
+    "DES",
+    "31323334353637",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "error": "InvalidKeyException"
+  },
+  {
+   "note": "加密：DES CBC",
+   "op": "cipher",
+   "args": [
+    "DES/CBC/PKCS5Padding",
+    "3132333435363738",
+    "6162636465666768",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "dd3f8334bb3c209701aac10dabdd1a694e9861810aac1660"
+  },
+  {
+   "note": "加密：DES NoPadding",
+   "op": "cipher",
+   "args": [
+    "DES/ECB/NoPadding",
+    "3132333435363738",
+    "",
+    "encrypt",
+    "6162636465666768"
+   ],
+   "expected": "94d4436bc3b5b693"
+  },
+  {
+   "note": "加密：DESede ECB",
+   "op": "cipher",
+   "args": [
+    "DESede",
+    "313233343536373839303132333435363738393031323334",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "69816a0e29a5eb7095a0522d6aa03e5b0306de1ffb536800"
+  },
+  {
+   "note": "加密：DESede CBC",
+   "op": "cipher",
+   "args": [
+    "DESede/CBC/PKCS5Padding",
+    "313233343536373839303132333435363738393031323334",
+    "6162636465666768",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "6eca0c784778a6f7333e1974b21b9929f7bf5d57cb1116ea"
+  },
+  {
+   "note": "加密：DESede 两段密钥",
+   "op": "cipher",
+   "args": [
+    "DESede",
+    "31323334353637383930313233343536",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "c849c5a67cddb4f52f14c4c790c3ffdb6a92b0ef3dba8b5d"
+  },
+  {
+   "note": "加密：DESede 密钥截到 24 字节",
+   "op": "cipher",
+   "args": [
+    "DESede",
+    "313233343536373839303132333435363738393031323334353637383930",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "expected": "69816a0e29a5eb7095a0522d6aa03e5b0306de1ffb536800"
+  },
+  {
+   "note": "加密：DESede 密钥 20 字节",
+   "op": "cipher",
+   "args": [
+    "DESede",
+    "3132333435363738393031323334353637383930",
+    "",
+    "encrypt",
+    "e4b889e4bd93efbc9ae59cb0e79083e5be80e4ba8b"
+   ],
+   "error": "InvalidKeyException"
+  },
+  {
+   "note": "解密：填充错误",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "31323334353637383930313233343536",
+    "",
+    "decrypt",
+    "00000000000000000000000000000000"
+   ],
+   "error": "BadPaddingException"
+  },
+  {
+   "note": "解密：长度不是块的整数倍",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "31323334353637383930313233343536",
+    "",
+    "decrypt",
+    "000000000000000000000000000000"
+   ],
+   "error": "IllegalBlockSizeException"
+  },
+  {
+   "note": "解密：空密文",
+   "op": "cipher",
+   "args": [
+    "AES",
+    "31323334353637383930313233343536",
+    "",
+    "decrypt",
+    ""
+   ],
+   "expected": ""
+  },
+  {
+   "note": "解密：CBC 没有 IV",
+   "op": "cipher",
+   "args": [
+    "AES/CBC/PKCS5Padding",
+    "31323334353637383930313233343536",
+    "",
+    "decrypt",
+    "00000000000000000000000000000000"
+   ],
+   "error": "InvalidKeyException"
+  },
+  {
+   "note": "解密：NoPadding 解密",
+   "op": "cipher",
+   "args": [
+    "AES/ECB/NoPadding",
+    "31323334353637383930313233343536",
+    "",
+    "decrypt",
+    "00000000000000000000000000000000"
+   ],
+   "expected": "739ffbf4ee2f700715587ec0e5dc1d93"
+  },
+  {
+   "note": "解密：DES 填充错误",
+   "op": "cipher",
+   "args": [
+    "DES",
+    "3132333435363738",
+    "",
+    "decrypt",
+    "0000000000000000"
+   ],
+   "error": "BadPaddingException"
+  },
+  {
+   "note": "东八区",
+   "op": "timeFormatUTC",
+   "args": [
+    "0",
+    "yyyy-MM-dd HH:mm",
+    "28800000"
+   ],
+   "expected": "1970-01-01 08:00"
+  },
+  {
+   "note": "UTC",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd HH:mm:ss",
+    "0"
+   ],
+   "expected": "2023-11-14 22:13:20"
+  },
+  {
+   "note": "跨日",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd HH:mm:ss",
+    "28800000"
+   ],
+   "expected": "2023-11-15 06:13:20"
+  },
+  {
+   "note": "负偏移",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd HH:mm:ss",
+    "-18000000"
+   ],
+   "expected": "2023-11-14 17:13:20"
+  },
+  {
+   "note": "偏移只有 12 毫秒",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd HH:mm",
+    "12"
+   ],
+   "expected": "2023-11-14 22:13"
+  },
+  {
+   "note": "ISO 风格",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+    "28800000"
+   ],
+   "expected": "2023-11-15T06:13:20.123+0800"
+  },
+  {
+   "note": "短格式",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yy/M/d H:m:s",
+    "0"
+   ],
+   "expected": "23/11/14 22:13:20"
+  },
+  {
+   "note": "年份位数",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyyy y",
+    "0"
+   ],
+   "expected": "02023 2023"
+  },
+  {
+   "note": "十二小时制下午",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "h:mm a",
+    "0"
+   ],
+   "expected": "10:13 下午"
+  },
+  {
+   "note": "十二小时制凌晨",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "h:mm a",
+    "7200000"
+   ],
+   "expected": "12:13 上午"
+  },
+  {
+   "note": "零点是 12",
+   "op": "timeFormatUTC",
+   "args": [
+    "1699920000000",
+    "hh:mm a",
+    "0"
+   ],
+   "expected": "12:00 上午"
+  },
+  {
+   "note": "星期",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "E EE EEE EEEE",
+    "0"
+   ],
+   "expected": "周二 周二 周二 星期二"
+  },
+  {
+   "note": "月份",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "M MM MMM MMMM",
+    "0"
+   ],
+   "expected": "11 11 11月 十一月"
+  },
+  {
+   "note": "毫秒",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "S SS SSS SSSS",
+    "0"
+   ],
+   "expected": "123 123 123 0123"
+  },
+  {
+   "note": "半小时时区",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "Z ZZ",
+    "19800000"
+   ],
+   "expected": "+0530 +0530"
+  },
+  {
+   "note": "单引号转义",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "'at' HH 'o''clock' ''",
+    "0"
+   ],
+   "expected": "at 22 o'clock '"
+  },
+  {
+   "note": "中文字面量",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy年MM月dd日",
+    "28800000"
+   ],
+   "expected": "2023年11月15日"
+  },
+  {
+   "note": "负时间",
+   "op": "timeFormatUTC",
+   "args": [
+    "-1",
+    "yyyy-MM-dd HH:mm:ss.SSS",
+    "0"
+   ],
+   "expected": "1969-12-31 23:59:59.999"
+  },
+  {
+   "note": "2100 年",
+   "op": "timeFormatUTC",
+   "args": [
+    "4102444800000",
+    "yyyy-MM-dd",
+    "0"
+   ],
+   "expected": "2100-01-01"
+  },
+  {
+   "note": "非法字母",
+   "op": "timeFormatUTC",
+   "args": [
+    "1700000000123",
+    "yyyy-MM-dd q",
+    "0"
+   ],
+   "error": "IllegalArgumentException"
+  }
+ ]
+}
