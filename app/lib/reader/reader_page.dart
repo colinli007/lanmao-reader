@@ -9,9 +9,14 @@ import '../library/providers.dart';
 import '../storage/database.dart';
 import 'chapter_format.dart';
 import 'chapter_list.dart';
+import 'layout/chapter_layout.dart';
+import 'layout/page_painter.dart';
+import 'paged/chapter_window.dart';
+import 'paged/paged_view.dart';
 import 'reader_settings.dart';
+import 'scroll/scroll_view.dart';
 
-/// 滚动阅读：一次显示一章（reader 规格，设计 D9）。
+/// 阅读页：按翻页方式显示分页视图或滚动视图，两者共用一个三章窗口（add-paged-reader 设计 D1、D9）。
 ///
 /// [startAt] 不为空时从这一章的章首开始（详情页的目录选章、第一次阅读），否则从保存的进度继续。
 class ReaderPage extends ConsumerStatefulWidget {
@@ -24,47 +29,24 @@ class ReaderPage extends ConsumerStatefulWidget {
   ConsumerState<ReaderPage> createState() => _ReaderPageState();
 }
 
-/// 一章的显示状态。
-sealed class _ChapterState {
-  const _ChapterState();
-}
-
-final class _Loading extends _ChapterState {
-  const _Loading();
-}
-
-final class _Failed extends _ChapterState {
-  const _Failed(this.message);
-
-  final String message;
-}
-
-final class _Shown extends _ChapterState {
-  const _Shown(this.chapter);
-
-  final FormattedChapter chapter;
-}
-
 class _ReaderPageState extends ConsumerState<ReaderPage> {
   late final AppDatabase _db = ref.read(databaseProvider);
   late final BookContentSource _source = ref.read(contentSourceProvider);
   final _scaffold = GlobalKey<ScaffoldState>();
-  final _scroll = ScrollController();
-  final _column = GlobalKey();
+  final _menu = ValueNotifier(false);
   late final AppLifecycleListener _lifecycle;
 
   ShelfBook? _book;
   List<TocChapter> _chapters = const [];
-  int _index = 0;
-  _ChapterState _state = const _Loading();
-  List<GlobalKey> _paragraphKeys = const [];
 
-  /// 当前章节内的阅读位置（第一个可见段落的偏移），滚动停止时更新。
-  int _position = 0;
-  bool _menu = false;
+  /// 第一次拿到正文区域的尺寸时创建（排版要用）。
+  ChapterWindow? _window;
+
+  /// 上次保存进度时的章节：窗口换了章就立即保存，同一章里的移动 2 秒防抖保存（设计 D13）。
+  int? _savedChapter;
   Timer? _saveTimer;
 
-  /// 进行中的正文请求，按章节地址；阅读和预加载共用，同一章同时只有一个。
+  /// 进行中的正文请求，按章节地址；窗口里的三章共用，同一章同时只有一个。
   final Map<String, Future<ChapterText>> _loading = {};
 
   @override
@@ -76,11 +58,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   void dispose() {
-    _saveTimer?.cancel();
-    // 元素正在卸载，不再量布局，用滚动停止时记下的位置
-    _saveProgress(measure: false);
+    _saveProgress();
     _lifecycle.dispose();
-    _scroll.dispose();
+    _window?.dispose();
+    _menu.dispose();
     super.dispose();
   }
 
@@ -92,44 +73,29 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       _book = book;
       _chapters = chapters;
     });
-    final startAt = widget.startAt;
-    if (startAt != null) {
-      await _show(startAt.clamp(0, chapters.length - 1));
-    } else {
-      await _show(book.durChapterIndex.clamp(0, chapters.length - 1), position: book.durChapterPos);
-    }
   }
 
-  /// 打开第 [index] 章，停在包含 [position] 的段落（默认章首）。
-  Future<void> _show(int index, {int position = 0}) async {
-    final chapter = _chapters[index];
-    setState(() {
-      _index = index;
-      _position = position;
-      _state = const _Loading();
-      _paragraphKeys = const [];
-    });
-    final _ChapterState state;
-    if (chapter.isVolume) {
-      state = _Shown((title: chapter.title, paragraphs: const []));
+  /// 第一次布局时创建窗口，打开要读的章节。在 LayoutBuilder 里调用，所以先打开再挂监听，不在构建期间 setState。
+  ChapterWindow _createWindow(LayoutSpec spec) {
+    final book = _book!;
+    final window = ChapterWindow(chapters: _chapters, load: _formatted, spec: spec);
+    final startAt = widget.startAt;
+    if (startAt != null) {
+      window.open(startAt.clamp(0, _chapters.length - 1));
     } else {
-      try {
-        final text = await _text(index);
-        state = _Shown(formatChapter(text.title.isEmpty ? chapter.title : text.title, text.content));
-      } on ContentLoadException catch (e) {
-        if (mounted && _index == index) setState(() => _state = _Failed(e.message));
-        return;
-      }
+      window.open(book.durChapterIndex.clamp(0, _chapters.length - 1), offset: book.durChapterPos);
     }
-    if (!mounted || _index != index) return;
-    setState(() {
-      _state = state;
-      if (state case _Shown(:final chapter)) _paragraphKeys = [for (final _ in chapter.paragraphs) GlobalKey()];
+    window.addListener(_onWindow);
+    // 这一帧结束后：按要打开的位置保存一次（同时更新最近阅读时间），并重建一次，让菜单和目录用上窗口
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(_saveProgress);
     });
-    _restorePosition();
-    // 新章节还没布局，按要打开的位置保存（同时更新最近阅读时间）
-    _saveProgress(measure: false);
-    _preloadAfter(index);
+    return window;
+  }
+
+  Future<FormattedChapter> _formatted(int index) async {
+    final text = await _text(index);
+    return formatChapter(text.title.isEmpty ? _chapters[index].title : text.title, text.content);
   }
 
   /// 正文：先读缓存，没有时执行正文链路并写入缓存。
@@ -151,89 +117,39 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     }();
   }
 
-  /// 预加载下一个不是卷的章节，失败不提示。
-  void _preloadAfter(int index) {
-    final next = _neighbor(index, 1);
-    if (next != null) _text(next).ignore();
-  }
-
-  /// 上一章、下一章跳过卷。
-  int? _neighbor(int index, int step) {
-    for (var i = index + step; i >= 0 && i < _chapters.length; i += step) {
-      if (!_chapters[i].isVolume) return i;
-    }
-    return null;
-  }
-
-  void _go(int index) {
-    _saveProgress();
-    _show(index);
-  }
-
-  // ---------------------------------------------------------------- 阅读位置
-
-  /// 视口顶部所在的段落的偏移；还没有布局时返回上次记下的位置。
-  int _visiblePosition() {
-    final state = _state;
-    final column = _column.currentContext?.findRenderObject() as RenderBox?;
-    if (state is! _Shown || column == null || !_scroll.hasClients || state.chapter.paragraphs.isEmpty) return _position;
-    final top = _scroll.offset;
-    var position = 0;
-    for (final (i, key) in _paragraphKeys.indexed) {
-      final box = key.currentContext?.findRenderObject() as RenderBox?;
-      if (box == null) break;
-      if (box.localToGlobal(Offset.zero, ancestor: column).dy > top + 1) break;
-      position = state.chapter.paragraphs[i].offset;
-    }
-    return position;
-  }
-
-  /// 布局完成后把包含 [_position] 的段落滚到顶部。
-  void _restorePosition() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = _state;
-      final column = _column.currentContext?.findRenderObject() as RenderBox?;
-      if (!mounted || state is! _Shown || column == null || !_scroll.hasClients) return;
-      if (_position == 0 || state.chapter.paragraphs.isEmpty) {
-        _scroll.jumpTo(0);
-        return;
-      }
-      final box = _paragraphKeys[paragraphAt(state.chapter.paragraphs, _position)].currentContext?.findRenderObject() as RenderBox?;
-      if (box == null) return;
-      final y = box.localToGlobal(Offset.zero, ancestor: column).dy;
-      _scroll.jumpTo(y.clamp(0, _scroll.position.maxScrollExtent));
-    });
-  }
-
-  void _saveProgress({bool measure = true}) {
-    final book = _book;
-    if (book == null || _chapters.isEmpty) return;
-    if (measure) _position = _visiblePosition();
-    final chapter = _chapters[_index];
-    _db.saveProgress(book.bookUrl, index: _index, url: chapter.url, title: chapter.title, position: _position, now: DateTime.now());
-  }
-
-  bool _onScroll(ScrollNotification notification) {
-    if (notification is ScrollEndNotification) {
-      _position = _visiblePosition();
+  /// 换了章：立即保存，菜单里的章节名、目录标记跟着变；同一章里翻页或滚动：2 秒内没有再动时保存。
+  void _onWindow() {
+    if (_window!.chapter != _savedChapter) {
+      _saveProgress();
+      setState(() {});
+    } else {
       _saveTimer?.cancel();
       _saveTimer = Timer(const Duration(seconds: 2), _saveProgress);
     }
-    return false;
   }
+
+  void _saveProgress() {
+    final book = _book;
+    final window = _window;
+    if (book == null || window == null) return;
+    _saveTimer?.cancel();
+    final index = window.chapter;
+    final chapter = _chapters[index];
+    _savedChapter = index;
+    _db.saveProgress(book.bookUrl, index: index, url: chapter.url, title: chapter.title, position: window.offset, now: DateTime.now());
+  }
+
+  /// 菜单和目录换章：从章首开始（reader「章节切换」）。
+  void _go(int index) => _window?.open(index);
 
   // ---------------------------------------------------------------- 界面
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(readerSettingsProvider);
-    ref.listen(readerSettingsProvider, (_, _) {
-      // 改设置之前记下第一个可见段落，重排之后滚回去
-      _position = _visiblePosition();
-      _restorePosition();
-    });
+    final theme = settings.effectiveTheme(MediaQuery.platformBrightnessOf(context));
     final book = _book;
-    final theme = settings.theme;
+    final window = _window;
     // 正文背景铺到状态栏后面，状态栏图标的深浅跟着它；菜单打开时盖在上面的 AppBar 用它自己的
     final background = ThemeData.estimateBrightnessForColor(theme.background);
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -244,13 +160,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       child: Scaffold(
         key: _scaffold,
         backgroundColor: theme.background,
-        drawer: book == null
+        drawer: window == null
             ? null
             : Drawer(
                 child: SafeArea(
                   child: ChapterList(
                     chapters: _chapters,
-                    current: _index,
+                    current: window.chapter,
                     onSelect: (index) {
                       Navigator.pop(context);
                       _go(index);
@@ -259,84 +175,43 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 ),
               ),
         body: Stack(
-          // 铺满整页：章节很短时正文只有几行，点中部也要能打开菜单
           fit: StackFit.expand,
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (details) {
-                final size = MediaQuery.sizeOf(context);
-                final p = details.localPosition;
-                final central = p.dx > size.width / 3 && p.dx < size.width * 2 / 3 && p.dy > size.height / 3 && p.dy < size.height * 2 / 3;
-                if (central) setState(() => _menu = !_menu);
-              },
-              child: SafeArea(child: _content(settings)),
+            if (book == null) Center(child: CircularProgressIndicator(color: theme.foreground)) else _content(settings, theme),
+            ValueListenableBuilder(
+              valueListenable: _menu,
+              builder: (context, menu, _) => menu && book != null && _window != null
+                  ? Stack(fit: StackFit.expand, children: _menuBars(book, _window!))
+                  : const SizedBox.shrink(),
             ),
-            if (_menu && book != null) ..._menuBars(book),
           ],
         ),
       ),
     );
   }
 
-  Widget _content(ReaderSettings settings) {
-    final color = settings.theme.foreground;
-    final body = TextStyle(fontSize: settings.fontSize, height: settings.lineHeight, color: color);
-    switch (_state) {
-      case _Loading():
-        return Center(child: CircularProgressIndicator(color: color));
-      case _Failed(:final message):
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(padding: const EdgeInsets.all(16), child: Text(message, style: TextStyle(color: color))),
-              FilledButton(onPressed: () => _show(_index, position: _position), child: const Text('重试')),
-            ],
-          ),
+  Widget _content(ReaderSettings settings, ReaderTheme theme) {
+    final insets = PageGeometry.bodyInsets(MediaQuery.paddingOf(context));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 分页和滚动用同一个排版参数（滚动只用宽度），切换翻页方式时排版结果直接复用
+        final spec = LayoutSpec(
+          fontSize: settings.fontSize,
+          lineHeight: settings.lineHeight,
+          size: insets.deflateSize(constraints.biggest),
         );
-      case _Shown(:final chapter):
-        final previous = _neighbor(_index, -1);
-        final next = _neighbor(_index, 1);
-        return NotificationListener<ScrollNotification>(
-          onNotification: _onScroll,
-          child: SingleChildScrollView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            child: Column(
-              key: _column,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (previous != null)
-                  Align(child: TextButton(onPressed: () => _go(previous), child: const Text('上一章'))),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(chapter.title, style: body.copyWith(fontSize: settings.fontSize * 1.3, fontWeight: FontWeight.w600)),
-                ),
-                for (final (i, paragraph) in chapter.paragraphs.indexed)
-                  Padding(
-                    key: _paragraphKeys[i],
-                    padding: EdgeInsets.only(bottom: settings.fontSize * 0.6),
-                    child: Text(paragraph.text, style: body),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 24),
-                  child: Align(
-                    child: next == null
-                        ? Text('已是最后一章', style: TextStyle(color: color))
-                        : FilledButton(onPressed: () => _go(next), child: const Text('下一章')),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-    }
+        final window = _window ??= _createWindow(spec);
+        window.resize(spec);
+        return settings.pageMode == PageMode.scroll
+            ? ScrollReaderView(window: window, theme: theme, menu: _menu)
+            : PagedView(window: window, mode: settings.pageMode, theme: theme, insets: insets, menu: _menu);
+      },
+    );
   }
 
-  List<Widget> _menuBars(ShelfBook book) {
-    final previous = _neighbor(_index, -1);
-    final next = _neighbor(_index, 1);
+  List<Widget> _menuBars(ShelfBook book, ChapterWindow window) {
+    final previous = window.neighbor(window.chapter, -1);
+    final next = window.neighbor(window.chapter, 1);
     return [
       Positioned(
         top: 0,
@@ -349,7 +224,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(book.name),
-              Text(_chapters[_index].title, style: Theme.of(context).textTheme.bodySmall),
+              Text(_chapters[window.chapter].title, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -392,6 +267,7 @@ class _SettingsSheet extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          spacing: 8,
           children: [
             Row(
               children: [
@@ -427,6 +303,16 @@ class _SettingsSheet extends ConsumerWidget {
               segments: [for (final theme in ReaderTheme.values) ButtonSegment(value: theme, label: Text(theme.label))],
               selected: {settings.theme},
               onSelectionChanged: (selection) => notifier.update(settings.copyWith(theme: selection.single)),
+            ),
+            SegmentedButton<PageMode>(
+              segments: [for (final mode in PageMode.values) ButtonSegment(value: mode, label: Text(mode.label))],
+              selected: {settings.pageMode},
+              onSelectionChanged: (selection) => notifier.update(settings.copyWith(pageMode: selection.single)),
+            ),
+            SwitchListTile(
+              title: const Text('跟随系统深色'),
+              value: settings.followSystemDark,
+              onChanged: (value) => notifier.update(settings.copyWith(followSystemDark: value)),
             ),
           ],
         ),

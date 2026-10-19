@@ -16,14 +16,34 @@ enum ReaderTheme {
   final Color foreground;
 }
 
+/// 翻页方式（reader「翻页方式」，add-paged-reader 设计 D14）。前三种是分页，滚动是整章上下滚动。
+enum PageMode {
+  cover('覆盖'),
+  slide('滑动'),
+  none('无动画'),
+  scroll('滚动');
+
+  const PageMode(this.label);
+
+  final String label;
+}
+
 /// 阅读设置：对所有书生效（reader「阅读设置」）。
 final class ReaderSettings {
-  const ReaderSettings({this.fontSize = 18, this.lineHeight = 1.8, this.theme = ReaderTheme.light});
+  const ReaderSettings({
+    this.fontSize = 18,
+    this.lineHeight = 1.8,
+    this.theme = ReaderTheme.light,
+    this.pageMode = PageMode.cover,
+    this.followSystemDark = true,
+  });
 
   factory ReaderSettings.fromMap(Map<String, String> map) => ReaderSettings(
     fontSize: double.tryParse(map[_fontSize] ?? '')?.clamp(minFontSize, maxFontSize) ?? 18,
     lineHeight: double.tryParse(map[_lineHeight] ?? '')?.clamp(minLineHeight, maxLineHeight) ?? 1.8,
     theme: ReaderTheme.values.asNameMap()[map[_theme]] ?? ReaderTheme.light,
+    pageMode: PageMode.values.asNameMap()[map[_pageMode]] ?? PageMode.cover,
+    followSystemDark: bool.tryParse(map[_followSystemDark] ?? '') ?? true,
   );
 
   static const minFontSize = 12.0;
@@ -34,18 +54,36 @@ final class ReaderSettings {
   static const _fontSize = 'reader.fontSize';
   static const _lineHeight = 'reader.lineHeight';
   static const _theme = 'reader.theme';
+  static const _pageMode = 'reader.pageMode';
+  static const _followSystemDark = 'reader.followSystemDark';
 
   final double fontSize;
   final double lineHeight;
   final ReaderTheme theme;
+  final PageMode pageMode;
 
-  ReaderSettings copyWith({double? fontSize, double? lineHeight, ReaderTheme? theme}) => ReaderSettings(
-    fontSize: fontSize ?? this.fontSize,
-    lineHeight: lineHeight ?? this.lineHeight,
-    theme: theme ?? this.theme,
-  );
+  /// 打开时，系统是深色模式就用暗主题，否则用 [theme]（reader「阅读主题跟随系统」）。
+  final bool followSystemDark;
 
-  Map<String, String> toMap() => {_fontSize: '$fontSize', _lineHeight: lineHeight.toStringAsFixed(1), _theme: theme.name};
+  /// 实际显示的主题（设计 D14）。
+  ReaderTheme effectiveTheme(Brightness platform) => followSystemDark && platform == Brightness.dark ? ReaderTheme.dark : theme;
+
+  ReaderSettings copyWith({double? fontSize, double? lineHeight, ReaderTheme? theme, PageMode? pageMode, bool? followSystemDark}) =>
+      ReaderSettings(
+        fontSize: fontSize ?? this.fontSize,
+        lineHeight: lineHeight ?? this.lineHeight,
+        theme: theme ?? this.theme,
+        pageMode: pageMode ?? this.pageMode,
+        followSystemDark: followSystemDark ?? this.followSystemDark,
+      );
+
+  Map<String, String> toMap() => {
+    _fontSize: '$fontSize',
+    _lineHeight: lineHeight.toStringAsFixed(1),
+    _theme: theme.name,
+    _pageMode: pageMode.name,
+    _followSystemDark: '$followSystemDark',
+  };
 }
 
 /// 启动时从数据库读出的设置，在 main 里覆盖。

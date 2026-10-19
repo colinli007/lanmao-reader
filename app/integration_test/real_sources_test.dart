@@ -77,7 +77,12 @@ void main() {
   }
 
   Future<void> startApp(WidgetTester tester, AppDatabase db) async {
-    await tester.pumpWidget(ProviderScope(overrides: await startServices(database: db), child: const NovelReaderApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: await startServices(database: db),
+        child: const NovelReaderApp(),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -110,11 +115,7 @@ void main() {
     await tester.enterText(find.byType(TextField), _key);
     final watch = Stopwatch()..start();
     await tester.testTextInput.receiveAction(TextInputAction.search);
-    final finished = await pumpUntil(
-      tester,
-      () => find.textContaining('搜索结束').evaluate().isNotEmpty,
-      timeout: const Duration(minutes: 10),
-    );
+    final finished = await pumpUntil(tester, () => find.textContaining('搜索结束').evaluate().isNotEmpty, timeout: const Duration(minutes: 10));
     expect(finished, isTrue, reason: '搜索没有在 10 分钟内结束');
     return watch.elapsed;
   }
@@ -122,10 +123,17 @@ void main() {
   SearchState searchState(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(SearchPage))).read(searchControllerProvider);
 
+  /// 阅读页上显示的正文：正文是自己画的，每页（滚动模式是每段）带一个读屏标签。
   Finder readerParagraphs() => find.descendant(
     of: find.byType(ReaderPage),
-    matching: find.byWidgetPredicate((w) => w is Text && (w.data?.startsWith('　　') ?? false)),
+    matching: find.byWidgetPredicate((w) => w is Semantics && (w.properties.label?.isNotEmpty ?? false)),
   );
+
+  /// 正文显示出来了：有正文，并且不是加载中的页或失败的页。
+  bool readerShown() =>
+      readerParagraphs().evaluate().isNotEmpty &&
+      find.text('重试').evaluate().isEmpty &&
+      find.descendant(of: find.byType(ReaderPage), matching: find.byType(CircularProgressIndicator)).evaluate().isEmpty;
 
   testWidgets('在 200 个书源上搜索一次', (tester) async {
     ignoreCoverErrors();
@@ -139,8 +147,10 @@ void main() {
       final kind = failure.reason.split('：').first;
       reasons[kind] = (reasons[kind] ?? 0) + 1;
     }
-    report('搜索「$_key」${state.total} 个书源，耗时 ${elapsed.inSeconds} 秒，合并后 ${state.books.length} 本，'
-        '有结果的书源 ${state.total - state.failures.length}（含 0 结果），失败 ${state.failures.length}：$reasons');
+    report(
+      '搜索「$_key」${state.total} 个书源，耗时 ${elapsed.inSeconds} 秒，合并后 ${state.books.length} 本，'
+      '有结果的书源 ${state.total - state.failures.length}（含 0 结果），失败 ${state.failures.length}：$reasons',
+    );
     await shutdown(tester, db);
   }, skip: _benchSources.isEmpty);
 
@@ -174,7 +184,13 @@ void main() {
         timeout: const Duration(seconds: 90),
       );
       if (!tocLoaded || find.text('重试').evaluate().isNotEmpty) {
-        final error = find.descendant(of: find.byType(BookDetailPage), matching: find.byType(Text)).evaluate().map((e) => (e.widget as Text).data).whereType<String>().where((t) => t.contains('：')).firstOrNull;
+        final error = find
+            .descendant(of: find.byType(BookDetailPage), matching: find.byType(Text))
+            .evaluate()
+            .map((e) => (e.widget as Text).data)
+            .whereType<String>()
+            .where((t) => t.contains('：'))
+            .firstOrNull;
         report('${candidate.source.source.bookSourceName}：详情或目录失败 $error');
         navigator.pop();
         await tester.pumpAndSettle();
@@ -183,18 +199,28 @@ void main() {
       await tester.tap(find.text('加入书架'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('开始阅读'));
-      final first = await pumpUntil(tester, () => readerParagraphs().evaluate().isNotEmpty || find.text('重试').evaluate().isNotEmpty, timeout: const Duration(seconds: 90));
-      final firstOk = first && readerParagraphs().evaluate().isNotEmpty;
+      final first = await pumpUntil(
+        tester,
+        () => readerShown() || find.text('重试').evaluate().isNotEmpty,
+        timeout: const Duration(seconds: 90),
+      );
+      final firstOk = first && readerShown();
       var secondOk = false;
-      if (firstOk && find.text('下一章').evaluate().isNotEmpty) {
-        final scrollable = find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scrollable)).first;
-        await tester.scrollUntilVisible(find.text('下一章'), 600, scrollable: scrollable, maxScrolls: 500);
+      if (firstOk) {
+        // 默认是分页模式：从菜单进下一章（窗口已经预加载过它）
+        await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('下一章'));
-        secondOk = await pumpUntil(tester, () => readerParagraphs().evaluate().isNotEmpty, timeout: const Duration(seconds: 90));
+        final next = find.widgetWithText(TextButton, '下一章');
+        if (tester.widget<TextButton>(next).onPressed != null) {
+          await tester.tap(next);
+          await tester.pump();
+          secondOk = await pumpUntil(tester, readerShown, timeout: const Duration(seconds: 90));
+        }
       }
-      final paragraphs = readerParagraphs().evaluate().length;
-      report('${candidate.source.source.bookSourceName}：《${candidate.book.name}》第一章 ${firstOk ? '通过' : '失败'}，第二章 ${secondOk ? '通过' : '失败'}（$paragraphs 段）');
+      final chars = readerParagraphs().evaluate().fold(0, (sum, e) => sum + ((e.widget as Semantics).properties.label?.length ?? 0));
+      report(
+        '${candidate.source.source.bookSourceName}：《${candidate.book.name}》第一章 ${firstOk ? '通过' : '失败'}，第二章 ${secondOk ? '通过' : '失败'}（这一页 $chars 字）',
+      );
       if (firstOk) shelved.add(candidate.book.bookUrl);
       navigator.pop(); // 阅读页
       await tester.pumpAndSettle();
@@ -214,9 +240,10 @@ void main() {
     // 从书架继续阅读：回到上次的章节，正文读缓存
     final book = shelf.first.book;
     await tester.tap(find.text(book.name).first);
-    expect(await pumpUntil(tester, () => readerParagraphs().evaluate().isNotEmpty, timeout: const Duration(seconds: 30)), isTrue);
+    expect(await pumpUntil(tester, readerShown, timeout: const Duration(seconds: 30)), isTrue);
     final title = (await db.chaptersOf(book.bookUrl))[book.durChapterIndex].title;
-    report('从书架打开《${book.name}》：显示「$title」${find.textContaining(title).evaluate().isNotEmpty ? '' : '（没找到章节名）'}');
+    final shown = find.bySemanticsLabel(RegExp(RegExp.escape(title))).evaluate().isNotEmpty;
+    report('从书架打开《${book.name}》：显示「$title」${shown ? '' : '（没找到章节名）'}');
     tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await tester.pumpAndSettle();
 

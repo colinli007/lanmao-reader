@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 排版验证的真实网文（有版权），用 tool/export_corpus.sh 生成
+/assets/corpus.txt

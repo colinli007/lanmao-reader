@@ -10,7 +10,7 @@ import 'package:novel_reader/online/startup.dart';
 import 'package:novel_reader/reader/reader_page.dart';
 import 'package:novel_reader/storage/database.dart';
 
-/// 端到端：本地 HTTP 服务器上的假书源，走完导入 → 搜索 → 详情 → 加入书架 → 读第 1、2 章 → 返回书架。
+/// 端到端：本地 HTTP 服务器上的假书源，走完导入 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架。
 /// 用真的 worker 池和 quickjs（打包在 app 里），数据库是临时的内存数据库。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +44,8 @@ void main() {
   });
   tearDownAll(() => server.close(force: true));
 
-  String sourceJson() => '''{
+  String sourceJson() =>
+      '''{
     "bookSourceUrl": "$base", "bookSourceName": "本地测试", "searchUrl": "/search?q={{key}}",
     "ruleSearch": {"bookList": "class.book", "name": "class.name@text", "author": "class.author@text", "bookUrl": "tag.a@href"},
     "ruleBookInfo": {"intro": "class.intro@text", "tocUrl": "class.toc@href"},
@@ -63,9 +64,23 @@ void main() {
 
   Finder readerScrollable() => find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scrollable)).first;
 
+  /// 正文是自己画的，按读屏标签找：分页模式一页一个标签（各行以换行连接），滚动模式一段一个，按整行匹配。
+  Finder paragraph(String text) => find.bySemanticsLabel(RegExp('(^|\n)${RegExp.escape(text)}(\n|\$)'));
+
+  Future<void> tapReader(WidgetTester tester, double x) async {
+    final size = tester.getSize(find.byType(ReaderPage));
+    await tester.tapAt(Offset(size.width * x, size.height / 2));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('导入 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
-    await tester.pumpWidget(ProviderScope(overrides: await startServices(database: db), child: const NovelReaderApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: await startServices(database: db),
+        child: const NovelReaderApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // 导入
@@ -100,13 +115,30 @@ void main() {
     await tester.tap(find.text('加入书架'));
     await pumpUntil(tester, find.text('已在书架'));
 
-    // 读第一章、第二章
+    // 读第一章、第二章：默认覆盖翻页，点右侧翻进第二章，点左侧翻回第一章。
+    // 导入时的提示条还在底部，会挡住阅读菜单的底栏，先清掉
+    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await tester.tap(find.text('开始阅读'));
-    await pumpUntil(tester, find.text('　　第一章的第一段。'));
-    expect(find.text('　　第一章 开始'), findsNothing, reason: '和章节名相同的第一段被去掉');
+    await pumpUntil(tester, paragraph('第一章的第一段。'));
+    await tester.pumpAndSettle(); // 等打开阅读页的过渡动画结束，过渡期间页面不接收点击
+    expect(find.bySemanticsLabel('第一章 开始\n第一章的第一段。\n第一章的第二段。'), findsOneWidget, reason: '和章节名相同的第一段被去掉');
+    await tapReader(tester, 0.9);
+    await pumpUntil(tester, paragraph('第二章的第一段。'));
+    await tapReader(tester, 0.1);
+    await pumpUntil(tester, paragraph('第一章的第一段。'));
+
+    // 切到滚动模式，章末点下一章
+    await tapReader(tester, 0.5);
+    await tester.tap(find.byTooltip('阅读设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('滚动'));
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+    await tapReader(tester, 0.5); // 隐藏菜单
     await tester.scrollUntilVisible(find.text('下一章'), 300, scrollable: readerScrollable());
     await tester.tap(find.text('下一章'));
-    await pumpUntil(tester, find.text('　　第二章的第一段。'));
+    await pumpUntil(tester, paragraph('第二章的第一段。'));
     await tester.scrollUntilVisible(find.text('已是最后一章'), 300, scrollable: readerScrollable());
 
     // 返回书架（等滚动停下，否则这一下点击只会停住滚动）

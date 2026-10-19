@@ -27,3 +27,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # 排版验证的真实网文 assets/corpus.txt 不进仓库（见 assets/README.md），声明成目录，缺这个文件时不影响构建
+  assets:
+    - assets/
