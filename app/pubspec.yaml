@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^2.6.1
+  package_info_plus: ^9.0.1
   path: ^1.9.1
   path_provider: ^2.1.5
   blocking_bridge:

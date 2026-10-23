@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_info.dart';
 import 'bookshelf/bookshelf_page.dart';
 
 /// Material 3 默认组件和主题，跟随系统亮暗。
@@ -11,7 +12,7 @@ class NovelReaderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '小说阅读',
+      title: appName,
       theme: ThemeData(colorSchemeSeed: _seed),
       darkTheme: ThemeData(colorSchemeSeed: _seed, brightness: Brightness.dark),
       home: const BookshelfPage(),

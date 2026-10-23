@@ -7,6 +7,7 @@ import '../online/book_detail_page.dart';
 import '../online/search_page.dart';
 import '../online/source_list_page.dart';
 import '../reader/reader_page.dart';
+import '../settings/settings_page.dart';
 import '../storage/database.dart';
 import 'shelf_refresh.dart';
 
@@ -38,6 +39,11 @@ class BookshelfPage extends ConsumerWidget {
             tooltip: '书源',
             icon: const Icon(Icons.source_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SourceListPage())),
+          ),
+          IconButton(
+            tooltip: '设置',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
           ),
         ],
       ),

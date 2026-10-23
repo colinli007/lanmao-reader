@@ -8,9 +8,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:novel_reader/app.dart';
 import 'package:novel_reader/online/startup.dart';
 import 'package:novel_reader/reader/reader_page.dart';
+import 'package:novel_reader/settings/byte_size.dart';
 import 'package:novel_reader/storage/database.dart';
 
-/// 端到端：本地 HTTP 服务器上的假书源，走完导入 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架。
+/// 端到端：本地 HTTP 服务器上的假书源，走完导入 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架
+/// → 清除正文缓存后再打开。
 /// 用真的 worker 池和 quickjs（打包在 app 里），数据库是临时的内存数据库。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -18,11 +20,15 @@ void main() {
   late HttpServer server;
   late String base;
 
+  /// 每个路径被请求的次数。
+  final hits = <String, int>{};
+
   setUpAll(() async {
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     base = 'http://127.0.0.1:${server.port}';
     server.listen((request) {
       final path = request.uri.path;
+      hits.update(path, (n) => n + 1, ifAbsent: () => 1);
       final body = switch (path) {
         '/search' => '<div class="book"><a href="/book/1"><span class="name">本地小说</span></a><span class="author">测试作者</span></div>',
         '/book/1' => '<p class="intro">这是一本测试用的小说。</p><a class="toc" href="/book/1/toc">目录</a>',
@@ -73,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('导入 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架', (tester) async {
+  testWidgets('导入 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架 → 清除缓存后再打开', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(
       ProviderScope(
@@ -162,5 +168,30 @@ void main() {
     await tester.tap(find.byTooltip('书源日志'));
     await tester.pumpAndSettle();
     expect(find.text('读到第一章 开始'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // 清除正文缓存，再从书架打开：停在第二章，正文重新请求网络
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 章 · ${formatByteSize((await db.contentCacheStats()).bytes)}'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '清除'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '清除'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 章 · 0 B'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    final before = hits['/c/2'];
+    await tester.tap(find.text('本地小说'));
+    await pumpUntil(tester, paragraph('第二章的第一段。'));
+    expect(hits['/c/2'], before! + 1);
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
   });
 }

@@ -32,6 +32,14 @@ void main() {
     ],
   );
 
+  testWidgets('顶栏的设置按钮进入设置页', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('正文缓存'), findsOneWidget);
+    expect(find.text('关于'), findsOneWidget);
+  });
+
   testWidgets('空书架提示去搜索', (tester) async {
     await pump(tester);
     expect(find.text('书架是空的，去搜索添加吧'), findsOneWidget);

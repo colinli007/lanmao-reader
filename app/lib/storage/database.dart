@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -111,6 +113,9 @@ class Settings extends Table {
 
 /// 书架上的一本书和它的未读章节数（排在当前章节之后的非卷章节数）。
 typedef ShelfEntry = ({ShelfBook book, int unread});
+
+/// 已缓存正文的章节数和正文的 UTF-8 字节数。
+typedef ContentCacheStats = ({int chapters, int bytes});
 
 @DriftDatabase(tables: [Sources, Books, Chapters, Contents, SourceKv, Cookies, Settings])
 class AppDatabase extends _$AppDatabase {
@@ -274,6 +279,25 @@ class AppDatabase extends _$AppDatabase {
       (select(contents)..where((c) => c.bookUrl.equals(bookUrl) & c.chapterUrl.equals(chapterUrl))).getSingleOrNull();
 
   Future<void> putContent(ContentRow row) => into(contents).insertOnConflictUpdate(row);
+
+  /// 正文缓存的大小：清除时会删掉的那些正文（add-settings 设计 D1）。
+  Future<ContentCacheStats> contentCacheStats() async {
+    final chapters = countAll();
+    final bytes = const CustomExpression<int>('COALESCE(SUM(octet_length(content)), 0)');
+    final row = await (selectOnly(contents)..addColumns([chapters, bytes])).getSingle();
+    return (chapters: row.read(chapters)!, bytes: row.read(bytes)!);
+  }
+
+  /// 清除所有书的正文缓存，再 VACUUM 回收磁盘空间（设计 D2）。VACUUM 不能在事务里执行；
+  /// 它失败（比如磁盘空间不足）时删除已经生效，只是文件没有变小，所以只记日志。
+  Future<void> clearContents() async {
+    await delete(contents).go();
+    try {
+      await customStatement('VACUUM');
+    } catch (e) {
+      log('清除正文缓存后 VACUUM 失败', error: e, name: 'storage');
+    }
+  }
 
   // ---------------------------------------------------------------- 书源级状态、Cookie、设置
 

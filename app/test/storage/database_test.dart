@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_reader/storage/database.dart';
@@ -57,6 +61,54 @@ void main() {
     await db.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/1', title: 't', content: 'c2'));
     expect((await db.getContent('b', '/1'))?.content, 'c2');
     expect(await db.getContent('b', '/2'), isNull);
+  });
+
+  test('正文缓存统计：章节数和正文的 UTF-8 字节数', () async {
+    expect(await db.contentCacheStats(), (chapters: 0, bytes: 0));
+    const texts = ['第一章正文', 'abc', '“对话”……'];
+    await db.putContent(ContentRow(bookUrl: 'a', chapterUrl: '/0', title: '标题', content: texts[0]));
+    await db.putContent(ContentRow(bookUrl: 'a', chapterUrl: '/1', title: '标题', content: texts[1]));
+    await db.putContent(ContentRow(bookUrl: 'b', chapterUrl: '/0', title: '标题', content: texts[2]));
+    final bytes = texts.fold(0, (sum, t) => sum + utf8.encode(t).length);
+    expect(await db.contentCacheStats(), (chapters: 3, bytes: bytes));
+  });
+
+  test('清除正文缓存：只删正文，书籍、目录、进度、书源、设置、书源级状态和 Cookie 不变', () async {
+    await db.importSources([(url: 's', json: '{}', enabled: true)]);
+    await db.saveBrowsingBook(book('b'), toc('b', 3));
+    await db.addToShelf('b', DateTime(2026));
+    await db.saveProgress('b', index: 2, url: '/2.html', title: '第2章', position: 40, now: DateTime(2026));
+    await db.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/2.html', title: '第2章', content: '正文'));
+    await db.putSetting('k', 'v');
+    await db.putSourceKv('kv', 'v', null);
+    await db.putCookie('a.com', 'x=1');
+    Future<List<Object>> others() async => [
+      for (final ResultSetImplementation<HasResultSet, Object> table in [db.sources, db.books, db.chapters, db.settings, db.sourceKv, db.cookies])
+        await db.select(table).get(),
+    ];
+    final before = await others();
+
+    await db.clearContents();
+    expect(await db.contentCacheStats(), (chapters: 0, bytes: 0));
+    expect(await others(), before);
+  });
+
+  test('清除正文缓存后数据库文件变小', () async {
+    final dir = Directory.systemTemp.createTempSync('db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = File('${dir.path}/app.sqlite');
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true; // setUp 的内存数据库也开着
+    final fileDb = AppDatabase(NativeDatabase(file));
+    addTearDown(fileDb.close);
+    final chapter = '正文' * 50000; // 300KB
+    for (var i = 0; i < 34; i++) {
+      await fileDb.putContent(ContentRow(bookUrl: 'b', chapterUrl: '/$i', title: '第$i章', content: chapter));
+    }
+    final cached = (await fileDb.contentCacheStats()).bytes;
+    final before = file.lengthSync();
+
+    await fileDb.clearContents();
+    expect(before - file.lengthSync(), closeTo(cached, cached * 0.05));
   });
 
   test('书源级状态：载入时删除过期的行', () async {
