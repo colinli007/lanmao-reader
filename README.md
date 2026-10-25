@@ -8,6 +8,44 @@
 
 开源协议：[GPL-3.0](LICENSE)。
 
+## 安装
+
+从 [GitHub Releases](https://github.com/colinli007/novel-reader/releases) 下载对应平台的文件（`<版本>` 是版本号，如 `0.1.0`）：
+
+| 平台 | 文件 |
+|---|---|
+| Android（64 位） | `novel-reader-<版本>-android-arm64.apk` |
+| iOS | `novel-reader-<版本>-ios-unsigned.ipa` |
+| macOS | `novel-reader-<版本>-macos.dmg` |
+
+**Android**：
+
+1. 在手机上打开下载的 APK。
+2. 第一次安装时，系统会要求允许浏览器或文件管理器「安装未知应用」，在弹出的设置里打开，返回后继续安装。
+
+以后的版本直接覆盖安装，书架、书源和设置都会保留。不要先卸载，卸载会删掉本机的所有数据。不支持 32 位 ARM 的手机。
+
+**iOS**：IPA 没有签名，要用自签工具装到手机上，比如 [AltStore](https://altstore.io/)、[Sideloadly](https://sideloadly.io/)：
+
+1. 按工具的说明，用自己的 Apple ID 给 IPA 签名并安装。
+2. iOS 16 及以上，第一次要在「设置 → 隐私与安全性 → 开发者模式」里打开开发者模式。
+3. 打开 app 前，可能要在「设置 → 通用 → VPN 与设备管理」里信任自己的 Apple ID。
+
+用免费 Apple ID 签名的 app 7 天后会打不开，要用同一个工具重新签名。重新签名不会丢数据。
+
+**macOS**：
+
+1. 打开 dmg，把「小说阅读」拖到「应用程序」。
+2. 第一次打开时，系统会提示 Apple 无法验证「小说阅读」，点「完成」。这是因为 app 没有做 Apple 公证。
+3. 打开「系统设置 → 隐私与安全性」，在下面找到「已阻止打开“小说阅读”」，点「仍要打开」，输入密码。
+4. 再打开一次 app，在弹出的对话框里点「打开」。
+
+也可以在终端里执行下面这条命令，清除下载时加上的隔离属性，之后就能直接打开：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/小说阅读.app"
+```
+
 ## 目录
 
 | 路径 | 内容 |
@@ -38,9 +76,19 @@ flutter test integration_test/app_flow_test.dart -d macos     # 或 -d emulator-
 # 真实书源走查（联网，见文件里的说明）
 flutter test integration_test/real_sources_test.dart -d macos --dart-define=WALKTHROUGH_SOURCES=<书源文件网址>
 
-# Android release 包：只出 arm64-v8a 一个 APK（不支持 32 位 ARM），暂用 debug 签名
+# Android release 包：只出 arm64-v8a 一个 APK（不支持 32 位 ARM）
 flutter build apk --release --split-per-abi --target-platform android-arm64
+
+# 发布包：三个平台的安装包，打完检查签名、ABI、体积和版本，产物在 build/release/<版本>/ 下
+tool/release.sh                                          # 只打包和检查，不上传
+tool/release.sh --upload ../docs/发布说明/v<版本>.md     # 先做发布前检查，再建 GitHub 草稿 Release
 ```
+
+签名和版本号：
+
+- Android release 包的签名密钥由 `android/key.properties` 指定，这个文件不入库。没有它时用 debug 签名，`flutter run --release` 照样能跑，但这样的包不能发布，`tool/release.sh` 会核对证书指纹。
+- 版本号只写在 `pubspec.yaml` 里，格式是 `<版本>+<构建号>`。每次发布，构建号都要比上一次大，否则 Android 不能覆盖升级。
+- app 图标的源文件和生成方法见 [design/README.md](design/README.md)。
 
 Android 模拟器上：
 
