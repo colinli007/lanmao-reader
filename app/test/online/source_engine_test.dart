@@ -95,6 +95,17 @@ void main() {
     expect(logs, isEmpty);
   });
 
+  test('替换规则：在 worker 里载入、校验和执行，超过规则的超时时间时抛出 TaskTimeoutException', () async {
+    final engine = PoolSourceEngine(pool, (request, {cancelled}) async => ok(request));
+    final rule = (await engine.loadReplaceRules('{"pattern": "(a+)+b", "replacement": "x", "timeoutMillisecond": 300}')).rules.single;
+    expect(await engine.replaceRuleError('[未闭合', isRegex: true), '正则无法编译');
+    await expectLater(engine.loadReplaceRules('<html>'), throwsFormatException);
+    expect(await engine.replace('aab', rule), 'x');
+    final watch = Stopwatch()..start();
+    await expectLater(engine.replace('a' * 30, rule), throwsA(isA<TaskTimeoutException>()));
+    expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
+  });
+
   test('停止后，等网络的书源在 100 毫秒内以取消结束', () async {
     // 请求一直不返回，也不理会 cancelled：停止不等请求或关连接的过程
     final allWaiting = Completer<void>();

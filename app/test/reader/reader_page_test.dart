@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -156,6 +157,45 @@ void main() {
       expect(nexts['/4.html'], '${SimpleBook.sourceUrl}/5.html');
       expect(nexts.containsKey('/5.html'), isTrue);
       expect(nexts['/5.html'], isNull);
+    });
+  });
+
+  group('替换净化', () {
+    testWidgets('打开章节时去掉广告', (tester) async {
+      await services.addReplaceRules([{'id': 1, 'pattern': '第3章第1段'}]);
+      await open(tester, startAt: 3);
+      expect(paragraph(3, 0), findsOneWidget);
+      expect(paragraph(3, 1), findsNothing);
+      expect(paragraph(3, 2), findsOneWidget);
+    });
+
+    testWidgets('改规则后不用清缓存：重新打开按新规则显示，不请求网络，缓存里仍是原文', (tester) async {
+      await open(tester, startAt: 3);
+      expect(paragraph(3, 1), findsOneWidget);
+      await back(tester);
+      await services.addReplaceRules([{'id': 1, 'pattern': '第3章第1段'}]);
+      services.engine.calls.clear();
+      await open(tester, startAt: 3);
+      expect(paragraph(3, 1), findsNothing);
+      expect(services.engine.calls.where((call) => call.startsWith('content')), isEmpty);
+      expect((await services.db.getContent(SimpleBook.bookUrl, '/3.html'))!.content, contains('第3章第1段'));
+    });
+
+    testWidgets('替换章节名：正文第一行替换后和章节名相同，章节名只显示一次', (tester) async {
+      services.engine.onContent = (source, book, chapter, next) async =>
+          ChapterContent('${chapter.title}（求月票）\n${chapter.title}第0段', title: '${chapter.title}（求月票）');
+      await services.addReplaceRules([{'id': 1, 'pattern': '（求月票）', 'scopeTitle': true}]);
+      await open(tester, startAt: 3);
+      expect(pageText(tester), '第3章\n第3章第0段');
+    });
+
+    testWidgets('规则超时：章节照常显示，提示这条规则已停用', (tester) async {
+      await services.addReplaceRules([{'id': 1, 'name': '回溯', 'pattern': r'(a+)+b'}]);
+      services.engine.onReplace = (input, rule) => Future.error(TaskTimeoutException(rule.timeout));
+      await open(tester, startAt: 3);
+      expect(paragraph(3, 0), findsOneWidget);
+      expect(find.text('替换规则「回溯」超时，已停用'), findsOneWidget);
+      expect(services.replaceRules.isEnabled(1), isFalse);
     });
   });
 

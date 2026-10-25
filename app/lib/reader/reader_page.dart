@@ -93,9 +93,16 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     return window;
   }
 
+  /// 正文先按替换净化规则处理再排版，缓存里保存的是原文（reader「替换净化」，add-replace-rules 设计 D1）。
   Future<FormattedChapter> _formatted(int index) async {
     final text = await _text(index);
-    return formatChapter(text.title.isEmpty ? _chapters[index].title : text.title, text.content);
+    final purified = await _source.purify(_book!, (title: text.title.isEmpty ? _chapters[index].title : text.title, content: text.content));
+    if (mounted) {
+      for (final name in purified.disabled) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('替换规则「$name」超时，已停用')));
+      }
+    }
+    return formatChapter(purified.text.title, purified.text.content);
   }
 
   /// 正文：先读缓存，没有时执行正文链路并写入缓存。

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/providers.dart';
+import '../online/replace_rule_list_page.dart';
 import '../storage/database.dart';
 import 'about_page.dart';
 import 'byte_size.dart';
@@ -11,7 +12,7 @@ final contentCacheStatsProvider = FutureProvider.autoDispose<ContentCacheStats>(
   (ref) => ref.read(databaseProvider).contentCacheStats(),
 );
 
-/// 设置页（settings）：正文缓存和关于。
+/// 设置页（settings）：替换净化规则、正文缓存和关于。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -21,6 +22,11 @@ class SettingsPage extends StatelessWidget {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
+          ListTile(
+            title: const Text('替换净化规则'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ReplaceRuleListPage())),
+          ),
           const _ContentCacheTile(),
           ListTile(
             title: const Text('关于'),

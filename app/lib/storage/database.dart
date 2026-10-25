@@ -20,6 +20,17 @@ class Sources extends Table {
   Set<Column> get primaryKey => {url};
 }
 
+/// 替换净化规则：原始 JSON（编辑后的字段写回这里）和启用状态，[id] 是 Legado 的规则 id（add-replace-rules 设计 D4）。
+@DataClassName('ReplaceRuleRow')
+class ReplaceRules extends Table {
+  IntColumn get id => integer()();
+  TextColumn get json => text()();
+  BoolColumn get enabled => boolean()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// 书架上的书和浏览中的书（[inShelf] 为假，启动时清理）。
 @DataClassName('ShelfBook')
 class Books extends Table {
@@ -117,7 +128,7 @@ typedef ShelfEntry = ({ShelfBook book, int unread});
 /// 已缓存正文的章节数和正文的 UTF-8 字节数。
 typedef ContentCacheStats = ({int chapters, int bytes});
 
-@DriftDatabase(tables: [Sources, Books, Chapters, Contents, SourceKv, Cookies, Settings])
+@DriftDatabase(tables: [Sources, ReplaceRules, Books, Chapters, Contents, SourceKv, Cookies, Settings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
@@ -127,7 +138,15 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// 2：新增 replace_rules（add-replace-rules）。
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(replaceRules);
+    },
+  );
 
   // ---------------------------------------------------------------- 书源
 
@@ -153,6 +172,19 @@ class AppDatabase extends _$AppDatabase {
       (update(sources)..where((s) => s.url.isIn(urls))).write(SourcesCompanion(enabled: Value(enabled)));
 
   Future<void> deleteSources(Iterable<String> urls) => (delete(sources)..where((s) => s.url.isIn(urls))).go();
+
+  // ---------------------------------------------------------------- 替换净化规则
+
+  Future<List<ReplaceRuleRow>> allReplaceRules() => select(replaceRules).get();
+
+  /// 写入导入、新建或编辑的规则，同一个 id 整行替换。
+  Future<void> putReplaceRules(List<ReplaceRuleRow> rows) =>
+      batch((b) => b.insertAll(replaceRules, rows, mode: InsertMode.insertOrReplace));
+
+  Future<void> setReplaceRuleEnabled(int id, bool enabled) =>
+      (update(replaceRules)..where((r) => r.id.equals(id))).write(ReplaceRulesCompanion(enabled: Value(enabled)));
+
+  Future<void> deleteReplaceRule(int id) => (delete(replaceRules)..where((r) => r.id.equals(id))).go();
 
   // ---------------------------------------------------------------- 书
 

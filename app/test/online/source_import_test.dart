@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_reader/online/import_text.dart';
 import 'package:novel_reader/online/source_import.dart';
 
 import '../support/test_app.dart';
@@ -24,15 +25,15 @@ void main() {
   tearDown(() => server.close(force: true));
 
   test('从网址下载书源，按 UTF-8 解码', () async {
-    expect(await downloadSourceText('$base/sources.json'), contains('"甲"'));
+    expect(await downloadText('$base/sources.json'), contains('"甲"'));
   });
 
   test('404 和不是网址时给出原因', () async {
     await expectLater(
-      downloadSourceText('$base/missing'),
+      downloadText('$base/missing'),
       throwsA(isA<ImportException>().having((e) => e.reason, 'reason', '下载失败：HTTP 404')),
     );
-    await expectLater(downloadSourceText('abc'), throwsA(isA<ImportException>().having((e) => e.reason, 'reason', '不是有效的网址')));
+    await expectLater(downloadText('abc'), throwsA(isA<ImportException>().having((e) => e.reason, 'reason', '不是有效的网址')));
   });
 
   test('预览：同一地址出现多次只算一次，以最后一次为准', () async {

@@ -11,7 +11,7 @@ import 'package:novel_reader/reader/reader_page.dart';
 import 'package:novel_reader/settings/byte_size.dart';
 import 'package:novel_reader/storage/database.dart';
 
-/// 端到端：本地 HTTP 服务器上的假书源，走完导入 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架
+/// 端到端：本地 HTTP 服务器上的假书源，走完导入书源和替换规则 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架
 /// → 清除正文缓存后再打开 → 导入第二个书源，在书架上换过去，从对齐到的章节继续。
 /// 用真的 worker 池和 quickjs（打包在 app 里），数据库是临时的内存数据库。
 void main() {
@@ -33,7 +33,7 @@ void main() {
         '/search' => '<div class="book"><a href="/book/1"><span class="name">本地小说</span></a><span class="author">测试作者</span></div>',
         '/book/1' => '<p class="intro">这是一本测试用的小说。</p><a class="toc" href="/book/1/toc">目录</a>',
         '/book/1/toc' => '<ul><li><a href="/c/1">第一章 开始</a></li><li><a href="/c/2">第二章 继续</a></li></ul>',
-        '/c/1' => '<div id="content">第一章 开始<br>第一章的第一段。<br>第一章的第二段。</div>',
+        '/c/1' => '<div id="content">第一章 开始<br>第一章的第一段。<br>第一章的第二段。<br>请记住本站域名 www.example.com</div>',
         '/c/2' => '<div id="content">第二章的第一段。<br>第二章的第二段。</div>',
         // 第二个书源：同一本书，目录前面多一个卷，章节名的写法不同
         '/b/search' => '<div class="book"><a href="/b/book/1"><span class="name">本地小说</span></a><span class="author">测试作者</span></div>',
@@ -94,6 +94,29 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// 书架 → 设置 → 替换净化规则 → 粘贴导入一条去掉「请记住本站」的规则 → 回到书架。
+  Future<void> importReplaceRule(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('替换净化规则'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('导入'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('粘贴文本导入'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '[{"id": 1, "name": "去本站广告", "pattern": "请记住本站.*"}]');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    expect(find.text('新增 1 条，更新 0 条，跳过 0 条'), findsOneWidget);
+    await tester.tap(find.text('导入').last);
+    await tester.pumpAndSettle();
+    expect(find.text('去本站广告'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+  }
+
   /// 等到 [finder] 出现（真实网络和 worker，pumpAndSettle 等不到）。
   Future<void> pumpUntil(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 30)}) async {
     final end = DateTime.now().add(timeout);
@@ -114,7 +137,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('导入 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架 → 清除缓存后再打开 → 换书源', (tester) async {
+  testWidgets('导入书源和替换规则 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架 → 清除缓存后再打开 → 换书源', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(
       ProviderScope(
@@ -124,8 +147,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 导入
+    // 导入书源和替换规则
     await importSource(tester, sourceJson(), '本地测试');
+    await importReplaceRule(tester);
 
     // 搜索
     await tester.tap(find.byTooltip('搜索'));
@@ -148,7 +172,12 @@ void main() {
     await tester.tap(find.text('开始阅读'));
     await pumpUntil(tester, paragraph('第一章的第一段。'));
     await tester.pumpAndSettle(); // 等打开阅读页的过渡动画结束，过渡期间页面不接收点击
-    expect(find.bySemanticsLabel('第一章 开始\n第一章的第一段。\n第一章的第二段。'), findsOneWidget, reason: '和章节名相同的第一段被去掉');
+    expect(
+      find.bySemanticsLabel('第一章 开始\n第一章的第一段。\n第一章的第二段。'),
+      findsOneWidget,
+      reason: '和章节名相同的第一段被去掉，广告被替换净化规则去掉',
+    );
+    expect([for (final row in await db.select(db.contents).get()) row.content], contains(contains('请记住本站域名')), reason: '缓存里是原文');
     await tapReader(tester, 0.9);
     await pumpUntil(tester, paragraph('第二章的第一段。'));
     await tapReader(tester, 0.1);

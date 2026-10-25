@@ -318,6 +318,254 @@ class SourcesCompanion extends UpdateCompanion<SourceRow> {
   }
 }
 
+class $ReplaceRulesTable extends ReplaceRules
+    with TableInfo<$ReplaceRulesTable, ReplaceRuleRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReplaceRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jsonMeta = const VerificationMeta('json');
+  @override
+  late final GeneratedColumn<String> json = GeneratedColumn<String>(
+    'json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, json, enabled];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'replace_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReplaceRuleRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('json')) {
+      context.handle(
+        _jsonMeta,
+        json.isAcceptableOrUnknown(data['json']!, _jsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_jsonMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_enabledMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReplaceRuleRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReplaceRuleRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      json: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}json'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+    );
+  }
+
+  @override
+  $ReplaceRulesTable createAlias(String alias) {
+    return $ReplaceRulesTable(attachedDatabase, alias);
+  }
+}
+
+class ReplaceRuleRow extends DataClass implements Insertable<ReplaceRuleRow> {
+  final int id;
+  final String json;
+  final bool enabled;
+  const ReplaceRuleRow({
+    required this.id,
+    required this.json,
+    required this.enabled,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['json'] = Variable<String>(json);
+    map['enabled'] = Variable<bool>(enabled);
+    return map;
+  }
+
+  ReplaceRulesCompanion toCompanion(bool nullToAbsent) {
+    return ReplaceRulesCompanion(
+      id: Value(id),
+      json: Value(json),
+      enabled: Value(enabled),
+    );
+  }
+
+  factory ReplaceRuleRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReplaceRuleRow(
+      id: serializer.fromJson<int>(json['id']),
+      json: serializer.fromJson<String>(json['json']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'json': serializer.toJson<String>(json),
+      'enabled': serializer.toJson<bool>(enabled),
+    };
+  }
+
+  ReplaceRuleRow copyWith({int? id, String? json, bool? enabled}) =>
+      ReplaceRuleRow(
+        id: id ?? this.id,
+        json: json ?? this.json,
+        enabled: enabled ?? this.enabled,
+      );
+  ReplaceRuleRow copyWithCompanion(ReplaceRulesCompanion data) {
+    return ReplaceRuleRow(
+      id: data.id.present ? data.id.value : this.id,
+      json: data.json.present ? data.json.value : this.json,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReplaceRuleRow(')
+          ..write('id: $id, ')
+          ..write('json: $json, ')
+          ..write('enabled: $enabled')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, json, enabled);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReplaceRuleRow &&
+          other.id == this.id &&
+          other.json == this.json &&
+          other.enabled == this.enabled);
+}
+
+class ReplaceRulesCompanion extends UpdateCompanion<ReplaceRuleRow> {
+  final Value<int> id;
+  final Value<String> json;
+  final Value<bool> enabled;
+  const ReplaceRulesCompanion({
+    this.id = const Value.absent(),
+    this.json = const Value.absent(),
+    this.enabled = const Value.absent(),
+  });
+  ReplaceRulesCompanion.insert({
+    this.id = const Value.absent(),
+    required String json,
+    required bool enabled,
+  }) : json = Value(json),
+       enabled = Value(enabled);
+  static Insertable<ReplaceRuleRow> custom({
+    Expression<int>? id,
+    Expression<String>? json,
+    Expression<bool>? enabled,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (json != null) 'json': json,
+      if (enabled != null) 'enabled': enabled,
+    });
+  }
+
+  ReplaceRulesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? json,
+    Value<bool>? enabled,
+  }) {
+    return ReplaceRulesCompanion(
+      id: id ?? this.id,
+      json: json ?? this.json,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (json.present) {
+      map['json'] = Variable<String>(json.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReplaceRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('json: $json, ')
+          ..write('enabled: $enabled')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $BooksTable extends Books with TableInfo<$BooksTable, ShelfBook> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -2916,6 +3164,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $SourcesTable sources = $SourcesTable(this);
+  late final $ReplaceRulesTable replaceRules = $ReplaceRulesTable(this);
   late final $BooksTable books = $BooksTable(this);
   late final $ChaptersTable chapters = $ChaptersTable(this);
   late final $ContentsTable contents = $ContentsTable(this);
@@ -2928,6 +3177,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     sources,
+    replaceRules,
     books,
     chapters,
     contents,
@@ -3110,6 +3360,158 @@ typedef $$SourcesTableProcessedTableManager =
       $$SourcesTableUpdateCompanionBuilder,
       (SourceRow, BaseReferences<_$AppDatabase, $SourcesTable, SourceRow>),
       SourceRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ReplaceRulesTableCreateCompanionBuilder =
+    ReplaceRulesCompanion Function({
+      Value<int> id,
+      required String json,
+      required bool enabled,
+    });
+typedef $$ReplaceRulesTableUpdateCompanionBuilder =
+    ReplaceRulesCompanion Function({
+      Value<int> id,
+      Value<String> json,
+      Value<bool> enabled,
+    });
+
+class $$ReplaceRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReplaceRulesTable> {
+  $$ReplaceRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get json => $composableBuilder(
+    column: $table.json,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReplaceRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReplaceRulesTable> {
+  $$ReplaceRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get json => $composableBuilder(
+    column: $table.json,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReplaceRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReplaceRulesTable> {
+  $$ReplaceRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get json =>
+      $composableBuilder(column: $table.json, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+}
+
+class $$ReplaceRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReplaceRulesTable,
+          ReplaceRuleRow,
+          $$ReplaceRulesTableFilterComposer,
+          $$ReplaceRulesTableOrderingComposer,
+          $$ReplaceRulesTableAnnotationComposer,
+          $$ReplaceRulesTableCreateCompanionBuilder,
+          $$ReplaceRulesTableUpdateCompanionBuilder,
+          (
+            ReplaceRuleRow,
+            BaseReferences<_$AppDatabase, $ReplaceRulesTable, ReplaceRuleRow>,
+          ),
+          ReplaceRuleRow,
+          PrefetchHooks Function()
+        > {
+  $$ReplaceRulesTableTableManager(_$AppDatabase db, $ReplaceRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReplaceRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReplaceRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReplaceRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> json = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+              }) => ReplaceRulesCompanion(id: id, json: json, enabled: enabled),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String json,
+                required bool enabled,
+              }) => ReplaceRulesCompanion.insert(
+                id: id,
+                json: json,
+                enabled: enabled,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReplaceRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReplaceRulesTable,
+      ReplaceRuleRow,
+      $$ReplaceRulesTableFilterComposer,
+      $$ReplaceRulesTableOrderingComposer,
+      $$ReplaceRulesTableAnnotationComposer,
+      $$ReplaceRulesTableCreateCompanionBuilder,
+      $$ReplaceRulesTableUpdateCompanionBuilder,
+      (
+        ReplaceRuleRow,
+        BaseReferences<_$AppDatabase, $ReplaceRulesTable, ReplaceRuleRow>,
+      ),
+      ReplaceRuleRow,
       PrefetchHooks Function()
     >;
 typedef $$BooksTableCreateCompanionBuilder =
@@ -4461,6 +4863,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$SourcesTableTableManager get sources =>
       $$SourcesTableTableManager(_db, _db.sources);
+  $$ReplaceRulesTableTableManager get replaceRules =>
+      $$ReplaceRulesTableTableManager(_db, _db.replaceRules);
   $$BooksTableTableManager get books =>
       $$BooksTableTableManager(_db, _db.books);
   $$ChaptersTableTableManager get chapters =>

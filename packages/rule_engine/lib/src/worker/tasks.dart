@@ -2,6 +2,7 @@ import '../chain/chains.dart';
 import '../chain/models.dart';
 import '../core/environment.dart';
 import '../source/book_source.dart';
+import '../source/replace_rule.dart';
 import 'worker_environment.dart';
 
 /// 四条链路的任务工厂，交给 `WorkerPool.run`。
@@ -32,3 +33,12 @@ TocResult Function() chapterListTask(BookSource source, Book book) => () {
 
 ChapterContent Function() contentTask(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
     () => getContent(const WorkerRuleEnvironment(), source, book, chapter, nextChapterUrl: nextChapterUrl);
+
+/// 替换净化规则（add-replace-rules 设计 D2、D3）：执行一条正则规则、载入规则 JSON、校验一条规则，都要用到 worker 里的正则引擎。
+String Function() replaceTask(String input, String pattern, String replacement) =>
+    () => applyReplaceRule(const WorkerRuleEnvironment(), input, pattern, replacement);
+
+ReplaceRuleLoadResult Function() loadReplaceRulesTask(String text) => () => loadReplaceRules(text);
+
+String? Function() replaceRuleErrorTask(String pattern, {required bool isRegex}) =>
+    () => replaceRuleError(pattern, isRegex: isRegex);

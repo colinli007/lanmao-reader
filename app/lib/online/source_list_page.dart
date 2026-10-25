@@ -1,12 +1,9 @@
-import 'dart:convert';
-
-import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rule_engine/rule_engine.dart';
 
+import 'import_text.dart';
 import 'providers.dart';
 import 'source_import.dart';
 import 'source_log_page.dart';
@@ -62,16 +59,7 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
   AppBar _normalBar(SourceRepository repository) => AppBar(
     title: const Text('书源'),
     actions: [
-      PopupMenuButton<_ImportFrom>(
-        tooltip: '导入',
-        icon: const Icon(Icons.add),
-        onSelected: _import,
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: _ImportFrom.file, child: Text('从文件导入')),
-          PopupMenuItem(value: _ImportFrom.url, child: Text('从网址导入')),
-          PopupMenuItem(value: _ImportFrom.text, child: Text('粘贴文本导入')),
-        ],
-      ),
+      ImportMenuButton(onSelected: _import),
       IconButton(
         tooltip: '书源日志',
         icon: const Icon(Icons.receipt_long_outlined),
@@ -135,56 +123,19 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
     _selected = selected;
   });
 
-  Future<void> _import(_ImportFrom from) async {
+  Future<void> _import(ImportFrom from) async {
     final repository = ref.read(sourceRepositoryProvider);
     try {
-      final text = switch (from) {
-        _ImportFrom.file => await _pickFile(),
-        _ImportFrom.url => switch (await _askUrl()) {
-          final url? => await downloadSourceText(url),
-          null => null,
-        },
-        _ImportFrom.text => await _askText(),
-      };
+      final text = await readImportText(context, from, kind: '书源', hint: '单个书源对象或书源数组');
       if (text == null || !mounted) return;
       final preview = previewImport(text, repository);
       if (await _confirm(preview) != true) return;
       await repository.import(preview.sources);
       _snack('已导入 ${preview.sources.length} 个书源');
     } on ImportException catch (e) {
-      if (mounted) {
-        await showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('无法导入'),
-            content: Text(e.reason),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了'))],
-          ),
-        );
-      }
+      if (mounted) await showImportError(context, e);
     }
   }
-
-  Future<String?> _pickFile() async {
-    // Android 只按 MIME 过滤，下载来的书源文件常被识别成 application/octet-stream，不列上就选不了。
-    // macOS 也会把 MIME 换成 UTType，octet-stream 在那里是 public.data（所有文件），所以只给 Android。
-    final group = defaultTargetPlatform == TargetPlatform.android
-        ? const XTypeGroup(label: '书源', mimeTypes: ['application/json', 'text/plain', 'application/octet-stream'])
-        : const XTypeGroup(label: '书源', extensions: ['json', 'txt'], uniformTypeIdentifiers: ['public.json', 'public.plain-text']);
-    final file = await openFile(acceptedTypeGroups: [group]);
-    if (file == null) return null;
-    // 自己按 UTF-8 解码（和从网址导入一致）：Android 上的 XFile 是内存里的字节，它的 readAsString 不认编码，按 Latin-1 解出来中文是乱码
-    return utf8.decode(await file.readAsBytes(), allowMalformed: true);
-  }
-
-  Future<String?> _askUrl() => _askInput(title: '从网址导入', hint: 'https://…', maxLines: 1);
-
-  Future<String?> _askText() => _askInput(title: '粘贴书源 JSON', hint: '单个书源对象或书源数组', maxLines: 8);
-
-  Future<String?> _askInput({required String title, required String hint, required int maxLines}) => showDialog<String>(
-    context: context,
-    builder: (_) => _InputDialog(title: title, hint: hint, maxLines: maxLines),
-  );
 
   Future<bool?> _confirm(ImportPreview preview) => showDialog<bool>(
     context: context,
@@ -236,46 +187,6 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
   void _snack(String message) {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
-}
-
-enum _ImportFrom { file, url, text }
-
-/// 输入网址或文本的对话框，确定时把输入的文本作为结果返回。
-class _InputDialog extends StatefulWidget {
-  const _InputDialog({required this.title, required this.hint, required this.maxLines});
-
-  final String title;
-  final String hint;
-  final int maxLines;
-
-  @override
-  State<_InputDialog> createState() => _InputDialogState();
-}
-
-class _InputDialogState extends State<_InputDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
-    content: TextField(
-      controller: _controller,
-      autofocus: true,
-      minLines: widget.maxLines,
-      maxLines: widget.maxLines,
-      decoration: InputDecoration(hintText: widget.hint),
-    ),
-    actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-      FilledButton(onPressed: () => Navigator.pop(context, _controller.text), child: const Text('确定')),
-    ],
-  );
 }
 
 const _typeLabels = {

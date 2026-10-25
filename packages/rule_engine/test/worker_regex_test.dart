@@ -1,4 +1,5 @@
 import 'package:blocking_bridge/blocking_bridge.dart';
+import 'package:rule_engine/rule_engine.dart' show replaceTask;
 import 'package:rule_engine/src/core/source_task.dart';
 import 'package:rule_engine/src/rule/analyze_rule.dart';
 import 'package:rule_engine/src/worker/worker_environment.dart';
@@ -29,6 +30,17 @@ void main() {
     // worker 在宽限期内结束了任务：没有被放弃，下一个任务立即在同一个 worker 上执行
     expect(await pool.run(_purify('aab', r'text##(a+)+b##x')), 'x');
     expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+    expect(pool.availableWorkers, 1);
+  });
+
+  // replace-rules「超时停用」：替换规则的正则超时后被中止，worker 继续可用
+  test('替换规则超时', () async {
+    expect(await pool.run(replaceTask('ab', r'(a+)+b', 'x')), 'x');
+    await expectLater(
+      pool.run(replaceTask('a' * 30, r'(a+)+b', 'x'), timeout: const Duration(milliseconds: 300)),
+      throwsA(isA<TaskTimeoutException>()),
+    );
+    expect(await pool.run(replaceTask('aab', r'(a+)+b', 'x')), 'x');
     expect(pool.availableWorkers, 1);
   });
 }

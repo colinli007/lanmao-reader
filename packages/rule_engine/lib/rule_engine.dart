@@ -22,5 +22,6 @@ export 'src/host/cookie_store.dart' show CookieStore;
 export 'src/host/rule_host.dart';
 export 'src/host/source_store.dart' show MemorySourceStore, SourceStore, runStoreRequest;
 export 'src/source/book_source.dart';
+export 'src/source/replace_rule.dart';
 export 'src/worker/tasks.dart';
 export 'src/worker/worker_environment.dart' show WorkerRuleEnvironment;

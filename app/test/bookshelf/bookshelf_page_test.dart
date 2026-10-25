@@ -36,6 +36,7 @@ void main() {
     await pump(tester);
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
+    expect(find.text('替换净化规则'), findsOneWidget);
     expect(find.text('正文缓存'), findsOneWidget);
     expect(find.text('关于'), findsOneWidget);
   });

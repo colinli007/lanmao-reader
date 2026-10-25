@@ -5,7 +5,7 @@ import 'package:rule_engine/rule_engine.dart';
 
 import 'batch.dart';
 
-/// 四条链路的执行方。界面和控制器只依赖这个接口，测试换成假的实现。
+/// 四条链路和替换净化规则的执行方。界面和控制器只依赖这个接口，测试换成假的实现。
 abstract interface class SourceEngine {
   /// 批量任务，经限流器提交。
   Future<List<SearchBook>> search(BookSource source, String key, Batch batch);
@@ -16,6 +16,15 @@ abstract interface class SourceEngine {
   Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch});
 
   Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl});
+
+  /// 执行一条正则替换规则，超过规则的超时时间时抛出 [TaskTimeoutException]（add-replace-rules 设计 D2、D5）。
+  Future<String> replace(String input, ReplaceRule rule);
+
+  /// 载入替换规则 JSON，内容不是 JSON 时抛出 [FormatException]（设计 D3）。
+  Future<ReplaceRuleLoadResult> loadReplaceRules(String text);
+
+  /// 规则不可用的原因，可用时为 null（设计 D3）。
+  Future<String?> replaceRuleError(String pattern, {required bool isRegex});
 }
 
 /// 主 isolate 上发出请求的函数（`RuleHost.execute`）：[cancelled] 完成时中断请求。
@@ -91,6 +100,17 @@ final class PoolSourceEngine implements SourceEngine {
   @override
   Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
       _pool.run(contentTask(source, book, chapter, nextChapterUrl: nextChapterUrl));
+
+  @override
+  Future<String> replace(String input, ReplaceRule rule) =>
+      _pool.run(replaceTask(input, rule.pattern, rule.replacement), timeout: rule.timeout);
+
+  @override
+  Future<ReplaceRuleLoadResult> loadReplaceRules(String text) => _pool.run(loadReplaceRulesTask(text));
+
+  @override
+  Future<String?> replaceRuleError(String pattern, {required bool isRegex}) =>
+      _pool.run(replaceRuleErrorTask(pattern, isRegex: isRegex));
 }
 
 /// 一个书源的搜索预算（设计 D4）：只在三步执行时扣减，排队的时间不算。哪一步超时都按整个预算报告。

@@ -73,8 +73,9 @@ void main() {
     expect(await db.contentCacheStats(), (chapters: 3, bytes: bytes));
   });
 
-  test('清除正文缓存：只删正文，书籍、目录、进度、书源、设置、书源级状态和 Cookie 不变', () async {
+  test('清除正文缓存：只删正文，书籍、目录、进度、书源、替换规则、设置、书源级状态和 Cookie 不变', () async {
     await db.importSources([(url: 's', json: '{}', enabled: true)]);
+    await db.putReplaceRules([const ReplaceRuleRow(id: 1, json: '{}', enabled: true)]);
     await db.saveBrowsingBook(book('b'), toc('b', 3));
     await db.addToShelf('b', DateTime(2026));
     await db.saveProgress('b', index: 2, url: '/2.html', title: '第2章', position: 40, now: DateTime(2026));
@@ -83,7 +84,7 @@ void main() {
     await db.putSourceKv('kv', 'v', null);
     await db.putCookie('a.com', 'x=1');
     Future<List<Object>> others() async => [
-      for (final ResultSetImplementation<HasResultSet, Object> table in [db.sources, db.books, db.chapters, db.settings, db.sourceKv, db.cookies])
+      for (final ResultSetImplementation<HasResultSet, Object> table in [db.sources, db.replaceRules, db.books, db.chapters, db.settings, db.sourceKv, db.cookies])
         await db.select(table).get(),
     ];
     final before = await others();
@@ -153,6 +154,44 @@ void main() {
     await fileDb.purgeBrowsingBooks();
     expect([for (final entry in await fileDb.shelf()) entry.book.bookUrl], ['new']);
     expect(await fileDb.chaptersOf('new'), hasLength(5));
+  });
+
+  test('替换规则：同一个 id 整行替换，可以改启用状态和删除', () async {
+    await db.putReplaceRules([
+      const ReplaceRuleRow(id: 1, json: '{"pattern":"a"}', enabled: true),
+      const ReplaceRuleRow(id: 2, json: '{"pattern":"b"}', enabled: true),
+    ]);
+    await db.putReplaceRules([const ReplaceRuleRow(id: 1, json: '{"pattern":"c"}', enabled: false)]);
+    await db.setReplaceRuleEnabled(2, false);
+    await db.deleteReplaceRule(1);
+    expect(await db.allReplaceRules(), [const ReplaceRuleRow(id: 2, json: '{"pattern":"b"}', enabled: false)]);
+  });
+
+  test('从没有替换规则的版本（v1）升级：原有数据都在，替换规则为空、可以写入', () async {
+    final dir = Directory.systemTemp.createTempSync('db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = File('${dir.path}/app.sqlite');
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true; // setUp 的内存数据库也开着
+    var fileDb = AppDatabase(NativeDatabase(file));
+    await fileDb.importSources([(url: 's', json: '{}', enabled: true)]);
+    await fileDb.saveBrowsingBook(book('b'), toc('b', 3));
+    await fileDb.addToShelf('b', DateTime(2026));
+    await fileDb.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/0.html', title: '第0章', content: '正文'));
+    await fileDb.putSetting('k', 'v');
+    // 退回 v1 的样子：没有 replace_rules 表
+    await fileDb.customStatement('DROP TABLE replace_rules');
+    await fileDb.customStatement('PRAGMA user_version = 1');
+    await fileDb.close();
+
+    fileDb = AppDatabase(NativeDatabase(file));
+    addTearDown(fileDb.close);
+    expect((await fileDb.allSources()).single.url, 's');
+    expect([for (final entry in await fileDb.shelf()) entry.book.bookUrl], ['b']);
+    expect((await fileDb.getContent('b', '/0.html'))?.content, '正文');
+    expect(await fileDb.loadSettings(), {'k': 'v'});
+    expect(await fileDb.allReplaceRules(), isEmpty);
+    await fileDb.putReplaceRules([const ReplaceRuleRow(id: 1, json: '{}', enabled: true)]);
+    expect(await fileDb.allReplaceRules(), hasLength(1));
   });
 
   test('书源级状态：载入时删除过期的行', () async {

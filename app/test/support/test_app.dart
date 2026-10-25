@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnection, driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_reader/library/providers.dart';
@@ -10,11 +12,13 @@ import 'package:novel_reader/online/batch.dart';
 import 'package:novel_reader/online/book_mapping.dart';
 import 'package:novel_reader/online/online_content_source.dart';
 import 'package:novel_reader/online/providers.dart';
+import 'package:novel_reader/online/replace_rule_repository.dart';
 import 'package:novel_reader/online/source_engine.dart';
 import 'package:novel_reader/online/source_log.dart';
 import 'package:novel_reader/online/source_repository.dart';
 import 'package:novel_reader/storage/database.dart';
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/rule_engine.dart' as rule_engine show loadReplaceRules, replaceRuleError;
 
 /// 假的链路执行方：按书源地址给出结果，记录调用次数。
 final class FakeEngine implements SourceEngine {
@@ -22,6 +26,9 @@ final class FakeEngine implements SourceEngine {
   Future<Book> Function(BookSource source, Book book)? onBookInfo;
   Future<TocResult> Function(BookSource source, Book book)? onChapterList;
   Future<ChapterContent> Function(BookSource source, Book book, BookChapter chapter, String? next)? onContent;
+
+  /// 不为空时代替正则替换规则的执行（注入超时等），否则在当前 isolate 里执行规则。
+  Future<String> Function(String input, ReplaceRule rule)? onReplace;
 
   final List<String> calls = [];
 
@@ -53,14 +60,53 @@ final class FakeEngine implements SourceEngine {
     calls.add('content ${chapter.url}');
     return onContent!(source, book, chapter, nextChapterUrl);
   }
+
+  @override
+  Future<String> replace(String input, ReplaceRule rule) async {
+    calls.add('replace ${rule.pattern}');
+    return onReplace?.call(input, rule) ?? applyReplaceRule(_LocalEnvironment.instance, input, rule.pattern, rule.replacement);
+  }
+
+  @override
+  Future<ReplaceRuleLoadResult> loadReplaceRules(String text) async => rule_engine.loadReplaceRules(text);
+
+  @override
+  Future<String?> replaceRuleError(String pattern, {required bool isRegex}) async =>
+      rule_engine.replaceRuleError(pattern, isRegex: isRegex);
+}
+
+/// 在测试的 isolate 里执行正则用的环境：只提供不会被设置的中止标志，正则规则用不到其它能力。
+final class _LocalEnvironment implements RuleEnvironment {
+  _LocalEnvironment._();
+
+  static final instance = _LocalEnvironment._();
+
+  @override
+  final Pointer<Int32> abortSignal = calloc<Int32>();
+
+  @override
+  void checkCancelled() {}
+
+  @override
+  HttpResult fetch(HttpRequest request) => throw UnsupportedError('fetch');
+
+  @override
+  List<HttpResult> fetchAll(List<HttpRequest> requests) => throw UnsupportedError('fetchAll');
+
+  @override
+  Object? store(StoreRequest request) => throw UnsupportedError('store');
+
+  @override
+  void log(SourceLog log) => throw UnsupportedError('log');
 }
 
 /// app 的全部依赖：内存数据库、假的链路执行方，其余和正式启动一样。
 final class TestServices {
-  TestServices._(this.db, this.repository, this.log, this.engine);
+  TestServices._(this.db, this.repository, this.replaceRules, this.log, this.engine);
 
   final AppDatabase db;
   final SourceRepository repository;
+  final ReplaceRuleRepository replaceRules;
   final SourceLogBuffer log;
   final FakeEngine engine;
 
@@ -70,14 +116,15 @@ final class TestServices {
     // 关闭流时同步清理：否则 drift 在取消订阅时排一个零延时的定时器，widget 测试结束时会被当成泄漏
     final executor = file == null ? NativeDatabase.memory() : NativeDatabase(file);
     final db = AppDatabase(DatabaseConnection(executor, closeStreamsSynchronously: true));
-    return TestServices._(db, await SourceRepository.load(db), SourceLogBuffer(), FakeEngine());
+    return TestServices._(db, await SourceRepository.load(db), await ReplaceRuleRepository.load(db), SourceLogBuffer(), FakeEngine());
   }
 
   List<Override> get overrides => [
     databaseProvider.overrideWithValue(db),
-    contentSourceProvider.overrideWithValue(OnlineContentSource(engine, repository)),
+    contentSourceProvider.overrideWithValue(OnlineContentSource(engine, repository, replaceRules)),
     sourceEngineProvider.overrideWithValue(engine),
     sourceRepositoryProvider.overrideWith((ref) => repository),
+    replaceRuleRepositoryProvider.overrideWith((ref) => replaceRules),
     sourceLogProvider.overrideWith((ref) => log),
   ];
 
@@ -85,6 +132,10 @@ final class TestServices {
 
   /// 导入书源：[sources] 是书源 JSON 对象。
   Future<void> addSources(List<Map<String, Object?>> sources) => repository.import(loadBookSources(jsonEncode(sources)).sources);
+
+  /// 导入替换规则：[rules] 是规则 JSON 对象。
+  Future<void> addReplaceRules(List<Map<String, Object?>> rules) =>
+      replaceRules.import(loadReplaceRules(jsonEncode(rules)).rules);
 }
 
 /// 一个简单的书源和它上面的一本书：[chapters] 章，第 i 章的正文是「第 i 章正文」加若干段。

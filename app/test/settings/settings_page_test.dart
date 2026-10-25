@@ -35,6 +35,7 @@ void main() {
     await pump(tester);
     expect(find.text('5 章 · ${formatByteSize(bytes)}'), findsOneWidget);
     expect(find.text('关于'), findsOneWidget);
+    expect(find.text('替换净化规则'), findsOneWidget);
   });
 
   testWidgets('没有缓存时显示 0 章，不能清除', (tester) async {
@@ -71,5 +72,12 @@ void main() {
     await tester.tap(find.text('关于'));
     await tester.pumpAndSettle();
     expect(find.text('免责声明'), findsOneWidget);
+  });
+
+  testWidgets('点替换净化规则进入规则列表', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('替换净化规则'));
+    await tester.pumpAndSettle();
+    expect(find.text('还没有替换规则，点右上角导入或新建'), findsOneWidget);
   });
 }
