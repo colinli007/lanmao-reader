@@ -4,10 +4,17 @@ import 'package:flutter/scheduler.dart';
 
 import '../chapter_format.dart';
 
-/// 排版参数：字号、行距和正文区域的尺寸。任何一项变了，排版结果都作废，换一个新的 [ChapterLayout]（设计 D6）。
+/// 排版参数：字号、行距、段距、首行缩进和正文区域的尺寸。任何一项变了，排版结果都作废，换一个新的 [ChapterLayout]（设计 D6）。
+/// 段距和缩进相对字号给出，缺省是阅读设置的默认值（complete-reader-settings 设计 D2）。
 @immutable
 final class LayoutSpec {
-  const LayoutSpec({required this.fontSize, required this.lineHeight, required this.size});
+  const LayoutSpec({
+    required this.fontSize,
+    required this.lineHeight,
+    required this.size,
+    this.paragraphSpacingRatio = 0.6,
+    this.indentChars = 2,
+  });
 
   final double fontSize;
   final double lineHeight;
@@ -15,18 +22,27 @@ final class LayoutSpec {
   /// 正文区域：屏幕去掉安全区、页眉页脚和左右边距（设计 D15）。滚动模式只用宽度。
   final Size size;
 
-  /// 段首缩进两个字宽（设计 D4）。
-  double get indent => fontSize * 2;
+  /// 段距是字号的几倍，首行缩进几个字。
+  final double paragraphSpacingRatio;
+  final int indentChars;
 
-  /// 段距，沿用原来的字号的 0.6 倍（设计 D5）。
-  double get paragraphSpacing => fontSize * 0.6;
+  /// 段首缩进（设计 D4）。
+  double get indent => fontSize * indentChars;
+
+  /// 段距（设计 D5）。
+  double get paragraphSpacing => fontSize * paragraphSpacingRatio;
 
   @override
   bool operator ==(Object other) =>
-      other is LayoutSpec && other.fontSize == fontSize && other.lineHeight == lineHeight && other.size == size;
+      other is LayoutSpec &&
+      other.fontSize == fontSize &&
+      other.lineHeight == lineHeight &&
+      other.size == size &&
+      other.paragraphSpacingRatio == paragraphSpacingRatio &&
+      other.indentChars == indentChars;
 
   @override
-  int get hashCode => Object.hash(fontSize, lineHeight, size);
+  int get hashCode => Object.hash(fontSize, lineHeight, size, paragraphSpacingRatio, indentChars);
 }
 
 /// 段内的一行：字符区间 [start, end)（相对段首），相对段落顶部的 [top] 和高度。

@@ -36,6 +36,11 @@ final class ReaderSettings {
     this.theme = ReaderTheme.light,
     this.pageMode = PageMode.cover,
     this.followSystemDark = true,
+    this.paragraphSpacing = 0.6,
+    this.indent = 2,
+    this.margin = 20,
+    this.keepScreenOn = false,
+    this.volumeKeyTurn = true,
   });
 
   factory ReaderSettings.fromMap(Map<String, String> map) => ReaderSettings(
@@ -44,18 +49,34 @@ final class ReaderSettings {
     theme: ReaderTheme.values.asNameMap()[map[_theme]] ?? ReaderTheme.light,
     pageMode: PageMode.values.asNameMap()[map[_pageMode]] ?? PageMode.cover,
     followSystemDark: bool.tryParse(map[_followSystemDark] ?? '') ?? true,
+    paragraphSpacing: double.tryParse(map[_paragraphSpacing] ?? '')?.clamp(minParagraphSpacing, maxParagraphSpacing) ?? 0.6,
+    indent: int.tryParse(map[_indent] ?? '')?.clamp(minIndent, maxIndent) ?? 2,
+    margin: double.tryParse(map[_margin] ?? '')?.clamp(minMargin, maxMargin) ?? 20,
+    keepScreenOn: bool.tryParse(map[_keepScreenOn] ?? '') ?? false,
+    volumeKeyTurn: bool.tryParse(map[_volumeKeyTurn] ?? '') ?? true,
   );
 
   static const minFontSize = 12.0;
   static const maxFontSize = 40.0;
   static const minLineHeight = 1.0;
   static const maxLineHeight = 3.0;
+  static const minParagraphSpacing = 0.0;
+  static const maxParagraphSpacing = 2.0;
+  static const minIndent = 0;
+  static const maxIndent = 4;
+  static const minMargin = 8.0;
+  static const maxMargin = 48.0;
 
   static const _fontSize = 'reader.fontSize';
   static const _lineHeight = 'reader.lineHeight';
   static const _theme = 'reader.theme';
   static const _pageMode = 'reader.pageMode';
   static const _followSystemDark = 'reader.followSystemDark';
+  static const _paragraphSpacing = 'reader.paragraphSpacing';
+  static const _indent = 'reader.indent';
+  static const _margin = 'reader.margin';
+  static const _keepScreenOn = 'reader.keepScreenOn';
+  static const _volumeKeyTurn = 'reader.volumeKeyTurn';
 
   final double fontSize;
   final double lineHeight;
@@ -65,17 +86,45 @@ final class ReaderSettings {
   /// 打开时，系统是深色模式就用暗主题，否则用 [theme]（reader「阅读主题跟随系统」）。
   final bool followSystemDark;
 
+  /// 段距，字号的倍数；首行缩进，字数（complete-reader-settings 设计 D1）。都相对字号，调字号时比例不变。
+  final double paragraphSpacing;
+  final int indent;
+
+  /// 正文左右两边离屏幕（安全区）的距离，分页和滚动都用。
+  final double margin;
+
+  /// 阅读页显示期间屏幕不自动熄灭（reader「屏幕常亮」）。
+  final bool keepScreenOn;
+
+  /// Android 上用音量键翻页（reader「音量键翻页」）。
+  final bool volumeKeyTurn;
+
   /// 实际显示的主题（设计 D14）。
   ReaderTheme effectiveTheme(Brightness platform) => followSystemDark && platform == Brightness.dark ? ReaderTheme.dark : theme;
 
-  ReaderSettings copyWith({double? fontSize, double? lineHeight, ReaderTheme? theme, PageMode? pageMode, bool? followSystemDark}) =>
-      ReaderSettings(
-        fontSize: fontSize ?? this.fontSize,
-        lineHeight: lineHeight ?? this.lineHeight,
-        theme: theme ?? this.theme,
-        pageMode: pageMode ?? this.pageMode,
-        followSystemDark: followSystemDark ?? this.followSystemDark,
-      );
+  ReaderSettings copyWith({
+    double? fontSize,
+    double? lineHeight,
+    ReaderTheme? theme,
+    PageMode? pageMode,
+    bool? followSystemDark,
+    double? paragraphSpacing,
+    int? indent,
+    double? margin,
+    bool? keepScreenOn,
+    bool? volumeKeyTurn,
+  }) => ReaderSettings(
+    fontSize: fontSize ?? this.fontSize,
+    lineHeight: lineHeight ?? this.lineHeight,
+    theme: theme ?? this.theme,
+    pageMode: pageMode ?? this.pageMode,
+    followSystemDark: followSystemDark ?? this.followSystemDark,
+    paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+    indent: indent ?? this.indent,
+    margin: margin ?? this.margin,
+    keepScreenOn: keepScreenOn ?? this.keepScreenOn,
+    volumeKeyTurn: volumeKeyTurn ?? this.volumeKeyTurn,
+  );
 
   Map<String, String> toMap() => {
     _fontSize: '$fontSize',
@@ -83,6 +132,11 @@ final class ReaderSettings {
     _theme: theme.name,
     _pageMode: pageMode.name,
     _followSystemDark: '$followSystemDark',
+    _paragraphSpacing: paragraphSpacing.toStringAsFixed(1),
+    _indent: '$indent',
+    _margin: '$margin',
+    _keepScreenOn: '$keepScreenOn',
+    _volumeKeyTurn: '$volumeKeyTurn',
   };
 }
 

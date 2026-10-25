@@ -11,8 +11,8 @@ const _safeArea = EdgeInsets.only(top: 24, bottom: 16);
 
 const _filler = '山风从谷底卷上来吹得崖边的松枝簌簌作响他站在最高的那块石头上望着远处渐渐亮起来的天色';
 
-ChapterLayout _layout(FormattedChapter chapter, {bool isVolume = false, bool complete = true}) {
-  final insets = PageGeometry.bodyInsets(_safeArea);
+ChapterLayout _layout(FormattedChapter chapter, {bool isVolume = false, bool complete = true, double margin = 20}) {
+  final insets = PageGeometry.bodyInsets(_safeArea, margin);
   final layout = ChapterLayout(chapter, LayoutSpec(fontSize: 18, lineHeight: 1.8, size: insets.deflateSize(_page)), isVolume: isVolume);
   layout.layoutThrough(complete ? 1 << 30 : 0);
   return layout;
@@ -21,7 +21,7 @@ ChapterLayout _layout(FormattedChapter chapter, {bool isVolume = false, bool com
 FormattedChapter _chapter() =>
     formatChapter('第三章 下山', [for (var i = 0; i < 40; i++) '${_filler.substring(0, 6 + (i * 11) % (_filler.length - 6))}。'].join('\n'));
 
-Future<void> _pumpPage(WidgetTester tester, ChapterLayout layout, int index) async {
+Future<void> _pumpPage(WidgetTester tester, ChapterLayout layout, int index, {double margin = 20}) async {
   tester.view.physicalSize = _page;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -30,7 +30,7 @@ Future<void> _pumpPage(WidgetTester tester, ChapterLayout layout, int index) asy
       child: RepaintBoundary(
         child: CustomPaint(
           size: _page,
-          painter: PagePainter(layout: layout, index: index, theme: ReaderTheme.sepia, insets: PageGeometry.bodyInsets(_safeArea)),
+          painter: PagePainter(layout: layout, index: index, theme: ReaderTheme.sepia, insets: PageGeometry.bodyInsets(_safeArea, margin)),
         ),
       ),
     ),
@@ -60,6 +60,21 @@ void main() {
     final layout = _layout((title: '第二卷 江湖', paragraphs: const []), isVolume: true);
     await _pumpPage(tester, layout, 0);
     await expectLater(find.byType(RepaintBoundary), matchesGoldenFile('goldens/page_volume.png'));
+    layout.dispose();
+  });
+
+  testWidgets('左右边距 40：页眉、章节名、正文和页脚的左边缘都在 40，首行多缩进两个字', (tester) async {
+    final layout = _layout(_chapter(), margin: 40);
+    await _pumpPage(tester, layout, 0, margin: 40);
+    final xs = <double>{};
+    expect(
+      find.byType(CustomPaint),
+      paints..everything((method, arguments) {
+        if (method == #drawParagraph) xs.add((arguments[1] as Offset).dx);
+        return true;
+      }),
+    );
+    expect(xs, {40, 40 + 36});
     layout.dispose();
   });
 

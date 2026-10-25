@@ -16,6 +16,7 @@ import 'package:novel_reader/online/replace_rule_repository.dart';
 import 'package:novel_reader/online/source_engine.dart';
 import 'package:novel_reader/online/source_log.dart';
 import 'package:novel_reader/online/source_repository.dart';
+import 'package:novel_reader/reader/screen_awake.dart';
 import 'package:novel_reader/storage/database.dart';
 import 'package:rule_engine/rule_engine.dart';
 import 'package:rule_engine/rule_engine.dart' as rule_engine show loadReplaceRules, replaceRuleError;
@@ -100,7 +101,15 @@ final class _LocalEnvironment implements RuleEnvironment {
   void log(SourceLog log) => throw UnsupportedError('log');
 }
 
-/// app 的全部依赖：内存数据库、假的链路执行方，其余和正式启动一样。
+/// 记录屏幕常亮的调用，不交给平台。
+final class FakeScreenAwake extends ScreenAwake {
+  final List<bool> calls = [];
+
+  @override
+  void apply(bool on) => calls.add(on);
+}
+
+/// app 的全部依赖：内存数据库、假的链路执行方、假的屏幕常亮，其余和正式启动一样。
 final class TestServices {
   TestServices._(this.db, this.repository, this.replaceRules, this.log, this.engine);
 
@@ -109,6 +118,7 @@ final class TestServices {
   final ReplaceRuleRepository replaceRules;
   final SourceLogBuffer log;
   final FakeEngine engine;
+  final FakeScreenAwake screen = FakeScreenAwake();
 
   /// [file] 不为空时用文件数据库（关闭后重新 create 模拟重启），否则用内存数据库。
   static Future<TestServices> create({File? file}) async {
@@ -126,6 +136,7 @@ final class TestServices {
     sourceRepositoryProvider.overrideWith((ref) => repository),
     replaceRuleRepositoryProvider.overrideWith((ref) => replaceRules),
     sourceLogProvider.overrideWith((ref) => log),
+    screenAwakeProvider.overrideWithValue(screen),
   ];
 
   Widget app(Widget home) => ProviderScope(overrides: overrides, child: MaterialApp(home: home));

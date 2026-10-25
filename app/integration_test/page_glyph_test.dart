@@ -23,7 +23,7 @@ void main() {
 
   testWidgets('行距 1.0、页首页尾都有 emoji：每页都能画出来，页内 painter 的断行和量出来的一致', (tester) async {
     const size = Size(412, 915);
-    final insets = PageGeometry.bodyInsets(const EdgeInsets.only(top: 24, bottom: 16));
+    final insets = PageGeometry.bodyInsets(const EdgeInsets.only(top: 24, bottom: 16), 20);
     final chapter = formatChapter('第一章 字形', List.filled(30, _text).join('\n'));
     final layout = ChapterLayout(chapter, LayoutSpec(fontSize: 18, lineHeight: 1.0, size: insets.deflateSize(size)))
       ..layoutThrough(1 << 30);

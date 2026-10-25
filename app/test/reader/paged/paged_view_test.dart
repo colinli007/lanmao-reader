@@ -17,7 +17,7 @@ FormattedChapter _content(int index) =>
 void main() {
   late ChapterWindow window;
   late ValueNotifier<bool> menu;
-  final insets = PageGeometry.bodyInsets(EdgeInsets.zero);
+  final insets = PageGeometry.bodyInsets(EdgeInsets.zero, 20);
 
   /// 打开第 [chapter] 章（正文立即返回、排版全部完成），显示分页视图。
   Future<void> pumpView(WidgetTester tester, PageMode mode, {int chapter = 3}) async {
@@ -41,7 +41,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: PagedView(window: window, mode: mode, theme: ReaderTheme.light, insets: insets, menu: menu),
+          body: PagedView(window: window, mode: mode, theme: ReaderTheme.light, insets: insets, menu: menu, volumeKeyTurn: false),
         ),
       ),
     );

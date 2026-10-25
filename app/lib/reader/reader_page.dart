@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import 'layout/page_painter.dart';
 import 'paged/chapter_window.dart';
 import 'paged/paged_view.dart';
 import 'reader_settings.dart';
+import 'screen_awake.dart';
 import 'scroll/scroll_view.dart';
 
 /// 阅读页：按翻页方式显示分页视图或滚动视图，两者共用一个三章窗口（add-paged-reader 设计 D1、D9）。
@@ -32,6 +34,7 @@ class ReaderPage extends ConsumerStatefulWidget {
 class _ReaderPageState extends ConsumerState<ReaderPage> {
   late final AppDatabase _db = ref.read(databaseProvider);
   late final BookContentSource _source = ref.read(contentSourceProvider);
+  late final ScreenAwake _screen = ref.read(screenAwakeProvider);
   final _scaffold = GlobalKey<ScaffoldState>();
   final _menu = ValueNotifier(false);
   late final AppLifecycleListener _lifecycle;
@@ -49,15 +52,34 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   /// 进行中的正文请求，按章节地址；窗口里的三章共用，同一章同时只有一个。
   final Map<String, Future<ChapterText>> _loading = {};
 
+  /// app 在前台：退到后台时恢复系统的熄屏设置（complete-reader-settings 设计 D4）。
+  bool _foreground = true;
+
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onInactive: _saveProgress, onHide: _saveProgress);
+    _lifecycle = AppLifecycleListener(
+      onInactive: _saveProgress,
+      onHide: () {
+        _saveProgress();
+        _foreground = false;
+        _updateScreen();
+      },
+      onShow: () {
+        _foreground = true;
+        _updateScreen();
+      },
+    );
+    _updateScreen();
     _open();
   }
 
+  /// 阅读页显示、app 在前台、设置打开时屏幕常亮（reader「屏幕常亮」）。
+  void _updateScreen() => _screen.set(_foreground && ref.read(readerSettingsProvider).keepScreenOn);
+
   @override
   void dispose() {
+    _screen.set(false);
     _saveProgress();
     _lifecycle.dispose();
     _window?.dispose();
@@ -153,6 +175,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(readerSettingsProvider.select((settings) => settings.keepScreenOn), (_, _) => _updateScreen());
     final settings = ref.watch(readerSettingsProvider);
     final theme = settings.effectiveTheme(MediaQuery.platformBrightnessOf(context));
     final book = _book;
@@ -198,7 +221,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   Widget _content(ReaderSettings settings, ReaderTheme theme) {
-    final insets = PageGeometry.bodyInsets(MediaQuery.paddingOf(context));
+    final insets = PageGeometry.bodyInsets(MediaQuery.paddingOf(context), settings.margin);
     return LayoutBuilder(
       builder: (context, constraints) {
         // 分页和滚动用同一个排版参数（滚动只用宽度），切换翻页方式时排版结果直接复用
@@ -206,12 +229,21 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           fontSize: settings.fontSize,
           lineHeight: settings.lineHeight,
           size: insets.deflateSize(constraints.biggest),
+          paragraphSpacingRatio: settings.paragraphSpacing,
+          indentChars: settings.indent,
         );
         final window = _window ??= _createWindow(spec);
         window.resize(spec);
         return settings.pageMode == PageMode.scroll
-            ? ScrollReaderView(window: window, theme: theme, menu: _menu)
-            : PagedView(window: window, mode: settings.pageMode, theme: theme, insets: insets, menu: _menu);
+            ? ScrollReaderView(window: window, theme: theme, margin: settings.margin, menu: _menu, volumeKeyTurn: settings.volumeKeyTurn)
+            : PagedView(
+                window: window,
+                mode: settings.pageMode,
+                theme: theme,
+                insets: insets,
+                menu: _menu,
+                volumeKeyTurn: settings.volumeKeyTurn,
+              );
       },
     );
   }
@@ -259,7 +291,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     ];
   }
 
-  void _openSettings() => showModalBottomSheet<void>(context: context, builder: (_) => const _SettingsSheet());
+  /// 项多，小屏上放不下，面板可以上下滚动（complete-reader-settings 设计 D5）。
+  void _openSettings() => showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const _SettingsSheet());
 }
 
 class _SettingsSheet extends ConsumerWidget {
@@ -270,41 +303,56 @@ class _SettingsSheet extends ConsumerWidget {
     final settings = ref.watch(readerSettingsProvider);
     final notifier = ref.read(readerSettingsProvider.notifier);
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: 8,
           children: [
-            Row(
-              children: [
-                SizedBox(width: 72, child: Text('字号 ${settings.fontSize.round()}')),
-                Expanded(
-                  child: Slider(
-                    label: '字号',
-                    value: settings.fontSize,
-                    min: ReaderSettings.minFontSize,
-                    max: ReaderSettings.maxFontSize,
-                    divisions: (ReaderSettings.maxFontSize - ReaderSettings.minFontSize).round(),
-                    onChanged: (value) => notifier.update(settings.copyWith(fontSize: value.roundToDouble())),
-                  ),
-                ),
-              ],
+            _SettingSlider(
+              label: '字号',
+              valueText: '${settings.fontSize.round()}',
+              value: settings.fontSize,
+              min: ReaderSettings.minFontSize,
+              max: ReaderSettings.maxFontSize,
+              step: 1,
+              onChanged: (value) => notifier.update(settings.copyWith(fontSize: value)),
             ),
-            Row(
-              children: [
-                SizedBox(width: 72, child: Text('行距 ${settings.lineHeight.toStringAsFixed(1)}')),
-                Expanded(
-                  child: Slider(
-                    label: '行距',
-                    value: settings.lineHeight,
-                    min: ReaderSettings.minLineHeight,
-                    max: ReaderSettings.maxLineHeight,
-                    divisions: ((ReaderSettings.maxLineHeight - ReaderSettings.minLineHeight) * 10).round(),
-                    onChanged: (value) => notifier.update(settings.copyWith(lineHeight: (value * 10).round() / 10)),
-                  ),
-                ),
-              ],
+            _SettingSlider(
+              label: '行距',
+              valueText: settings.lineHeight.toStringAsFixed(1),
+              value: settings.lineHeight,
+              min: ReaderSettings.minLineHeight,
+              max: ReaderSettings.maxLineHeight,
+              step: 0.1,
+              onChanged: (value) => notifier.update(settings.copyWith(lineHeight: value)),
+            ),
+            _SettingSlider(
+              label: '段距',
+              valueText: settings.paragraphSpacing.toStringAsFixed(1),
+              value: settings.paragraphSpacing,
+              min: ReaderSettings.minParagraphSpacing,
+              max: ReaderSettings.maxParagraphSpacing,
+              step: 0.1,
+              onChanged: (value) => notifier.update(settings.copyWith(paragraphSpacing: value)),
+            ),
+            _SettingSlider(
+              label: '缩进',
+              valueText: '${settings.indent} 字',
+              value: settings.indent.toDouble(),
+              min: ReaderSettings.minIndent.toDouble(),
+              max: ReaderSettings.maxIndent.toDouble(),
+              step: 1,
+              onChanged: (value) => notifier.update(settings.copyWith(indent: value.round())),
+            ),
+            _SettingSlider(
+              label: '边距',
+              valueText: '${settings.margin.round()}',
+              value: settings.margin,
+              min: ReaderSettings.minMargin,
+              max: ReaderSettings.maxMargin,
+              step: 4,
+              onChanged: (value) => notifier.update(settings.copyWith(margin: value)),
             ),
             SegmentedButton<ReaderTheme>(
               segments: [for (final theme in ReaderTheme.values) ButtonSegment(value: theme, label: Text(theme.label))],
@@ -321,9 +369,60 @@ class _SettingsSheet extends ConsumerWidget {
               value: settings.followSystemDark,
               onChanged: (value) => notifier.update(settings.copyWith(followSystemDark: value)),
             ),
+            SwitchListTile(
+              title: const Text('屏幕常亮'),
+              value: settings.keepScreenOn,
+              onChanged: (value) => notifier.update(settings.copyWith(keepScreenOn: value)),
+            ),
+            // 只有 Android 能拿到音量键（reader「音量键翻页」）
+            if (defaultTargetPlatform == TargetPlatform.android)
+              SwitchListTile(
+                title: const Text('音量键翻页'),
+                value: settings.volumeKeyTurn,
+                onChanged: (value) => notifier.update(settings.copyWith(volumeKeyTurn: value)),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+/// 设置面板里的一行数值：左边是名字和当前值，右边是按 [step] 取整的滑块。[min]、[max] 都是 [step] 的整数倍。
+class _SettingSlider extends StatelessWidget {
+  const _SettingSlider({
+    required this.label,
+    required this.valueText,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.step,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String valueText;
+  final double value;
+  final double min;
+  final double max;
+  final double step;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      SizedBox(width: 72, child: Text('$label $valueText')),
+      Expanded(
+        child: Slider(
+          label: label,
+          value: value,
+          min: min,
+          max: max,
+          divisions: ((max - min) / step).round(),
+          // 取整到步长的整数倍。除以 1 / step 而不是乘以 step：18 * 0.1 是 1.8000000000000003，18 / 10 是 1.8
+          onChanged: (value) => onChanged((value / step).round() / (1 / step)),
+        ),
+      ),
+    ],
+  );
 }

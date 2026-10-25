@@ -8,6 +8,16 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    // 阅读页的屏幕常亮（complete-reader-settings 设计 D4）
+    let screen = FlutterMethodChannel(name: "novel_reader/screen", binaryMessenger: registrar(forPlugin: "ScreenAwake")!.messenger())
+    screen.setMethodCallHandler { call, result in
+      guard call.method == "keepOn", let on = call.arguments as? Bool else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      UIApplication.shared.isIdleTimerDisabled = on
+      result(nil)
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

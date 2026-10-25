@@ -33,6 +33,28 @@ void main() {
       layout.dispose();
     });
 
+    test('首行缩进为 0 时，首字从左边缘开始', () {
+      const spec = LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600), indentChars: 0);
+      final layout = ChapterLayout(formatChapter('t', '他点了点头。'), spec);
+      final painter = layout.painterFor((paragraph: 0, from: 0, to: 1, top: 0), const Color(0xFF000000));
+      expect(painter.indent + _boxes(painter.first!, 0, 1).first.left, 0);
+      layout.dispose();
+    });
+
+    test('段距 1.2 倍字号：同一页上相邻两段之间空出 21.6', () {
+      const spec = LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600), paragraphSpacingRatio: 1.2);
+      final layout = ChapterLayout(formatChapter('t', '第一段。\n第二段。'), spec)..layoutThrough(0);
+      final [first, second] = layout.pages.single.segments;
+      expect(second.top - (first.top + layout.linesOf(0).height), closeTo(21.6, 0.001));
+      layout.dispose();
+    });
+
+    test('只有段距或缩进不同的两个排版参数不相等', () {
+      expect(_spec, const LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600)));
+      expect(_spec == const LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600), paragraphSpacingRatio: 1.2), isFalse);
+      expect(_spec == const LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600), indentChars: 3), isFalse);
+    });
+
     test('多行段落非末行贴齐右边缘，末行不拉伸', () {
       final text = '${_filler * 2}。';
       final layout = ChapterLayout(formatChapter('t', text), _spec);
