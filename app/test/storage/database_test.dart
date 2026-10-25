@@ -111,6 +111,50 @@ void main() {
     expect(before - file.lengthSync(), closeTo(cached, cached * 0.05));
   });
 
+  test('换书源：删除旧书的书籍、目录和正文，写入书架上的新书和目录；新地址已有的正文、书源级状态和 Cookie 不变', () async {
+    await db.saveBrowsingBook(book('old'), toc('old', 3));
+    await db.addToShelf('old', DateTime(2026));
+    await db.putContent(const ContentRow(bookUrl: 'old', chapterUrl: '/0.html', title: '第0章', content: '旧'));
+    // 新书源上的这本书以前浏览过，读过 2 章
+    await db.saveBrowsingBook(book('new'), toc('new', 2));
+    await db.putContent(const ContentRow(bookUrl: 'new', chapterUrl: '/0.html', title: '第0章', content: '新0'));
+    await db.putContent(const ContentRow(bookUrl: 'new', chapterUrl: '/1.html', title: '第1章', content: '新1'));
+    await db.putSourceKv('kv', 'v', null);
+    await db.putCookie('a.com', 'x=1');
+    Future<List<Object>> kept() async => [await db.select(db.sourceKv).get(), await db.select(db.cookies).get()];
+    final before = await kept();
+
+    final moved = book('new', inShelf: true, addedAt: DateTime(2026), lastReadAt: DateTime(2026, 2), dur: 3)
+        .copyWith(durChapterUrl: const Value('/3.html'), durChapterTitle: const Value('第3章'), durChapterPos: 40);
+    await db.changeSource('old', moved, toc('new', 5));
+
+    expect(await db.getBook('old'), isNull);
+    expect(await db.chaptersOf('old'), isEmpty);
+    expect(await db.getContent('old', '/0.html'), isNull);
+    expect(await db.getBook('new'), moved);
+    expect(await db.chaptersOf('new'), hasLength(5));
+    expect([for (final url in ['/0.html', '/1.html']) (await db.getContent('new', url))?.content], ['新0', '新1']);
+    expect(await kept(), before);
+  });
+
+  test('换书源后重启：新书不会当成浏览中的书清掉', () async {
+    final dir = Directory.systemTemp.createTempSync('db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = File('${dir.path}/app.sqlite');
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true; // setUp 的内存数据库也开着
+    var fileDb = AppDatabase(NativeDatabase(file));
+    await fileDb.saveBrowsingBook(book('old'), toc('old', 3));
+    await fileDb.addToShelf('old', DateTime(2026));
+    await fileDb.changeSource('old', book('new', inShelf: true, addedAt: DateTime(2026)), toc('new', 5));
+    await fileDb.close();
+
+    fileDb = AppDatabase(NativeDatabase(file));
+    addTearDown(fileDb.close);
+    await fileDb.purgeBrowsingBooks();
+    expect([for (final entry in await fileDb.shelf()) entry.book.bookUrl], ['new']);
+    expect(await fileDb.chaptersOf('new'), hasLength(5));
+  });
+
   test('书源级状态：载入时删除过期的行', () async {
     final now = DateTime(2026);
     await db.putSourceKv('old', 'v', now);

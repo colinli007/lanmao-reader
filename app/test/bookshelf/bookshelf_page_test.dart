@@ -103,6 +103,36 @@ void main() {
     expect(find.text('刘慈欣 · 第99章'), findsOneWidget);
   });
 
+  testWidgets('菜单里换书源：成功后回到书架，提示新书源，显示新书源的最新章节，原来的失败标记不再显示', (tester) async {
+    await services.shelveSimpleBook(chapters: 100);
+    services.engine.onChapterList = (source, book) => Future.error(const HostCallException('连接超时'));
+    await pump(tester);
+    await tester.tap(find.byTooltip('更新目录'));
+    await tester.pumpAndSettle();
+    expect(find.text('更新失败'), findsOneWidget);
+
+    await services.addSources([{'bookSourceUrl': 'https://b.com', 'bookSourceName': '书源乙', 'searchUrl': '/s'}]);
+    services.engine
+      ..onSearch = ((source, key) async => [
+        SearchBook(bookUrl: '${source.bookSourceUrl}/book/1', origin: source.bookSourceUrl, originName: source.bookSourceName)
+          ..name = '三体'
+          ..author = '刘慈欣',
+      ])
+      ..onBookInfo = ((source, book) async => book);
+    tocOf(3);
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('换书源'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书源乙'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookshelfPage), findsOneWidget);
+    expect(find.text('已换到书源乙'), findsOneWidget);
+    expect(find.text('刘慈欣 · 第2章'), findsOneWidget);
+    expect(find.text('更新失败'), findsNothing);
+  });
+
   testWidgets('书源已删除：不请求网络，标出书源不存在；书架上的书保留', (tester) async {
     await services.shelveSimpleBook(chapters: 100);
     await services.repository.delete({SimpleBook.sourceUrl});

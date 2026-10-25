@@ -24,7 +24,8 @@ class SearchPage extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          if (state.total > 0) _Progress(state: state, onStop: controller.stop),
+          if (state.total > 0)
+            SearchProgress(state: state, onStop: controller.stop, finished: '搜索结束，共 ${state.books.length} 本'),
           Expanded(
             child: state.noSources
                 ? const Center(child: Text('没有可以搜索的书源，先去导入或启用书源'))
@@ -39,11 +40,13 @@ class SearchPage extends ConsumerWidget {
   }
 }
 
-class _Progress extends StatelessWidget {
-  const _Progress({required this.state, required this.onStop});
+/// 搜索进度：进行中显示完成数和停止，结束后显示 [finished]；有失败的书源时可以查看原因。换书源页面也用它。
+class SearchProgress extends StatelessWidget {
+  const SearchProgress({super.key, required this.state, required this.onStop, required this.finished});
 
   final SearchState state;
   final VoidCallback onStop;
+  final String finished;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +60,7 @@ class _Progress extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  state.running ? '已完成 ${state.done}/${state.total} 个书源' : '搜索结束，共 ${state.books.length} 本',
+                  state.running ? '已完成 ${state.done}/${state.total} 个书源' : finished,
                 ),
               ),
               if (failures.isNotEmpty)

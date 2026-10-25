@@ -9,6 +9,7 @@ import '../reader/chapter_list.dart';
 import '../reader/reader_page.dart';
 import '../storage/database.dart';
 import 'book_mapping.dart';
+import 'change_source_page.dart';
 import 'errors.dart';
 import 'providers.dart';
 import 'search_controller.dart';
@@ -216,6 +217,12 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
               onPressed: _chooseSource,
             ),
           ),
+        // 从书架打开：进入书架的换书源（book-detail「换书源」）
+        if (widget.bookUrl != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(icon: const Icon(Icons.swap_horiz), label: const Text('换书源'), onPressed: _changeShelfSource),
+          ),
         if (display.intro case final intro? when intro.isNotEmpty)
           Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(intro)),
         if (infoError != null)
@@ -276,6 +283,14 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
   void _read(ShelfBook book, {int? startAt, bool replace = false}) {
     final route = MaterialPageRoute<void>(builder: (_) => ReaderPage(bookUrl: book.bookUrl, startAt: startAt));
     replace ? Navigator.of(context).pushReplacement(route) : Navigator.of(context).push(route);
+  }
+
+  /// 换源成功后改为显示新书；旧书已从数据库删除。
+  Future<void> _changeShelfSource() async {
+    final bookUrl = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: _bookUrl!)),
+    );
+    if (bookUrl != null && mounted) setState(() => _bookUrl = bookUrl);
   }
 
   Future<void> _chooseSource() async {

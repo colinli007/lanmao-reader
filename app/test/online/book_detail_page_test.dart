@@ -122,4 +122,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<ReaderPage>(find.byType(ReaderPage)).startAt, 0);
   });
+
+  testWidgets('从书架打开时换源：回到详情页，显示新书源名和目录，仍标明已在书架', (tester) async {
+    await services.shelveSimpleBook();
+    await services.addSources([{'bookSourceUrl': 'https://b.com', 'bookSourceName': '书源乙', 'searchUrl': '/s'}]);
+    services.engine.onSearch = (source, key) async => [
+      SearchBook(bookUrl: '${source.bookSourceUrl}/book/1', origin: source.bookSourceUrl, originName: source.bookSourceName)
+        ..name = '三体'
+        ..author = '刘慈欣',
+    ];
+    await tester.pumpWidget(services.app(const BookDetailPage.shelf(SimpleBook.bookUrl)));
+    await tester.pumpAndSettle();
+    expect(find.text('书源：书源甲'), findsOneWidget);
+    await tester.tap(find.text('换书源'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书源乙'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookDetailPage), findsOneWidget);
+    expect(find.text('书源：书源乙'), findsOneWidget);
+    expect(find.text('目录（5 章）'), findsOneWidget);
+    expect(find.text('已在书架'), findsWidgets);
+  });
 }

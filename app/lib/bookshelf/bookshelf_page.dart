@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../library/book_cover.dart';
 import '../library/providers.dart';
 import '../online/book_detail_page.dart';
+import '../online/change_source_page.dart';
 import '../online/search_page.dart';
 import '../online/source_list_page.dart';
 import '../reader/reader_page.dart';
@@ -120,10 +121,12 @@ class _ShelfTile extends ConsumerWidget {
               _Action.detail => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => BookDetailPage.shelf(book.bookUrl)),
               ),
+              _Action.changeSource => _changeSource(context, ref, book),
               _Action.remove => _remove(context, ref, book),
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: _Action.detail, child: Text('详情')),
+              PopupMenuItem(value: _Action.changeSource, child: Text('换书源')),
               PopupMenuItem(value: _Action.remove, child: Text('移出书架')),
             ],
           ),
@@ -131,6 +134,18 @@ class _ShelfTile extends ConsumerWidget {
       ),
       onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ReaderPage(bookUrl: book.bookUrl))),
     );
+  }
+
+  /// 换书源成功后书架跟着数据库刷新，这里只提示换到了哪个书源。
+  Future<void> _changeSource(BuildContext context, WidgetRef ref, ShelfBook book) async {
+    final db = ref.read(databaseProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final bookUrl = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: book.bookUrl)),
+    );
+    if (bookUrl == null) return;
+    final changed = await db.getBook(bookUrl);
+    messenger.showSnackBar(SnackBar(content: Text('已换到${changed!.originName}')));
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, ShelfBook book) async {
@@ -150,4 +165,4 @@ class _ShelfTile extends ConsumerWidget {
   }
 }
 
-enum _Action { detail, remove }
+enum _Action { detail, changeSource, remove }

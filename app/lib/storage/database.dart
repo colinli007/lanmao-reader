@@ -245,6 +245,14 @@ class AppDatabase extends _$AppDatabase {
     await (delete(books)..where((b) => b.bookUrl.equals(bookUrl))).go();
   });
 
+  /// 换书源（app-storage「换书源时的数据」）：删除旧书的书籍、目录和正文缓存，写入书架上的新书和它的目录。
+  /// 新地址上浏览中的那一行被覆盖，它的正文缓存保留：键是新书和新章节的地址，和新目录对得上。
+  Future<void> changeSource(String oldBookUrl, ShelfBook book, List<TocChapter> toc) => transaction(() async {
+    await removeBook(oldBookUrl);
+    await into(books).insert(book, mode: InsertMode.insertOrReplace);
+    await _replaceToc(book.bookUrl, toc);
+  });
+
   /// 启动时清理浏览中的书（不在书架上的书重启后不保留）。
   Future<void> purgeBrowsingBooks() => transaction(() async {
     final browsing = selectOnly(books)
