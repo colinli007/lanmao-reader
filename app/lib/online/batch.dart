@@ -8,11 +8,16 @@ import 'package:blocking_bridge/blocking_bridge.dart';
 final class Batch {
   final CancelToken token = CancelToken();
   final Set<Completer<void>> _waiting = {};
+  final Completer<void> _stopped = Completer<void>();
 
   bool get isStopped => token.isCancelled;
 
+  /// [stop] 时完成：不在池里的步骤（搜索等网络）据此中断。
+  Future<void> get stopped => _stopped.future;
+
   void stop() {
     token.cancel();
+    if (!_stopped.isCompleted) _stopped.complete();
     for (final waiter in _waiting) {
       waiter.completeError(const TaskCancelledException());
     }

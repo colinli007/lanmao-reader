@@ -13,7 +13,8 @@
 /// 由 [SourceStore] 保存（默认只在内存里）。
 library;
 
-export 'src/chain/chains.dart' show chapterAbsoluteUrl, getBookInfo, getChapterList, getContent, searchBooks;
+export 'src/chain/chains.dart'
+    show SearchStep, chapterAbsoluteUrl, finishSearch, getBookInfo, getChapterList, getContent, prepareSearch, searchBooks;
 export 'src/chain/models.dart';
 export 'src/core/environment.dart';
 export 'src/core/errors.dart';

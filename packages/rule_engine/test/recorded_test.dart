@@ -36,5 +36,34 @@ void main() {
       final content = getContent(env, source, book, first, nextChapterUrl: next);
       expect(content.content, startsWith(expected['contentHead'] as String));
     });
+
+    test('${expected['case']}：分两段搜索和一次执行相同（结果和日志）', () {
+      final records = (fixture['records'] as List).cast<Map<String, Object?>>();
+      final source = loadBookSources(jsonEncode(fixture['source'])).sources.single;
+      final key = fixture['key'] as String;
+      final onceEnv = ReplayEnvironment(records);
+      final splitEnv = ReplayEnvironment(records);
+      addTearDown(onceEnv.dispose);
+      addTearDown(splitEnv.dispose);
+
+      final once = searchBooks(onceEnv, source, key);
+      final step = prepareSearch(splitEnv, source, key);
+      final split = finishSearch(step, splitEnv.fetch(step.http));
+      expect(split.map(_summary).toList(), once.map(_summary).toList());
+      expect(splitEnv.logs.map((log) => log.toJson()).toList(), onceEnv.logs.map((log) => log.toJson()).toList());
+    });
   }
 }
+
+List<Object?> _summary(SearchBook b) => [
+  b.name,
+  b.author,
+  b.kind,
+  b.coverUrl,
+  b.intro,
+  b.wordCount,
+  b.latestChapterTitle,
+  b.bookUrl,
+  b.infoHtml,
+  b.variables,
+];

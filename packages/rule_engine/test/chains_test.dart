@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:rule_engine/rule_engine.dart';
+import 'package:rule_engine/src/js/js_values.dart';
 import 'package:test/test.dart';
 
 import 'support/fake_environment.dart';
@@ -117,6 +118,74 @@ void main() {
 
     test('搜索地址为空', () {
       expect(() => searchBooks(env, source({}), 'x'), throwsA(isA<RuleException>()));
+    });
+  });
+
+  group('分段搜索', () {
+    final search = {
+      'searchUrl': '/s?q={{key}}',
+      'ruleSearch': {'bookList': 'tag.li', 'name': 'text', 'bookUrl': 'text'},
+    };
+
+    // 提交方的做法：第一段交回请求，自己发出，再把响应交给第二段
+    List<SearchBook> twoSteps(BookSource s, String key) {
+      final step = prepareSearch(env, s, key);
+      return finishSearch(step, env.fetch(step.http));
+    }
+
+    RuleEngineException failure(List<SearchBook> Function() search) {
+      try {
+        search();
+      } on RuleEngineException catch (e) {
+        return e;
+      }
+      fail('没有出错');
+    }
+
+    test('地址里的 JS 只执行一次', () {
+      env.respond('https://a.com/search?q=k', '<li>三体</li>');
+      final s = source({...search, 'searchUrl': "@js:java.log('构造');'/search?q='+key"});
+      expect(twoSteps(s, 'k').single.name, '三体');
+      expect(env.logs.where((log) => log.message == '构造'), hasLength(1));
+    });
+
+    test('第二段执行 loginCheckJs', () {
+      env.respond('https://a.com/s?q=k', <Object>['<p>请登录</p>', '<li>三体</li>']);
+      final s = source({...search, 'loginCheckJs': "result.body().includes('请登录') ? java.getStrResponse() : result"});
+      expect(twoSteps(s, 'k').single.name, '三体');
+      expect(env.requests.map((r) => r.url), ['https://a.com/s?q=k', 'https://a.com/s?q=k']);
+    });
+
+    test('两段都能用书源对象：第一段登记过的对象随第一段失效，第二段重新登记', () {
+      env.respond('https://a.com/s?q=13', '<li>X</li>');
+      final s = source({...search, 'searchUrl': '/s?q={{source.getKey().length}},{"bodyJs":"result.replace(\'X\', source.getKey())"}'});
+      expect(twoSteps(s, 'k').single.name, 'https://a.com');
+
+      final handles = HandleTable();
+      final id = handles.add(s);
+      handles.clear();
+      expect(() => handles.get<BookSource>(id), throwsA(isA<JsEvalException>()));
+      final newId = handles.add(s);
+      expect(newId, isNot(id));
+      expect(handles.get<BookSource>(newId), same(s));
+    });
+
+    test('出错时的书源名和字段和一次执行相同', () {
+      env.respond('https://a.com/s?q=k', '<li>三体</li>');
+      final badName = source({
+        ...search,
+        'ruleSearch': {...search['ruleSearch'] as Map, 'name': '@css:h3'},
+      });
+      final badBodyJs = source({...search, 'searchUrl': '/s?q={{key}},{"bodyJs":"throw new Error(\'坏了\')"}'});
+      for (final s in [badName, badBodyJs]) {
+        final once = failure(() => searchBooks(env, s, 'k'));
+        final split = failure(() => twoSteps(s, 'k'));
+        expect(split.runtimeType, once.runtimeType);
+        expect(split.toString(), once.toString());
+        expect((split.sourceName, split.field), (once.sourceName, once.field));
+      }
+      expect(failure(() => twoSteps(badName, 'k')).field, 'ruleSearch.name');
+      expect(failure(() => twoSteps(badBodyJs, 'k')).field, 'searchUrl');
     });
   });
 

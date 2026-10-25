@@ -24,7 +24,7 @@ import 'package:path_provider/path_provider.dart';
 ///
 /// 书源文件从网址导入（走「从网址导入」的界面）。走查：在 [_targets] 列出的 A、C 类书源上各走一遍
 /// 详情 → 加入书架 → 读两章，然后像重启一样重新打开同一个数据库，从书架继续阅读并刷新书架。
-/// 计时：在 200 个书源上搜索一次，报告总耗时和失败原因的分布。报告以 `REPORT` 开头打印。
+/// 计时：在 200 个书源上搜索一次，报告总耗时、完成一半和九成书源时的耗时、失败原因的分布。报告以 `REPORT` 开头打印。
 const _walkthroughSources = String.fromEnvironment('WALKTHROUGH_SOURCES');
 const _benchSources = String.fromEnvironment('BENCH_SOURCES');
 const _key = String.fromEnvironment('KEY', defaultValue: '斗罗大陆');
@@ -108,14 +108,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// 搜索并等到结束，返回耗时。
-  Future<Duration> search(WidgetTester tester) async {
+  /// 搜索并等到结束，返回耗时。[onPump] 在每次 pump 之后拿到从开始搜索算起的时间。
+  Future<Duration> search(WidgetTester tester, {void Function(Duration elapsed)? onPump}) async {
     await tester.tap(find.byTooltip('搜索'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), _key);
     final watch = Stopwatch()..start();
     await tester.testTextInput.receiveAction(TextInputAction.search);
-    final finished = await pumpUntil(tester, () => find.textContaining('搜索结束').evaluate().isNotEmpty, timeout: const Duration(minutes: 10));
+    final finished = await pumpUntil(tester, () {
+      onPump?.call(watch.elapsed);
+      return find.textContaining('搜索结束').evaluate().isNotEmpty;
+    }, timeout: const Duration(minutes: 10));
     expect(finished, isTrue, reason: '搜索没有在 10 分钟内结束');
     return watch.elapsed;
   }
@@ -140,7 +143,29 @@ void main() {
     final db = AppDatabase(NativeDatabase(await freshDatabase('bench')));
     await startApp(tester, db);
     await importFromUrl(tester, _benchSources);
-    final elapsed = await search(tester);
+    // 每次 pump 记下完成数和失败数的变化，用来校准单书源的超时（设计 D7）
+    Duration? half;
+    Duration? ninety;
+    var done = 0;
+    var failed = 0;
+    var lateOk = 0;
+    var lateFailed = 0;
+    final elapsed = await search(
+      tester,
+      onPump: (elapsed) {
+        final state = searchState(tester);
+        final newFailed = state.failures.length - failed;
+        final newOk = state.done - done - newFailed;
+        if (elapsed > const Duration(seconds: 30)) {
+          lateOk += newOk;
+          lateFailed += newFailed;
+        }
+        done = state.done;
+        failed = state.failures.length;
+        if (done > 0 && done * 2 >= state.total) half ??= elapsed;
+        if (done > 0 && done * 10 >= state.total * 9) ninety ??= elapsed;
+      },
+    );
     final state = searchState(tester);
     final reasons = <String, int>{};
     for (final failure in state.failures) {
@@ -150,6 +175,11 @@ void main() {
     report(
       '搜索「$_key」${state.total} 个书源，耗时 ${elapsed.inSeconds} 秒，合并后 ${state.books.length} 本，'
       '有结果的书源 ${state.total - state.failures.length}（含 0 结果），失败 ${state.failures.length}：$reasons',
+    );
+    String seconds(Duration? d) => d == null ? '-' : (d.inMilliseconds / 1000).toStringAsFixed(1);
+    report(
+      '完成一半 ${seconds(half)} 秒，九成 ${seconds(ninety)} 秒，全部 ${seconds(elapsed)} 秒；'
+      '30 秒以后完成的书源：成功 $lateOk，失败 $lateFailed',
     );
     await shutdown(tester, db);
   }, skip: _benchSources.isEmpty);

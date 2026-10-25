@@ -24,7 +24,7 @@ Future<List<Override>> startServices({AppDatabase? database}) async {
   final settings = await db.loadSettings();
   // 进入后台时等落盘队列清空，app 被杀时不丢最后几次写入（监听器注册到 binding 上，整个运行期间有效）
   AppLifecycleListener(onHide: queue.flush, onPause: queue.flush);
-  final sourceEngine = PoolSourceEngine(engine.pool);
+  final sourceEngine = PoolSourceEngine(engine.pool, engine.host.execute);
   return [
     databaseProvider.overrideWithValue(db),
     initialSettingsProvider.overrideWithValue(settings),

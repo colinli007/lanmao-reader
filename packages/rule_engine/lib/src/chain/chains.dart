@@ -24,6 +24,26 @@ import 'models.dart';
 
 /// 搜索：请求搜索地址，解析结果列表。搜索响应本身就是详情页时，返回一个结果并保存这个页面。
 List<SearchBook> searchBooks(RuleEnvironment env, BookSource source, String key, {int page = 1}) {
+  final step = prepareSearch(env, source, key, page: page);
+  env.checkCancelled();
+  return finishSearch(step, env.fetch(step.http));
+}
+
+/// 分段搜索的第一段结果：构造好的请求，以及第二段要用的请求上下文和本次链路的变量。
+/// 都是普通 Dart 对象，可以在 isolate 之间传递，第二段可以在另一个 worker 上执行。
+final class SearchStep {
+  SearchStep._(this._request, this._ruleData);
+
+  final SourceRequest _request;
+  final ChainData _ruleData;
+
+  /// 交给提交方发出的请求。
+  HttpRequest get http => _request.http;
+}
+
+/// 分段搜索的第一段：构造搜索请求（地址里的 JS、请求头的 JS），请求由提交方发出，响应交给 [finishSearch]。
+/// 网络等待因此不占 worker；两段连着执行就是 [searchBooks]。
+SearchStep prepareSearch(RuleEnvironment env, BookSource source, String key, {int page = 1}) {
   return _withTask(env, source, 'searchUrl', (task) {
     final searchUrl = task.source.searchUrl;
     if (searchUrl == null || searchUrl.trim().isEmpty) throw RuleException('搜索url不能为空');
@@ -36,8 +56,18 @@ List<SearchBook> searchBooks(RuleEnvironment env, BookSource source, String key,
       baseUrl: task.source.bookSourceUrl,
       ruleData: ruleData,
     );
-    final response = _fetch(task, request, loginCheck: true);
-    return _analyzeBookList(task, ruleData, request, response);
+    // 这一段的 JS 作用域已经全部释放，登记的对象随之失效（见 [HandleTable.clear]）
+    task.handles.clear();
+    return SearchStep._(request, ruleData);
+  });
+}
+
+/// 分段搜索的第二段：处理响应（选项 `type`、`bodyJs`，再执行 `loginCheckJs`），解析结果列表。
+List<SearchBook> finishSearch(SearchStep step, HttpResult result) {
+  final request = step._request;
+  return _inTask(request.task, 'searchUrl', (task) {
+    final response = _toResponse(_loginCheck(task, request, request.response(result)));
+    return _analyzeBookList(task, step._ruleData, request, response);
   });
 }
 
@@ -581,11 +611,15 @@ void _optional(SourceTask task, String field, void Function() body) {
 }
 
 /// 一次链路调用：建立任务的书源上下文，给链路里的错误补上书源名，没有字段时补上 [field]。
-T _withTask<T>(RuleEnvironment env, BookSource source, String field, T Function(SourceTask task) body) {
+T _withTask<T>(RuleEnvironment env, BookSource source, String field, T Function(SourceTask task) body) =>
+    _inTask(SourceTask(env, source), field, body);
+
+/// 在已有的任务上继续执行（分段搜索的第二段），错误的处理同 [_withTask]。
+T _inTask<T>(SourceTask task, String field, T Function(SourceTask task) body) {
   try {
-    return body(SourceTask(env, source)..field = field);
+    return body(task..field = field);
   } on RuleEngineException catch (e) {
-    e.sourceName ??= source.bookSourceName;
+    e.sourceName ??= task.source.bookSourceName;
     e.field ??= field;
     rethrow;
   }

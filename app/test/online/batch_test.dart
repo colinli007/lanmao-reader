@@ -47,4 +47,15 @@ void main() {
     expect(submitted, ['first', 'other']);
     await expectLater(task(stopped, 'late'), throwsA(isA<TaskCancelledException>()));
   });
+  test('stop 之后 stopped 完成，重复 stop 不报错', () async {
+    final batch = Batch();
+    var stopped = false;
+    unawaited(batch.stopped.then((_) => stopped = true));
+    await Future<void>.delayed(Duration.zero);
+    expect(stopped, isFalse);
+    batch.stop();
+    batch.stop();
+    await batch.stopped;
+    expect(stopped, isTrue);
+  });
 }

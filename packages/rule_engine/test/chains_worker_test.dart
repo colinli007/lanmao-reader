@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
@@ -18,6 +20,8 @@ void main() {
         case '/s':
           await Future<void>.delayed(const Duration(seconds: 5));
           response.write('<div class="item"><h3>甲</h3><a href="/b/1">x</a></div>');
+        case '/q':
+          response.write('<li>X</li>');
         case '/b/1':
           response.write('<h1>三体</h1><ul><li><a href="/c/1">第一章</a></li><li><a href="/c/2">第二章</a></li></ul>');
         case '/c/1':
@@ -49,6 +53,31 @@ void main() {
     for (final future in futures) {
       await expectLater(future, throwsA(isA<TaskCancelledException>()));
     }
+  });
+
+  test('两段执行和一次执行结果相同：两段在不同的 worker 上，中间由主 isolate 交回响应', () async {
+    // 地址 JS 读写本次链路的变量、两段都用到书源对象
+    final s = loadBookSources('''{
+      "bookSourceUrl": "$base", "bookSourceName": "本地",
+      "searchUrl": "/q?k={{java.put('p', key)}}&n={{source.getKey().length}},{\\"bodyJs\\":\\"result.replace('X', source.getKey())\\"}",
+      "ruleSearch": {"bookList": "tag.li", "name": "text", "kind": "@get:{p}", "bookUrl": "text"}
+    }''').sources.single;
+    Object summary(List<SearchBook> books) => [for (final b in books) [b.name, b.kind, b.bookUrl, b.variables]];
+
+    final host = RuleHost();
+    final first = WorkerPool(host.handle, size: 1);
+    final second = WorkerPool(host.handle, size: 1);
+    addTearDown(first.close);
+    addTearDown(second.close);
+
+    final once = await first.run(searchTask(s, '三体'));
+    final step = await first.run(prepareSearchTask(s, '三体'));
+    final response = HttpResult(statusCode: 200, url: step.http.url, body: Uint8List.fromList(utf8.encode('<li>X</li>')));
+    final split = await second.run(finishSearchTask(step, response));
+    expect(summary(split), summary(once));
+    expect(summary(split), [
+      [base, '三体', base, {'p': '三体'}],
+    ]);
   });
 
   test('详情、目录、正文在 worker 里跑通', () async {

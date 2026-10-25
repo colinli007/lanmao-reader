@@ -126,6 +126,13 @@ final class HandleTable {
     if (object is T) return object;
     throw JsEvalException(object == null ? '对象已失效' : '对象类型不对');
   }
+
+  /// 清空登记的对象，之后旧编号查不到对象。分段搜索的第一段结束时用：表要带到另一个 worker，
+  /// 那里的编号从它自己的计数器取，留着旧条目可能被同号的新对象覆盖。
+  void clear() {
+    _objects.clear();
+    _ids.clear();
+  }
 }
 
 /// Dart 值转成交给 JS 的 JSON 值。元素、响应、加密器登记到 [handles]。

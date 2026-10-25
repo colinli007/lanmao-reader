@@ -1,5 +1,6 @@
 import '../chain/chains.dart';
 import '../chain/models.dart';
+import '../core/environment.dart';
 import '../source/book_source.dart';
 import 'worker_environment.dart';
 
@@ -9,6 +10,13 @@ import 'worker_environment.dart';
 /// 这里的闭包只捕获参数，书源、书籍、章节都是普通对象，可以传给 worker。
 List<SearchBook> Function() searchTask(BookSource source, String key, {int page = 1}) =>
     () => searchBooks(const WorkerRuleEnvironment(), source, key, page: page);
+
+/// 分段搜索的两段（见 [prepareSearch]）：第一段交回的 [SearchStep] 由提交方发出请求，再连同响应交给第二段。
+SearchStep Function() prepareSearchTask(BookSource source, String key) =>
+    () => prepareSearch(const WorkerRuleEnvironment(), source, key);
+
+List<SearchBook> Function() finishSearchTask(SearchStep step, HttpResult result) =>
+    () => finishSearch(step, result);
 
 Book Function() bookInfoTask(BookSource source, Book book, {bool canReName = true}) =>
     () => getBookInfo(const WorkerRuleEnvironment(), source, book, canReName: canReName);
