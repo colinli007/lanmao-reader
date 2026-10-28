@@ -40,7 +40,6 @@ final class ReaderSettings {
     this.indent = 2,
     this.margin = 20,
     this.keepScreenOn = false,
-    this.volumeKeyTurn = true,
   });
 
   factory ReaderSettings.fromMap(Map<String, String> map) => ReaderSettings(
@@ -53,7 +52,6 @@ final class ReaderSettings {
     indent: int.tryParse(map[_indent] ?? '')?.clamp(minIndent, maxIndent) ?? 2,
     margin: double.tryParse(map[_margin] ?? '')?.clamp(minMargin, maxMargin) ?? 20,
     keepScreenOn: bool.tryParse(map[_keepScreenOn] ?? '') ?? false,
-    volumeKeyTurn: bool.tryParse(map[_volumeKeyTurn] ?? '') ?? true,
   );
 
   static const minFontSize = 12.0;
@@ -76,7 +74,6 @@ final class ReaderSettings {
   static const _indent = 'reader.indent';
   static const _margin = 'reader.margin';
   static const _keepScreenOn = 'reader.keepScreenOn';
-  static const _volumeKeyTurn = 'reader.volumeKeyTurn';
 
   final double fontSize;
   final double lineHeight;
@@ -96,9 +93,6 @@ final class ReaderSettings {
   /// 阅读页显示期间屏幕不自动熄灭（reader「屏幕常亮」）。
   final bool keepScreenOn;
 
-  /// Android 上用音量键翻页（reader「音量键翻页」）。
-  final bool volumeKeyTurn;
-
   /// 实际显示的主题（设计 D14）。
   ReaderTheme effectiveTheme(Brightness platform) => followSystemDark && platform == Brightness.dark ? ReaderTheme.dark : theme;
 
@@ -112,7 +106,6 @@ final class ReaderSettings {
     int? indent,
     double? margin,
     bool? keepScreenOn,
-    bool? volumeKeyTurn,
   }) => ReaderSettings(
     fontSize: fontSize ?? this.fontSize,
     lineHeight: lineHeight ?? this.lineHeight,
@@ -123,7 +116,6 @@ final class ReaderSettings {
     indent: indent ?? this.indent,
     margin: margin ?? this.margin,
     keepScreenOn: keepScreenOn ?? this.keepScreenOn,
-    volumeKeyTurn: volumeKeyTurn ?? this.volumeKeyTurn,
   );
 
   Map<String, String> toMap() => {
@@ -136,7 +128,6 @@ final class ReaderSettings {
     _indent: '$indent',
     _margin: '$margin',
     _keepScreenOn: '$keepScreenOn',
-    _volumeKeyTurn: '$volumeKeyTurn',
   };
 }
 

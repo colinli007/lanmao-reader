@@ -4,19 +4,11 @@ import '../chapter_format.dart';
 import '../layout/chapter_layout.dart';
 import '../paged/chapter_window.dart';
 import '../reader_settings.dart';
-import '../volume_keys.dart';
 
 /// 滚动模式（设计 D12）：一次显示一章，按段懒加载；和分页模式共用 [ChapterWindow] 里的排版结果，
 /// 所以缩进、两端对齐、避头尾完全一样。章首有「上一章」，章末有「下一章」。
 class ScrollReaderView extends StatefulWidget {
-  const ScrollReaderView({
-    super.key,
-    required this.window,
-    required this.theme,
-    required this.margin,
-    required this.menu,
-    required this.volumeKeyTurn,
-  });
+  const ScrollReaderView({super.key, required this.window, required this.theme, required this.margin, required this.menu});
 
   final ChapterWindow window;
   final ReaderTheme theme;
@@ -26,9 +18,6 @@ class ScrollReaderView extends StatefulWidget {
 
   /// 阅读菜单是否显示：点中间一行打开；显示时点任何位置都只隐藏菜单（reader「点击区域翻页」）。
   final ValueNotifier<bool> menu;
-
-  /// 音量键翻页（阅读设置），按键和点击上下两侧一样滚一屏。
-  final bool volumeKeyTurn;
 
   /// 章首「上一章」那一行的高度。章首、章末都是固定高度，这样每一项的高度都能直接算出来。
   static const buttonRow = 56.0;
@@ -127,15 +116,11 @@ class _ScrollReaderViewState extends State<ScrollReaderView> {
       widget.menu.value = true;
       return;
     }
-    _scrollScreen(y > height / 3);
-  }
-
-  /// 往下（[forward]）或往上滚一屏减一行，留一行作为上下文。点击和音量键共用。
-  void _scrollScreen(bool forward) {
     if (!_scroll.hasClients) return;
+    // 翻一屏减一行，留一行作为上下文
     final spec = _window.spec;
     final step = _scroll.position.viewportDimension - spec.fontSize * spec.lineHeight;
-    final target = (_scroll.offset + (forward ? step : -step)).clamp(0.0, _scroll.position.maxScrollExtent);
+    final target = (_scroll.offset + (y < height / 3 ? -step : step)).clamp(0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(target, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
   }
 
@@ -143,32 +128,28 @@ class _ScrollReaderViewState extends State<ScrollReaderView> {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (_, event) => handleVolumeKey(event, enabled: widget.volumeKeyTurn, menu: widget.menu.value, turn: _scrollScreen),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: _onTapUp,
-        child: SafeArea(
-          child: ListenableBuilder(
-            listenable: _window,
-            builder: (context, _) => switch (_window.slotOf(_window.chapter)) {
-              SlotReady(:final layout) => _chapter(layout),
-              SlotFailed(:final message) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(message, style: TextStyle(color: widget.theme.foreground)),
-                    ),
-                    FilledButton(onPressed: () => _window.retry(_window.chapter), child: const Text('重试')),
-                  ],
-                ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: _onTapUp,
+      child: SafeArea(
+        child: ListenableBuilder(
+          listenable: _window,
+          builder: (context, _) => switch (_window.slotOf(_window.chapter)) {
+            SlotReady(:final layout) => _chapter(layout),
+            SlotFailed(:final message) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(message, style: TextStyle(color: widget.theme.foreground)),
+                  ),
+                  FilledButton(onPressed: () => _window.retry(_window.chapter), child: const Text('重试')),
+                ],
               ),
-              _ => Center(child: CircularProgressIndicator(color: widget.theme.foreground)),
-            },
-          ),
+            ),
+            _ => Center(child: CircularProgressIndicator(color: widget.theme.foreground)),
+          },
         ),
       ),
     );

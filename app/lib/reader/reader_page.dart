@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -235,15 +234,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         final window = _window ??= _createWindow(spec);
         window.resize(spec);
         return settings.pageMode == PageMode.scroll
-            ? ScrollReaderView(window: window, theme: theme, margin: settings.margin, menu: _menu, volumeKeyTurn: settings.volumeKeyTurn)
-            : PagedView(
-                window: window,
-                mode: settings.pageMode,
-                theme: theme,
-                insets: insets,
-                menu: _menu,
-                volumeKeyTurn: settings.volumeKeyTurn,
-              );
+            ? ScrollReaderView(window: window, theme: theme, margin: settings.margin, menu: _menu)
+            : PagedView(window: window, mode: settings.pageMode, theme: theme, insets: insets, menu: _menu);
       },
     );
   }
@@ -374,13 +366,6 @@ class _SettingsSheet extends ConsumerWidget {
               value: settings.keepScreenOn,
               onChanged: (value) => notifier.update(settings.copyWith(keepScreenOn: value)),
             ),
-            // 只有 Android 能拿到音量键（reader「音量键翻页」）
-            if (defaultTargetPlatform == TargetPlatform.android)
-              SwitchListTile(
-                title: const Text('音量键翻页'),
-                value: settings.volumeKeyTurn,
-                onChanged: (value) => notifier.update(settings.copyWith(volumeKeyTurn: value)),
-              ),
           ],
         ),
       ),

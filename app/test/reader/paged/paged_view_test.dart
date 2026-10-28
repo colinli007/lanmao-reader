@@ -41,7 +41,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: PagedView(window: window, mode: mode, theme: ReaderTheme.light, insets: insets, menu: menu, volumeKeyTurn: false),
+          body: PagedView(window: window, mode: mode, theme: ReaderTheme.light, insets: insets, menu: menu),
         ),
       ),
     );

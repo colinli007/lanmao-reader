@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -233,110 +232,6 @@ void main() {
       await back(tester);
       expect(services.screen.calls, [true, false, true, false]);
     });
-  });
-
-  group('音量键翻页', () {
-    const android = TargetPlatformVariant({TargetPlatform.android});
-    const down = LogicalKeyboardKey.audioVolumeDown, up = LogicalKeyboardKey.audioVolumeUp;
-
-    /// 按一下：返回这次按下有没有被阅读页消费（没消费的交回系统调音量）。
-    Future<bool> press(WidgetTester tester, LogicalKeyboardKey key) async {
-      final handled = await simulateKeyDownEvent(key, platform: 'android');
-      await simulateKeyUpEvent(key, platform: 'android');
-      await tester.pumpAndSettle();
-      return handled;
-    }
-
-    testWidgets('音量减翻到下一页，音量加翻回来，按键被消费', (tester) async {
-      await open(tester, startAt: 3);
-      final first = pageText(tester);
-      await tapRight(tester);
-      final second = pageText(tester);
-      await tapLeft(tester);
-      expect(await press(tester, down), isTrue);
-      expect(pageText(tester), second);
-      expect(await press(tester, up), isTrue);
-      expect(pageText(tester), first);
-    }, variant: android);
-
-    testWidgets('按住不放只翻一页', (tester) async {
-      await open(tester, startAt: 3);
-      await tapRight(tester);
-      final second = pageText(tester);
-      await tapLeft(tester);
-      expect(await simulateKeyDownEvent(down, platform: 'android'), isTrue);
-      for (var i = 0; i < 5; i++) {
-        expect(await simulateKeyRepeatEvent(down, platform: 'android'), isTrue);
-      }
-      expect(await simulateKeyUpEvent(down, platform: 'android'), isTrue);
-      await tester.pumpAndSettle();
-      expect(pageText(tester), second);
-    }, variant: android);
-
-    testWidgets('滚动模式：音量减向下滚一屏，音量加滚回来', (tester) async {
-      await open(tester, startAt: 3);
-      await useScroll(tester);
-      double pixels() => tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels;
-      final start = pixels();
-      expect(await press(tester, down), isTrue);
-      expect(pixels(), greaterThan(start + 300));
-      expect(await press(tester, up), isTrue);
-      expect(pixels(), closeTo(start, 1));
-    }, variant: android);
-
-    testWidgets('菜单显示时不翻页，按键交回系统', (tester) async {
-      await open(tester, startAt: 3);
-      final first = pageText(tester);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      expect(await press(tester, down), isFalse);
-      expect(pageText(tester), first);
-    }, variant: android);
-
-    testWidgets('设置关闭时不翻页，按键交回系统', (tester) async {
-      await open(tester, startAt: 3);
-      await update(tester, (s) => s.copyWith(volumeKeyTurn: false));
-      final first = pageText(tester);
-      expect(await press(tester, down), isFalse);
-      expect(pageText(tester), first);
-    }, variant: android);
-
-    testWidgets('不是 Android 时不处理', (tester) async {
-      await open(tester, startAt: 3);
-      expect(await press(tester, down), isFalse);
-    }, variant: const TargetPlatformVariant({TargetPlatform.iOS}));
-
-    testWidgets('打开再关掉设置面板、目录以后，音量键照样翻页', (tester) async {
-      await open(tester, startAt: 3);
-      await tapRight(tester);
-      final second = pageText(tester);
-      await tapLeft(tester);
-      // 设置面板
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
-      await tester.pumpAndSettle();
-      expect(await press(tester, down), isFalse, reason: '面板打开时交回系统');
-      Navigator.of(tester.element(find.text('跟随系统深色'))).pop();
-      await tester.pumpAndSettle();
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage))); // 隐藏菜单
-      await tester.pumpAndSettle();
-      expect(await press(tester, down), isTrue);
-      expect(pageText(tester), second);
-      await press(tester, up);
-      // 目录
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('目录'));
-      await tester.pumpAndSettle();
-      expect(await press(tester, down), isFalse, reason: '目录打开时交回系统');
-      Navigator.of(tester.element(find.byType(Drawer))).pop();
-      await tester.pumpAndSettle();
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      expect(await press(tester, down), isTrue);
-      expect(pageText(tester), second);
-    }, variant: android);
   });
 
   group('分页：章节之间连续翻页', () {
@@ -626,7 +521,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('设置面板：段距、缩进、边距拖到最右，打开屏幕常亮、关掉音量键翻页，都落盘', (tester) async {
+    testWidgets('设置面板：段距、缩进、边距拖到最右，打开屏幕常亮，都落盘', (tester) async {
       await open(tester, startAt: 0);
       await openSettings(tester);
       for (final label in ['段距', '缩进', '边距']) {
@@ -634,26 +529,16 @@ void main() {
         await tester.drag(slider, const Offset(1000, 0));
         await tester.pumpAndSettle();
       }
-      for (final title in ['屏幕常亮', '音量键翻页']) {
-        await tester.ensureVisible(find.text(title));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(title));
-        await tester.pumpAndSettle();
-      }
-      final saved = await services.db.loadSettings();
-      expect(
-        [for (final key in ['paragraphSpacing', 'indent', 'margin', 'keepScreenOn', 'volumeKeyTurn']) saved['reader.$key']],
-        ['2.0', '4', '48.0', 'true', 'false'],
-      );
-    }, variant: const TargetPlatformVariant({TargetPlatform.android}));
-
-    testWidgets('「音量键翻页」只在 Android 上显示', (tester) async {
-      await open(tester, startAt: 0);
-      await openSettings(tester);
       await tester.ensureVisible(find.text('屏幕常亮'));
       await tester.pumpAndSettle();
-      expect(find.text('音量键翻页'), defaultTargetPlatform == TargetPlatform.android ? findsOneWidget : findsNothing);
-    }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
+      await tester.tap(find.text('屏幕常亮'));
+      await tester.pumpAndSettle();
+      final saved = await services.db.loadSettings();
+      expect(
+        [for (final key in ['paragraphSpacing', 'indent', 'margin', 'keepScreenOn']) saved['reader.$key']],
+        ['2.0', '4', '48.0', 'true'],
+      );
+    });
 
     testWidgets('设置面板切换翻页方式和跟随系统深色，落盘', (tester) async {
       await open(tester, startAt: 0);

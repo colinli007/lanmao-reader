@@ -14,26 +14,19 @@ void main() {
     );
   });
 
-  test('新的五项默认值：段距 0.6、缩进 2 字、边距 20（和原来写死的一样），不常亮，音量键翻页', () {
+  test('新的四项默认值：段距 0.6、缩进 2 字、边距 20（和原来写死的一样），不常亮', () {
     final settings = ReaderSettings.fromMap(const {});
-    expect(
-      (settings.paragraphSpacing, settings.indent, settings.margin, settings.keepScreenOn, settings.volumeKeyTurn),
-      (0.6, 2, 20, false, true),
-    );
+    expect((settings.paragraphSpacing, settings.indent, settings.margin, settings.keepScreenOn), (0.6, 2, 20, false));
   });
 
-  test('新的五项：越界截到范围内，非法值回落到默认值；段距写成一位小数', () {
+  test('新的四项：越界截到范围内，非法值回落到默认值；段距写成一位小数', () {
     final settings = ReaderSettings.fromMap(const {
       'reader.paragraphSpacing': '-1',
       'reader.indent': '9',
       'reader.margin': '2',
       'reader.keepScreenOn': 'yes',
-      'reader.volumeKeyTurn': 'false',
     });
-    expect(
-      (settings.paragraphSpacing, settings.indent, settings.margin, settings.keepScreenOn, settings.volumeKeyTurn),
-      (0, 4, 8, false, false),
-    );
+    expect((settings.paragraphSpacing, settings.indent, settings.margin, settings.keepScreenOn), (0, 4, 8, false));
     expect(const ReaderSettings(paragraphSpacing: 0.7000000000000001).toMap()['reader.paragraphSpacing'], '0.7');
   });
 
@@ -73,7 +66,6 @@ void main() {
       indent: 0,
       margin: 36,
       keepScreenOn: true,
-      volumeKeyTurn: false,
     );
     container.read(readerSettingsProvider.notifier).update(changed);
     final reread = ReaderSettings.fromMap(await services.db.loadSettings());

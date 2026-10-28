@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../layout/page_painter.dart';
 import '../reader_settings.dart';
-import '../volume_keys.dart';
 import 'chapter_window.dart';
 import 'page_turn.dart';
 
@@ -10,15 +9,7 @@ import 'page_turn.dart';
 ///
 /// 页面来自 [window]；视图只决定翻不翻、怎么动，翻完再 [ChapterWindow.moveTo]。
 class PagedView extends StatefulWidget {
-  const PagedView({
-    super.key,
-    required this.window,
-    required this.mode,
-    required this.theme,
-    required this.insets,
-    required this.menu,
-    required this.volumeKeyTurn,
-  });
+  const PagedView({super.key, required this.window, required this.mode, required this.theme, required this.insets, required this.menu});
 
   final ChapterWindow window;
   final PageMode mode;
@@ -29,9 +20,6 @@ class PagedView extends StatefulWidget {
 
   /// 阅读菜单是否显示：点中间一列打开；显示时点任何位置都只隐藏菜单（reader「点击区域翻页」）。
   final ValueNotifier<bool> menu;
-
-  /// 音量键翻页（阅读设置），按键和点击左右两侧一样翻页。
-  final bool volumeKeyTurn;
 
   /// 点击翻页的动画时长和曲线（设计 D10）。
   static const turnDuration = Duration(milliseconds: 250);
@@ -162,20 +150,16 @@ class _PagedViewState extends State<PagedView> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (_, event) => handleVolumeKey(event, enabled: widget.volumeKeyTurn, menu: widget.menu.value, turn: _tapTurn),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: _onTapUp,
-        onHorizontalDragStart: _onDragStart,
-        onHorizontalDragUpdate: _onDragUpdate,
-        onHorizontalDragEnd: _onDragEnd,
-        onHorizontalDragCancel: _onDragCancel,
-        child: ListenableBuilder(
-          listenable: Listenable.merge([_window, _controller]),
-          builder: (context, _) => LayoutBuilder(builder: (context, constraints) => _pages(constraints.maxWidth)),
-        ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: _onTapUp,
+      onHorizontalDragStart: _onDragStart,
+      onHorizontalDragUpdate: _onDragUpdate,
+      onHorizontalDragEnd: _onDragEnd,
+      onHorizontalDragCancel: _onDragCancel,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([_window, _controller]),
+        builder: (context, _) => LayoutBuilder(builder: (context, constraints) => _pages(constraints.maxWidth)),
       ),
     );
   }
