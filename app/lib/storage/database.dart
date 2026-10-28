@@ -122,8 +122,8 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-/// 书架上的一本书和它的未读章节数（排在当前章节之后的非卷章节数）。
-typedef ShelfEntry = ({ShelfBook book, int unread});
+/// 书架上的一本书、它的未读章节数（排在当前章节之后的非卷章节数）和非卷章节总数。
+typedef ShelfEntry = ({ShelfBook book, int unread, int total});
 
 /// 已缓存正文的章节数和正文的 UTF-8 字节数。
 typedef ContentCacheStats = ({int chapters, int bytes});
@@ -203,16 +203,17 @@ class AppDatabase extends _$AppDatabase {
     final unread = chapters.idx.count(
       filter: chapters.idx.isBiggerThan(books.durChapterIndex) & chapters.isVolume.equals(false),
     );
+    final total = chapters.idx.count(filter: chapters.isVolume.equals(false));
     final query = select(books).join([leftOuterJoin(chapters, chapters.bookUrl.equalsExp(books.bookUrl), useColumns: false)])
       ..where(books.inShelf.equals(true))
-      ..addColumns([unread])
+      ..addColumns([unread, total])
       ..groupBy([books.bookUrl])
       ..orderBy([
         OrderingTerm(expression: books.lastReadAt.isNull()),
         OrderingTerm.desc(books.lastReadAt),
         OrderingTerm.desc(books.addedAt),
       ]);
-    return (query, (row) => (book: row.readTable(books), unread: row.read(unread) ?? 0));
+    return (query, (row) => (book: row.readTable(books), unread: row.read(unread) ?? 0, total: row.read(total) ?? 0));
   }
 
   Future<ShelfBook?> getBook(String bookUrl) => (select(books)..where((b) => b.bookUrl.equals(bookUrl))).getSingleOrNull();
@@ -319,6 +320,14 @@ class AppDatabase extends _$AppDatabase {
       (select(contents)..where((c) => c.bookUrl.equals(bookUrl) & c.chapterUrl.equals(chapterUrl))).getSingleOrNull();
 
   Future<void> putContent(ContentRow row) => into(contents).insertOnConflictUpdate(row);
+
+  /// 一本书已缓存正文的章节地址（目录页的已缓存标记）。
+  Stream<Set<String>> watchCachedChapterUrls(String bookUrl) {
+    final query = selectOnly(contents)
+      ..addColumns([contents.chapterUrl])
+      ..where(contents.bookUrl.equals(bookUrl));
+    return query.watch().map((rows) => {for (final row in rows) row.read(contents.chapterUrl)!});
+  }
 
   /// 正文缓存的大小：清除时会删掉的那些正文（add-settings 设计 D1）。
   Future<ContentCacheStats> contentCacheStats() async {

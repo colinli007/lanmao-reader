@@ -24,7 +24,7 @@ void main() {
   tearDown(() => services.db.close());
 
   /// 阅读页压在一个空页面上，这样能返回。正文是自己画的，用读屏标签找段落（testWidgets 默认打开语义树）。
-  Future<void> open(WidgetTester tester, {int? startAt, TestServices? using}) async {
+  Future<void> open(WidgetTester tester, {int? startAt, TestServices? using, bool introMenu = false}) async {
     final s = using ?? services;
     await tester.pumpWidget(
       s.app(
@@ -33,7 +33,7 @@ void main() {
             body: TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => ReaderPage(bookUrl: SimpleBook.bookUrl, startAt: startAt),
+                  builder: (_) => ReaderPage(bookUrl: SimpleBook.bookUrl, startAt: startAt, introMenu: introMenu),
                 ),
               ),
               child: const Text('打开'),
@@ -59,11 +59,11 @@ void main() {
 
   /// 返回：菜单里的返回按钮（菜单没显示时先点正文中部）。
   Future<void> back(WidgetTester tester) async {
-    if (find.byType(BackButton).evaluate().isEmpty) {
+    if (find.byTooltip('返回').evaluate().isEmpty) {
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
     }
-    await tester.tap(find.byType(BackButton));
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
   }
 
@@ -235,13 +235,20 @@ void main() {
   });
 
   group('分页：章节之间连续翻页', () {
-    testWidgets('翻进下一章：显示第 4 章第 1 页，菜单里的章节名变成第 4 章', (tester) async {
+    testWidgets('翻进下一章：显示第 4 章第 1 页，菜单里的剩余章节数跟着变', (tester) async {
       await open(tester, startAt: 3);
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      final remaining = RegExp(r'余 (\d+) 章');
+      int remainingChapters() => int.parse(remaining.firstMatch((tester.widget<Text>(find.textContaining(remaining))).data!)!.group(1)!);
+      final before = remainingChapters();
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
       await turnUntil(tester, paragraph(4, 0));
       expect(pageText(tester), startsWith('第4章'));
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      expect(find.descendant(of: find.byType(AppBar), matching: find.text('第4章')), findsOneWidget);
+      expect(remainingChapters(), before - 1);
     });
 
     testWidgets('往回翻到上一章的末页；往前翻也不等待，不请求网络', (tester) async {
@@ -315,21 +322,74 @@ void main() {
   });
 
   group('菜单', () {
+    testWidgets('从继续阅读进入：菜单先显示，2 秒后自动收起', (tester) async {
+      await open(tester, startAt: 1, introMenu: true);
+      expect(find.text('目录'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text('目录'), findsNothing);
+    });
+
+    testWidgets('从继续阅读进入后自己开关过菜单：不再自动收起', (tester) async {
+      await open(tester, startAt: 1, introMenu: true);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('目录'), findsOneWidget);
+    });
+
+    testWidgets('进度条拖到最右松手：打开最后一章，停在章首', (tester) async {
+      await open(tester, startAt: 1);
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byWidgetPredicate((widget) => widget is Slider && widget.label == '章节进度'), const Offset(1000, 0));
+      await tester.pumpAndSettle();
+      expect(pageText(tester), startsWith('第5章'), reason: '第 1 页顶部是章节名');
+    });
+
+    testWidgets('切到夜间是夜墨主题；从夜墨切回日间是素白，并关掉跟随系统深色', (tester) async {
+      await open(tester, startAt: 0);
+      await update(tester, (s) => s.copyWith(theme: ReaderTheme.sepia));
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('夜间'));
+      await tester.pumpAndSettle();
+      expect((await services.db.loadSettings())['reader.theme'], 'dark');
+      await tester.tap(find.text('日间'));
+      await tester.pumpAndSettle();
+      final saved = await services.db.loadSettings();
+      expect((saved['reader.theme'], saved['reader.followSystemDark']), ('light', 'false'));
+    });
+
+    testWidgets('还没做的功能点了提示暂未开发', (tester) async {
+      await open(tester, startAt: 0);
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('朗读'));
+      await tester.pump();
+      expect(find.text('朗读暂未开发'), findsOneWidget);
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('点正文中间显示菜单，目录里标出当前章节，点击跳转；再点中间隐藏', (tester) async {
       await open(tester, startAt: 3);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
       expect(find.text('三体'), findsOneWidget);
-      await tester.tap(find.byTooltip('目录'));
+      await tester.tap(find.text('目录'));
       await tester.pumpAndSettle();
-      final current = tester.widget<ListTile>(find.widgetWithText(ListTile, '第3章'));
-      expect(current.selected, isTrue);
-      await tester.tap(find.widgetWithText(ListTile, '第1章'));
+      final current = find.ancestor(of: find.text('读到这里'), matching: find.byType(Row));
+      expect(find.descendant(of: current, matching: find.text('第3章')), findsOneWidget);
+      await tester.tap(find.text('第1章'));
       await tester.pumpAndSettle();
       expect(paragraph(1, 0), findsOneWidget);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('目录'), findsNothing);
+      expect(find.text('目录'), findsNothing);
     });
 
     testWidgets('章节很短时点正文中部也能打开菜单', (tester) async {
@@ -337,7 +397,7 @@ void main() {
       await open(tester, startAt: 0);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      expect(find.byType(BackButton), findsOneWidget);
+      expect(find.byTooltip('返回'), findsOneWidget);
     });
 
     testWidgets('菜单打开时点右侧：菜单隐藏，页面不翻', (tester) async {
@@ -346,7 +406,8 @@ void main() {
       await tester.pumpAndSettle();
       final before = pageText(tester);
       await tapRight(tester);
-      expect(find.byTooltip('目录'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('目录'), findsNothing);
       expect(pageText(tester), before);
     });
   });
@@ -501,12 +562,12 @@ void main() {
       await open(tester, startAt: 0);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
+      await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('暗'));
+      await tester.tap(find.text(ReaderTheme.dark.label));
       await tester.pumpAndSettle();
       expect((await services.db.loadSettings())['reader.theme'], 'dark');
-      Navigator.of(tester.element(find.text('暗'))).pop();
+      Navigator.of(tester.element(find.text(ReaderTheme.dark.label))).pop();
       await tester.pumpAndSettle();
       await back(tester);
       await open(tester, startAt: 1);
@@ -517,7 +578,7 @@ void main() {
     Future<void> openSettings(WidgetTester tester) async {
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
+      await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
     }
 
@@ -544,7 +605,7 @@ void main() {
       await open(tester, startAt: 0);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
+      await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('滚动'));
       await tester.pumpAndSettle();
@@ -565,7 +626,7 @@ void main() {
       expect(icons(), Brightness.dark);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
+      await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
       for (final (theme, expected) in [(ReaderTheme.dark, Brightness.light), (ReaderTheme.sepia, Brightness.dark)]) {
         await tester.tap(find.text(theme.label));

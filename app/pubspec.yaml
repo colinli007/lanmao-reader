@@ -39,6 +39,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/OFL.txt
+    - assets/fonts/LUCIDE_LICENSE.txt
+  # 书名、标题用的衬线字：Noto Serif SC Black 的 GB2312 子集，由 tool/subset_serif_font.py 生成
+  fonts:
+    # 图标：lucide 的图标字体，常量在 lib/ui/icons.dart
+    - family: Lucide
+      fonts:
+        - asset: assets/fonts/lucide.ttf
+    - family: NotoSerifSC
+      fonts:
+        - asset: assets/fonts/NotoSerifSC-Black-subset.otf
+          weight: 900
 
 # app 图标：源文件和渲染命令见 design/README.md；改了图之后运行 dart run flutter_launcher_icons
 flutter_launcher_icons:

@@ -3,17 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/providers.dart';
 
-/// 阅读主题（设计 D9）。
+/// 阅读主题（add-paged-reader 设计 D9），颜色和名字按设计稿的四个色点（redesign-cinema-ui 设计 D9）。
+/// 存的是枚举名，改名字和颜色不用迁移。
 enum ReaderTheme {
-  light('亮', Color(0xFFFFFFFF), Color(0xFF1F1F1F)),
-  dark('暗', Color(0xFF121212), Color(0xFFB8B8B8)),
-  sepia('护眼', Color(0xFFF2E8CF), Color(0xFF3B3326));
+  light('素白', Color(0xFFF7F6F2), Color(0xFF1F1B16)),
+  dark('夜墨', Color(0xFF111113), Color(0xFFC9C4BA)),
+  sepia('羊皮', Color(0xFFF1EADC), Color(0xFF2A241D)),
+  bamboo('竹青', Color(0xFFCFDCCB), Color(0xFF1E2A1F));
 
   const ReaderTheme(this.label, this.background, this.foreground);
 
   final String label;
   final Color background;
   final Color foreground;
+
+  bool get isDark => this == dark;
 }
 
 /// 翻页方式（reader「翻页方式」，add-paged-reader 设计 D14）。前三种是分页，滚动是整章上下滚动。

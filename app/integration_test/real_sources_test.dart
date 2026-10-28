@@ -12,6 +12,7 @@ import 'package:novel_reader/online/search_page.dart';
 import 'package:novel_reader/online/startup.dart';
 import 'package:novel_reader/reader/reader_page.dart';
 import 'package:novel_reader/storage/database.dart';
+import 'package:novel_reader/ui/icons.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 真实书源走查（联网，结果取决于网站当时的状态，不进日常测试）：
@@ -107,7 +108,7 @@ void main() {
     report('导入 $url：${(find.textContaining('新增').evaluate().single.widget as Text).data}');
     await tester.tap(find.text('导入').last);
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
   }
 
@@ -213,7 +214,7 @@ void main() {
       navigator.push(MaterialPageRoute<void>(builder: (_) => BookDetailPage.search(merged)));
       final tocLoaded = await pumpUntil(
         tester,
-        () => find.textContaining('目录（').evaluate().isNotEmpty || find.text('重试').evaluate().isNotEmpty,
+        () => find.textContaining(RegExp(r'^目录 \d+$')).evaluate().isNotEmpty || find.text('重试').evaluate().isNotEmpty,
         timeout: const Duration(seconds: 90),
       );
       if (!tocLoaded || find.text('重试').evaluate().isNotEmpty) {
@@ -240,11 +241,20 @@ void main() {
       final firstOk = first && readerShown();
       var secondOk = false;
       if (firstOk) {
-        // 默认是分页模式：从菜单进下一章（窗口已经预加载过它）
+        // 进入时菜单先显示 2 秒再自动收起，等它收起
+        await pumpUntil(tester, () => find.text('朗读').evaluate().isEmpty, timeout: const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        // 默认是分页模式：从菜单进下一章（窗口已经预加载过它）。夜墨主题的菜单里是图标按钮，其余主题是文字按钮
         await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
         await tester.pumpAndSettle();
-        final next = find.widgetWithText(TextButton, '下一章');
-        if (tester.widget<TextButton>(next).onPressed != null) {
+        final icon = find.widgetWithIcon(IconButton, LucideIcons.skipForward);
+        final next = icon.evaluate().isNotEmpty ? icon : find.widgetWithText(TextButton, '下一章');
+        final enabled = switch (tester.widget(next)) {
+          IconButton(:final onPressed) => onPressed != null,
+          TextButton(:final onPressed) => onPressed != null,
+          _ => false,
+        };
+        if (enabled) {
           await tester.tap(next);
           await tester.pump();
           secondOk = await pumpUntil(tester, readerShown, timeout: const Duration(seconds: 90));
@@ -272,7 +282,7 @@ void main() {
 
     // 从书架继续阅读：回到上次的章节，正文读缓存
     final book = shelf.first.book;
-    await tester.tap(find.text(book.name).first);
+    await tester.tap(find.text(book.name).last); // 宫格里那本（大图里的书名不能点）
     expect(await pumpUntil(tester, readerShown, timeout: const Duration(seconds: 30)), isTrue);
     final title = (await db.chaptersOf(book.bookUrl))[book.durChapterIndex].title;
     final shown = find.bySemanticsLabel(RegExp(RegExp.escape(title))).evaluate().isNotEmpty;
@@ -280,10 +290,15 @@ void main() {
     tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await tester.pumpAndSettle();
 
-    // 刷新书架
+    // 刷新书架：macOS 上有更新目录按钮，手机上下拉
+    await tester.pumpAndSettle();
     final watch = Stopwatch()..start();
-    await tester.tap(find.byTooltip('更新目录'));
-    await tester.pump();
+    if (find.byTooltip('更新目录').evaluate().isNotEmpty) {
+      await tester.tap(find.byTooltip('更新目录'));
+    } else {
+      await tester.fling(find.byType(RefreshIndicator), const Offset(0, 400), 1000);
+    }
+    await pumpUntil(tester, () => find.textContaining('正在更新目录').evaluate().isNotEmpty, timeout: const Duration(seconds: 5));
     expect(await pumpUntil(tester, () => find.textContaining('正在更新目录').evaluate().isEmpty, timeout: const Duration(minutes: 3)), isTrue);
     final marks = find.textContaining('更新失败').evaluate().length + find.text('书源不存在').evaluate().length;
     report('刷新书架 ${shelf.length} 本，耗时 ${watch.elapsed.inSeconds} 秒，失败 $marks 本');

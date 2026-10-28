@@ -15,11 +15,12 @@ void main() {
   setUp(() async => services = await TestServices.create());
   tearDown(() => services.db.close());
 
-  Map<String, Object?> source(String url, {String? name, Object? enabled, int? type}) => {
+  Map<String, Object?> source(String url, {String? name, Object? enabled, int? type, String? group}) => {
     'bookSourceUrl': url,
     'bookSourceName': name ?? url,
     'enabled': ?enabled,
     'bookSourceType': ?type,
+    'bookSourceGroup': ?group,
   };
 
   Future<void> pasteImport(WidgetTester tester, String text) async {
@@ -75,13 +76,13 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
-  testWidgets('列表按首次导入顺序，标出非文本类型，按名字或地址筛选', (tester) async {
-    await services.addSources([source('https://x.com', name: '笔趣阁'), source('https://y.com', name: '起点', type: 2)]);
-    await services.addSources([source('https://x.com', name: '笔趣阁')]);
+  testWidgets('列表按首次导入顺序，标出非文本类型、分组和域名，按名字或地址筛选', (tester) async {
+    await services.addSources([source('https://x.com', name: '笔趣阁', group: '文学'), source('https://y.com', name: '起点', type: 2)]);
+    await services.addSources([source('https://x.com', name: '笔趣阁', group: '文学')]);
     await tester.pumpWidget(services.app(const SourceListPage()));
-    final titles = tester.widgetList<ListTile>(find.byType(ListTile)).map((t) => (t.title as Text).data).toList();
-    expect(titles, ['笔趣阁', '起点']);
-    expect(find.text('图片 · https://y.com'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('笔趣阁')).dy, lessThan(tester.getTopLeft(find.text('起点')).dy));
+    expect(find.text('文学 · x.com'), findsOneWidget);
+    expect(find.text('图片 · 未分组 · y.com'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '笔趣');
     await tester.pump();
     expect(find.text('起点'), findsNothing);
@@ -89,6 +90,28 @@ void main() {
     await tester.pump();
     expect(find.text('笔趣阁'), findsNothing);
     expect(find.text('起点'), findsOneWidget);
+  });
+
+  testWidgets('按分组筛选：分组按逗号拆开，没有分组的在「未分组」', (tester) async {
+    await services.addSources([
+      source('https://a.com', name: '书源甲', group: '文学,常用'),
+      source('https://b.com', name: '书源乙', group: '常用'),
+      source('https://c.com', name: '书源丙'),
+    ]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    await tester.tap(find.text('文学').first);
+    await tester.pump();
+    expect([find.text('书源甲'), find.text('书源乙'), find.text('书源丙')].map((f) => f.evaluate().length), [1, 0, 0]);
+    await tester.tap(find.text('常用').first);
+    await tester.pump();
+    expect([find.text('书源甲'), find.text('书源乙'), find.text('书源丙')].map((f) => f.evaluate().length), [1, 1, 0]);
+    await tester.tap(find.text('未分组'));
+    await tester.pump();
+    expect([find.text('书源甲'), find.text('书源乙'), find.text('书源丙')].map((f) => f.evaluate().length), [0, 0, 1]);
+    await tester.tap(find.text('失效'));
+    await tester.pump();
+    expect(find.text('书源校验暂未开发'), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('单个开关和多选批量启用、停用、删除（删除前确认）', (tester) async {
@@ -118,7 +141,7 @@ void main() {
     expect([for (final e in services.repository.entries) e.url], ['https://a.com']);
   });
 
-  testWidgets('导出：原始内容，enabled 是当前状态；没选中时导出全部', (tester) async {
+  testWidgets('导出：原始内容，enabled 是当前状态；全选后导出全部', (tester) async {
     String? clipboard;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'Clipboard.setData') clipboard = (call.arguments as Map)['text'] as String;
@@ -130,7 +153,11 @@ void main() {
     ]);
     await services.repository.setEnabled({'https://a.com'}, false);
     await tester.pumpWidget(services.app(const SourceListPage()));
-    await tester.tap(find.byTooltip('导出全部'));
+    await tester.longPress(find.text('https://b.com').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('全选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('导出'));
     await tester.pumpAndSettle();
     expect(find.text('已复制 2 个书源到剪贴板'), findsOneWidget);
     expect(clipboard, contains('"enabled": false'));

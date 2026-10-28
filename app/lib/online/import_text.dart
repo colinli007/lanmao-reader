@@ -18,17 +18,19 @@ final class ImportException implements Exception {
 /// 导入的三种来源：文件、网址、粘贴文本（书源和替换规则共用，add-replace-rules 设计 D7）。
 enum ImportFrom { file, url, text }
 
-/// 「导入」菜单按钮：选中一种来源时调用 [onSelected]。
+/// 「导入」菜单按钮：选中一种来源时调用 [onSelected]。[child] 是按钮的样子，默认是加号图标。
 class ImportMenuButton extends StatelessWidget {
-  const ImportMenuButton({super.key, required this.onSelected});
+  const ImportMenuButton({super.key, required this.onSelected, this.child});
 
   final ValueChanged<ImportFrom> onSelected;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<ImportFrom>(
     tooltip: '导入',
-    icon: const Icon(Icons.add),
+    icon: child == null ? const Icon(Icons.add) : null,
     onSelected: onSelected,
+    child: child,
     itemBuilder: (_) => const [
       PopupMenuItem(value: ImportFrom.file, child: Text('从文件导入')),
       PopupMenuItem(value: ImportFrom.url, child: Text('从网址导入')),

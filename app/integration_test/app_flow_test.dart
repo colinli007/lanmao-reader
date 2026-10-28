@@ -78,7 +78,7 @@ void main() {
     "ruleContent": {"content": "id.content@html"}
   }''';
 
-  /// 书架 → 书源 → 粘贴导入一个书源 → 回到书架。
+  /// 书架 → 书源 Tab → 粘贴导入一个书源 → 回到书架 Tab。
   Future<void> importSource(WidgetTester tester, String json, String name) async {
     await tester.tap(find.byTooltip('书源'));
     await tester.pumpAndSettle();
@@ -93,13 +93,13 @@ void main() {
     await tester.tap(find.text('导入').last);
     await tester.pumpAndSettle();
     expect(find.text(name), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
   }
 
-  /// 书架 → 设置 → 替换净化规则 → 粘贴导入一条去掉「请记住本站」的规则 → 回到书架。
+  /// 书架 → 我的 → 替换净化规则 → 粘贴导入一条去掉「请记住本站」的规则 → 回到书架。
   Future<void> importReplaceRule(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('设置'));
+    await tester.tap(find.byTooltip('我的'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('替换净化规则'));
     await tester.pumpAndSettle();
@@ -116,7 +116,13 @@ void main() {
     expect(find.text('去本站广告'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
+    await tester.pumpAndSettle();
+  }
+
+  /// 关掉最上面的页面：详情页、阅读页没有 [BackButton]，[WidgetTester.pageBack] 找不到。
+  Future<void> pop(WidgetTester tester) async {
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await tester.pumpAndSettle();
   }
 
@@ -137,6 +143,24 @@ void main() {
   Future<void> tapReader(WidgetTester tester, double x) async {
     final size = tester.getSize(find.byType(ReaderPage));
     await tester.tapAt(Offset(size.width * x, size.height / 2));
+    await tester.pumpAndSettle();
+  }
+
+  /// 从「继续阅读」「开始阅读」、书架进入时，菜单先显示 2 秒再自动收起；等它收起再点正文。
+  Future<void> waitIntroMenu(WidgetTester tester) async {
+    final end = DateTime.now().add(const Duration(seconds: 5));
+    while (find.text('朗读').evaluate().isNotEmpty) {
+      if (DateTime.now().isAfter(end)) fail('菜单没有自动收起');
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpAndSettle();
+  }
+
+  /// 阅读页：等菜单自动收起，再点中间打开菜单，点返回。
+  Future<void> leaveReader(WidgetTester tester) async {
+    await waitIntroMenu(tester);
+    await tapReader(tester, 0.5);
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
   }
 
@@ -164,7 +188,7 @@ void main() {
 
     // 详情、目录、加入书架
     await tester.tap(find.text('本地小说'));
-    await pumpUntil(tester, find.text('目录（2 章）'));
+    await pumpUntil(tester, find.text('目录 2'));
     expect(find.text('这是一本测试用的小说。'), findsOneWidget);
     await tester.tap(find.text('加入书架'));
     await pumpUntil(tester, find.text('已在书架'));
@@ -174,7 +198,7 @@ void main() {
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await tester.tap(find.text('开始阅读'));
     await pumpUntil(tester, paragraph('第一章的第一段。'));
-    await tester.pumpAndSettle(); // 等打开阅读页的过渡动画结束，过渡期间页面不接收点击
+    await waitIntroMenu(tester); // 等打开阅读页的过渡动画结束、菜单自动收起
     expect(
       find.bySemanticsLabel('第一章 开始\n第一章的第一段。\n第一章的第二段。'),
       findsOneWidget,
@@ -188,7 +212,7 @@ void main() {
 
     // 切到滚动模式，章末点下一章
     await tapReader(tester, 0.5);
-    await tester.tap(find.byTooltip('阅读设置'));
+    await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('滚动'));
     await tester.pumpAndSettle();
@@ -204,54 +228,49 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(BackButton));
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await pop(tester); // 详情页
+    await tester.pageBack(); // 搜索页
     await tester.pumpAndSettle();
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.text('本地小说'), findsOneWidget);
-    expect(find.text('测试作者 · 第二章 继续'), findsOneWidget);
+    expect(find.text('本地小说'), findsWidgets);
+    expect(find.text('第二章 继续'), findsOneWidget);
     final shelf = (await db.shelf()).single.book;
     expect((shelf.durChapterIndex, shelf.durChapterTitle), (1, '第二章 继续'));
 
-    // 第一章的 java.log 到了书源日志
-    await tester.tap(find.byTooltip('书源'));
+    // 第一章的 java.log 到了书源日志（在「我的」里）
+    await tester.tap(find.byTooltip('我的'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('书源日志'));
+    await tester.tap(find.text('书源日志'));
     await tester.pumpAndSettle();
     expect(find.text('读到第一章 开始'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.pageBack();
-    await tester.pumpAndSettle();
 
     // 清除正文缓存，再从书架打开：停在第二章，正文重新请求网络
-    await tester.tap(find.byTooltip('设置'));
-    await tester.pumpAndSettle();
     expect(find.text('2 章 · ${formatByteSize((await db.contentCacheStats()).bytes)}'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, '清除'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '清除'));
     await tester.pumpAndSettle();
     expect(find.text('0 章 · 0 B'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
     final before = hits['/c/2'];
-    await tester.tap(find.text('本地小说'));
+    await tester.tap(find.text('继续阅读'));
     await pumpUntil(tester, paragraph('第二章的第一段。'));
     expect(hits['/c/2'], before! + 1);
-    await tester.pumpAndSettle();
-    await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await leaveReader(tester);
 
     // 导入第二个书源，在书架上换过去：第二章对齐到「第2章：继续」（新目录里的序号 2），章内位置不变
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await importSource(tester, secondSourceJson(), '本地备用');
     final old = (await db.shelf()).single.book;
-    await tester.tap(find.byTooltip('更多'));
+    // 宫格里那本（大图里也有书名）在大图下面，先往上滚，别让底部的 Tab 和导入的提示条挡住
+    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('本地小说').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('换书源'));
     await pumpUntil(tester, find.text('本地备用'));
@@ -263,13 +282,9 @@ void main() {
     expect((moved.durChapterPos, moved.lastReadAt), (old.durChapterPos, old.lastReadAt));
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('本地小说'));
+    await tester.tap(find.text('继续阅读'));
     await pumpUntil(tester, paragraph('备用书源第二章的第一段。'));
     expect(hits['/b/c/2'], 1);
-    await tester.pumpAndSettle();
-    await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await leaveReader(tester);
   });
 }

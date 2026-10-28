@@ -196,16 +196,16 @@ void main() {
       tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
       await tester.tapAt(size.center(Offset.zero));
       await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.byTooltip('目录'));
+      await tester.tap(find.text('目录'));
       await tester.pump(const Duration(milliseconds: 500));
-      final tile = find.widgetWithText(ListTile, '第${chapter + 1}章');
+      final tile = find.text('第${chapter + 1}章');
       // 目录打开时停在当前章节附近，目标绕回开头时在上面
       await tester.scrollUntilVisible(tile, chapter > from ? 200 : -200, scrollable: find.byType(Scrollable).last);
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(tile);
       final open = Stopwatch()..start();
-      // 只在正文视图里找（目录抽屉里也有一行「第 N 章」）；查 widget 树而不是语义树：
-      // 抽屉关闭动画期间遮罩会屏蔽下层的语义，查语义树等到的是抽屉关完的时间
+      // 只在正文视图里找（目录页里也有一行「第 N 章」）；查 widget 树而不是语义树：
+      // 目录页关闭的过渡期间它会屏蔽下层的语义，查语义树等到的是目录页关完的时间
       final title = '第${chapter + 1}章';
       final shown = find.descendant(
         of: find.byWidgetPredicate((w) => w is PagedView || w is ScrollReaderView),
