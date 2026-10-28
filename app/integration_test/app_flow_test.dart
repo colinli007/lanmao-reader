@@ -15,7 +15,10 @@ import 'package:novel_reader/storage/database.dart';
 /// → 清除正文缓存后再打开 → 导入第二个书源，在书架上换过去，从对齐到的章节继续。
 /// 用真的 worker 池和 quickjs（打包在 app 里），数据库是临时的内存数据库。
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // 让测试接管文字输入通道：不接管时 enterText 用 -1 作输入连接编号，框架只在 debug 构建里（assert）放行它，
+  // profile 构建会静默丢掉输入的文字。iOS 26 真机上 debug 构建起不来（JIT），只能用 profile 跑
+  binding.testTextInput.register();
 
   late HttpServer server;
   late String base;

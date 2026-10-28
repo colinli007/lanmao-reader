@@ -40,7 +40,10 @@ const _targets = [
 ];
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // 让测试接管文字输入通道：不接管时 enterText 用 -1 作输入连接编号，框架只在 debug 构建里（assert）放行它，
+  // profile 构建会静默丢掉输入的文字。见 app_flow_test.dart
+  binding.testTextInput.register();
 
   void report(String line) => debugPrint('REPORT $line');
 
