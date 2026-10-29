@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../library/providers.dart';
 import '../library/relocate.dart';
 import '../storage/database.dart';
+import '../ui/tokens.dart';
 import 'book_mapping.dart';
 import 'errors.dart';
 import 'providers.dart';
@@ -92,7 +93,7 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (latest != null) Text(latest, maxLines: 1, overflow: TextOverflow.ellipsis),
-                if (error != null) Text(error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                if (error != null) Text(error, style: TextStyle(color: AppColors.of(context).danger)),
               ],
             ),
       trailing: identical(candidate, _changing)

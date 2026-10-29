@@ -63,6 +63,17 @@ void main() {
     expect(await db.getContent('b', '/2'), isNull);
   });
 
+  test('已缓存章节地址：只含这本书的，写入和清除后跟着变', () async {
+    Future<Set<String>> cached() => db.watchCachedChapterUrls('b').first;
+    expect(await cached(), isEmpty);
+    await db.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/1', title: 't', content: 'c'));
+    await db.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/2', title: 't', content: 'c'));
+    await db.putContent(const ContentRow(bookUrl: 'other', chapterUrl: '/9', title: 't', content: 'c'));
+    expect(await cached(), {'/1', '/2'});
+    await db.clearContents();
+    expect(await cached(), isEmpty);
+  });
+
   test('正文缓存统计：章节数和正文的 UTF-8 字节数', () async {
     expect(await db.contentCacheStats(), (chapters: 0, bytes: 0));
     const texts = ['第一章正文', 'abc', '“对话”……'];

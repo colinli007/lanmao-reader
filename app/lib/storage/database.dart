@@ -320,6 +320,14 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> putContent(ContentRow row) => into(contents).insertOnConflictUpdate(row);
 
+  /// 一本书已缓存正文的章节地址，目录页用来标出已缓存的章节（redesign-minimal-ui 设计 D4）。
+  Stream<Set<String>> watchCachedChapterUrls(String bookUrl) {
+    final query = selectOnly(contents)
+      ..addColumns([contents.chapterUrl])
+      ..where(contents.bookUrl.equals(bookUrl));
+    return query.watch().map((rows) => {for (final row in rows) row.read(contents.chapterUrl)!});
+  }
+
   /// 正文缓存的大小：清除时会删掉的那些正文（add-settings 设计 D1）。
   Future<ContentCacheStats> contentCacheStats() async {
     final chapters = countAll();

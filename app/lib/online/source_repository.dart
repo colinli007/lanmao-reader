@@ -14,6 +14,12 @@ final class SourceEntry {
 
   String get url => source.bookSourceUrl;
 
+  /// 分组：`bookSourceGroup` 按中英文逗号、分号拆开，去掉首尾空白，丢弃空的（source-management「书源列表」）。
+  List<String> get groups => [
+    for (final group in '${source.json['bookSourceGroup'] ?? ''}'.split(RegExp(r'[,;，；]')))
+      if (group.trim() case final name when name.isNotEmpty) name,
+  ];
+
   /// 参与搜索：启用、文本类、搜索地址不为空（book-search「发起搜索」）。
   bool get searchable => enabled && source.bookSourceType == BookSourceType.text && (source.searchUrl?.trim().isNotEmpty ?? false);
 }

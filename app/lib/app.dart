@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'app_info.dart';
-import 'bookshelf/bookshelf_page.dart';
+import 'app_shell.dart';
+import 'ui/theme.dart';
 
-/// Material 3 默认组件和主题，跟随系统亮暗。
+/// 极简主题（redesign-minimal-ui 设计 D2），跟随系统亮暗。
 class NovelReaderApp extends StatelessWidget {
   const NovelReaderApp({super.key});
-
-  static const _seed = Colors.teal;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: appName,
-      theme: ThemeData(colorSchemeSeed: _seed),
-      darkTheme: ThemeData(colorSchemeSeed: _seed, brightness: Brightness.dark),
-      home: const BookshelfPage(),
+      theme: appTheme(Brightness.light),
+      darkTheme: appTheme(Brightness.dark),
+      home: const AppShell(),
     );
   }
 }

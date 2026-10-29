@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/book_cover.dart';
+import '../ui/icons.dart';
+import '../ui/tokens.dart';
 import 'book_detail_page.dart';
 import 'search_controller.dart';
 
@@ -13,14 +15,32 @@ class SearchPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(searchControllerProvider);
     final controller = ref.read(searchControllerProvider.notifier);
+    final colors = AppColors.of(context);
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: AppSpacing.page,
+        // 胶囊形输入框，右边「取消」返回
         title: TextField(
           autofocus: true,
           textInputAction: TextInputAction.search,
-          decoration: const InputDecoration(hintText: '书名或作者', border: InputBorder.none),
+          style: const TextStyle(fontSize: 16),
+          decoration: InputDecoration(
+            hintText: '书名或作者',
+            isDense: true,
+            prefixIcon: Icon(LucideIcons.search, size: 18, color: colors.textSecondary),
+            border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999)), borderSide: BorderSide.none),
+          ),
           onSubmitted: controller.search,
         ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: colors.textPrimary),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          const SizedBox(width: AppSpacing.page - 12),
+        ],
       ),
       body: Column(
         children: [
@@ -28,7 +48,7 @@ class SearchPage extends ConsumerWidget {
             SearchProgress(state: state, onStop: controller.stop, finished: '搜索结束，共 ${state.books.length} 本'),
           Expanded(
             child: state.noSources
-                ? const Center(child: Text('没有可以搜索的书源，先去导入或启用书源'))
+                ? Center(child: Text('没有可以搜索的书源，先去导入或启用书源', style: TextStyle(color: colors.textSecondary)))
                 : ListView.builder(
                     itemCount: state.books.length,
                     itemBuilder: (context, index) => _ResultTile(book: state.books[index]),
@@ -51,16 +71,18 @@ class SearchProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final failures = state.failures;
+    final colors = AppColors.of(context);
     return Column(
       children: [
-        if (state.running) LinearProgressIndicator(value: state.done / state.total),
+        if (state.running) LinearProgressIndicator(value: state.done / state.total, minHeight: 2),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.only(left: AppSpacing.page, right: AppSpacing.page - 8),
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   state.running ? '已完成 ${state.done}/${state.total} 个书源' : finished,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 13),
                 ),
               ),
               if (failures.isNotEmpty)
@@ -94,11 +116,13 @@ class _ResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final first = book.first;
     final latest = first.latestChapterTitle;
+    final colors = AppColors.of(context);
     return ListTile(
-      leading: BookCover(url: first.coverUrl, width: 40),
-      title: Text(book.name),
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.page, vertical: 4),
+      leading: BookCover(url: first.coverUrl, width: 44),
+      title: Text(book.name, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text([book.author, if (latest != null && latest.isNotEmpty) latest].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Text('${book.results.length} 个书源'),
+      trailing: Text('${book.results.length} 个书源', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
       onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => BookDetailPage.search(book))),
     );
   }

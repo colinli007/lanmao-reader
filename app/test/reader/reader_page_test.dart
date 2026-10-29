@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show SemanticsFlag;
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_reader/reader/layout/page_painter.dart';
+import 'package:novel_reader/reader/menu/appearance_panel.dart';
+import 'package:novel_reader/reader/menu/layout_panel.dart';
+import 'package:novel_reader/reader/menu/progress_panel.dart';
 import 'package:novel_reader/reader/paged/paged_view.dart';
 import 'package:novel_reader/reader/reader_page.dart';
 import 'package:novel_reader/reader/reader_settings.dart';
+import 'package:novel_reader/reader/toc_page.dart';
+import 'package:novel_reader/ui/tokens.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';
@@ -56,6 +62,24 @@ void main() {
   }
 
   Future<void> useScroll(WidgetTester tester) => update(tester, (s) => s.copyWith(pageMode: PageMode.scroll));
+
+  /// 打开菜单（没显示时点正文中部），再点底栏的 [tooltip]：目录、进度、外观、排版。
+  Future<void> openPanel(WidgetTester tester, String tooltip) async {
+    if (find.byTooltip('目录').evaluate().isEmpty) {
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip(tooltip));
+    await tester.pumpAndSettle();
+  }
+
+  /// 点几次排版面板里的步进按钮，[tooltip] 比如「增大边距」。
+  Future<void> tapTimes(WidgetTester tester, String tooltip, int times) async {
+    for (var i = 0; i < times; i++) {
+      await tester.tap(find.byTooltip(tooltip));
+      await tester.pumpAndSettle();
+    }
+  }
 
   /// 返回：菜单里的返回按钮（菜单没显示时先点正文中部）。
   Future<void> back(WidgetTester tester) async {
@@ -202,7 +226,7 @@ void main() {
   });
 
   group('屏幕常亮', () {
-    testWidgets('设置关闭时不常亮；在阅读页里打开、关闭立即生效', (tester) async {
+    testWidgets('设置关闭时不常亮；阅读页显示时设置打开、关闭立即生效', (tester) async {
       await open(tester, startAt: 0);
       expect(services.screen.calls, isEmpty);
       await update(tester, (s) => s.copyWith(keepScreenOn: true));
@@ -235,13 +259,12 @@ void main() {
   });
 
   group('分页：章节之间连续翻页', () {
-    testWidgets('翻进下一章：显示第 4 章第 1 页，菜单里的章节名变成第 4 章', (tester) async {
+    testWidgets('翻进下一章：显示第 4 章第 1 页，进度面板里的章节名变成第 4 章', (tester) async {
       await open(tester, startAt: 3);
       await turnUntil(tester, paragraph(4, 0));
       expect(pageText(tester), startsWith('第4章'));
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      expect(find.descendant(of: find.byType(AppBar), matching: find.text('第4章')), findsOneWidget);
+      await openPanel(tester, '进度');
+      expect(find.descendant(of: find.byType(ProgressPanel), matching: find.text('第4章')), findsOneWidget);
     });
 
     testWidgets('往回翻到上一章的末页；往前翻也不等待，不请求网络', (tester) async {
@@ -274,9 +297,8 @@ void main() {
 
     testWidgets('读完直接进下一章：预加载过的下一章用菜单打开，不再请求', (tester) async {
       await open(tester, startAt: 3);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, '下一章'));
+      await openPanel(tester, '进度');
+      await tester.tap(find.byTooltip('下一章'));
       await tester.pumpAndSettle();
       expect(paragraph(4, 0), findsOneWidget);
       expect(services.engine.calls.where((c) => c == 'content /4.html'), hasLength(1));
@@ -286,9 +308,8 @@ void main() {
       await open(tester, startAt: 3);
       await tapRight(tester);
       await tapRight(tester);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, '下一章'));
+      await openPanel(tester, '进度');
+      await tester.tap(find.byTooltip('下一章'));
       await tester.pumpAndSettle();
       expect(pageText(tester), startsWith('第4章'), reason: '第 1 页顶部是章节名');
     });
@@ -317,19 +338,79 @@ void main() {
   group('菜单', () {
     testWidgets('点正文中间显示菜单，目录里标出当前章节，点击跳转；再点中间隐藏', (tester) async {
       await open(tester, startAt: 3);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await openPanel(tester, '目录');
+      expect(find.byType(TocPage), findsOneWidget);
+      expect(tester.widget<Text>(find.text('第3章')).style?.color, AppColors.light.accent);
+      await tester.tap(find.text('第1章'));
       await tester.pumpAndSettle();
-      expect(find.text('三体'), findsOneWidget);
-      await tester.tap(find.byTooltip('目录'));
-      await tester.pumpAndSettle();
-      final current = tester.widget<ListTile>(find.widgetWithText(ListTile, '第3章'));
-      expect(current.selected, isTrue);
-      await tester.tap(find.widgetWithText(ListTile, '第1章'));
-      await tester.pumpAndSettle();
+      expect(find.byType(TocPage), findsNothing);
       expect(paragraph(1, 0), findsOneWidget);
       await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
       await tester.pumpAndSettle();
       expect(find.byTooltip('目录'), findsNothing);
+    });
+
+    testWidgets('面板原地切换：外观换成排版，底栏不动；再点排版收起面板', (tester) async {
+      await open(tester, startAt: 3);
+      await openPanel(tester, '外观');
+      expect(find.byType(AppearancePanel), findsOneWidget);
+      final bar = tester.getTopLeft(find.byTooltip('目录'));
+      await tester.tap(find.byTooltip('排版'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppearancePanel), findsNothing);
+      expect(find.byType(LayoutPanel), findsOneWidget);
+      expect(tester.getTopLeft(find.byTooltip('目录')), bar);
+      await tester.tap(find.byTooltip('排版'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LayoutPanel), findsNothing);
+      expect(find.byTooltip('目录'), findsOneWidget);
+    });
+
+    testWidgets('面板打开时点正文：面板和菜单都收起，不翻页；再打开菜单时没有面板', (tester) async {
+      await open(tester, startAt: 3);
+      final before = pageText(tester);
+      await openPanel(tester, '排版');
+      await tester.tapAt(const Offset(400, 150));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('目录'), findsNothing);
+      expect(pageText(tester), before);
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('目录'), findsOneWidget);
+      expect(find.byType(LayoutPanel), findsNothing);
+    });
+
+    /// 进度条上第 [chapter] 格的位置（6 个章节，滑块两头各留出 24 的边）。
+    Offset sliderAt(WidgetTester tester, int chapter) {
+      final rect = tester.getRect(find.byType(Slider));
+      return Offset(rect.left + 24 + (rect.width - 48) * chapter / 5, rect.center.dy);
+    }
+
+    testWidgets('拖动进度条：拖动中显示目标章节名，松手打开那一章的章首', (tester) async {
+      await open(tester, startAt: 1);
+      await openPanel(tester, '进度');
+      final gesture = await tester.startGesture(sliderAt(tester, 1));
+      await gesture.moveTo(sliderAt(tester, 4));
+      await tester.pump();
+      expect(find.descendant(of: find.byType(ProgressPanel), matching: find.text('第4章')), findsOneWidget);
+      expect(pageText(tester), startsWith('第1章'), reason: '松手之前不跳');
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(pageText(tester), startsWith('第4章'));
+    });
+
+    testWidgets('拖动进度条：松手的位置还是当前章时不跳转', (tester) async {
+      await open(tester, startAt: 3);
+      await tapRight(tester);
+      final before = pageText(tester);
+      await openPanel(tester, '进度');
+      final gesture = await tester.startGesture(sliderAt(tester, 3));
+      await gesture.moveTo(sliderAt(tester, 5));
+      await tester.pump();
+      await gesture.moveTo(sliderAt(tester, 3));
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(pageText(tester), before);
     });
 
     testWidgets('章节很短时点正文中部也能打开菜单', (tester) async {
@@ -422,16 +503,6 @@ void main() {
   });
 
   group('设置', () {
-    testWidgets('调大字号不丢位置：重新分页，显示的这一页包含原来那页的首字', (tester) async {
-      await open(tester, startAt: 3);
-      for (var i = 0; i < 3; i++) {
-        await tapRight(tester);
-      }
-      final first = firstParagraph(tester);
-      await update(tester, (s) => s.copyWith(fontSize: 24));
-      expect(pageText(tester), contains(first));
-    });
-
     /// 分页视图当前画的这一页。
     PagePainter painterOf(WidgetTester tester) => tester
         .widgetList<CustomPaint>(find.descendant(of: find.byType(PagedView), matching: find.byType(CustomPaint)))
@@ -439,14 +510,28 @@ void main() {
         .whereType<PagePainter>()
         .last;
 
+    testWidgets('调大字号不丢位置：重新分页，显示的这一页包含原来那页的首字', (tester) async {
+      await open(tester, startAt: 3);
+      for (var i = 0; i < 3; i++) {
+        await tapRight(tester);
+      }
+      final first = firstParagraph(tester);
+      await openPanel(tester, '排版');
+      await tapTimes(tester, '增大字号', 6);
+      expect(painterOf(tester).layout.spec.fontSize, 24);
+      expect(pageText(tester), contains(first));
+    });
+
     testWidgets('调大段距不丢位置：重新分页，显示的这一页包含原来那页的首字', (tester) async {
       await open(tester, startAt: 3);
       for (var i = 0; i < 3; i++) {
         await tapRight(tester);
       }
       final first = firstParagraph(tester);
-      await update(tester, (s) => s.copyWith(paragraphSpacing: 1.2));
-      expect(painterOf(tester).layout.spec.paragraphSpacing, closeTo(18 * 1.2, 0.001));
+      await openPanel(tester, '排版');
+      await tester.tap(find.bySemanticsLabel('宽松段距'));
+      await tester.pumpAndSettle();
+      expect(painterOf(tester).layout.spec.paragraphSpacing, closeTo(18 * 1.0, 0.001));
       expect(pageText(tester), contains(first));
     });
 
@@ -456,7 +541,8 @@ void main() {
       await tapRight(tester);
       final first = firstParagraph(tester);
       final before = painterOf(tester).layout.spec.size.width;
-      await update(tester, (s) => s.copyWith(margin: 40));
+      await openPanel(tester, '排版');
+      await tapTimes(tester, '增大边距', 5);
       final painter = painterOf(tester);
       expect((painter.insets.left, painter.insets.right), (40, 40));
       expect(painter.layout.spec.size.width, before - 40);
@@ -499,59 +585,59 @@ void main() {
 
     testWidgets('主题在设置里切换，对所有书生效并落盘', (tester) async {
       await open(tester, startAt: 0);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('暗'));
+      await openPanel(tester, '外观');
+      await tester.tap(find.bySemanticsLabel('暗主题'));
       await tester.pumpAndSettle();
       expect((await services.db.loadSettings())['reader.theme'], 'dark');
-      Navigator.of(tester.element(find.text('暗'))).pop();
-      await tester.pumpAndSettle();
       await back(tester);
       await open(tester, startAt: 1);
       final scaffold = tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first);
       expect(scaffold.backgroundColor, ReaderTheme.dark.background);
     });
 
-    Future<void> openSettings(WidgetTester tester) async {
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('设置面板：段距、缩进、边距拖到最右，打开屏幕常亮，都落盘', (tester) async {
+    testWidgets('排版面板：缩进、边距加到最大，段距选宽松，都落盘', (tester) async {
       await open(tester, startAt: 0);
-      await openSettings(tester);
-      for (final label in ['段距', '缩进', '边距']) {
-        final slider = find.byWidgetPredicate((widget) => widget is Slider && widget.label == label);
-        await tester.drag(slider, const Offset(1000, 0));
-        await tester.pumpAndSettle();
-      }
-      await tester.ensureVisible(find.text('屏幕常亮'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('屏幕常亮'));
+      await openPanel(tester, '排版');
+      await tapTimes(tester, '增大缩进', 2);
+      await tapTimes(tester, '增大边距', 7);
+      await tester.tap(find.bySemanticsLabel('宽松段距'));
       await tester.pumpAndSettle();
       final saved = await services.db.loadSettings();
       expect(
-        [for (final key in ['paragraphSpacing', 'indent', 'margin', 'keepScreenOn']) saved['reader.$key']],
-        ['2.0', '4', '48.0', 'true'],
+        [for (final key in ['paragraphSpacing', 'indent', 'margin']) saved['reader.$key']],
+        ['1.0', '4', '48.0'],
       );
     });
 
-    testWidgets('设置面板切换翻页方式和跟随系统深色，落盘', (tester) async {
+    testWidgets('字号到上限时「+」不可用', (tester) async {
       await open(tester, startAt: 0);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await update(tester, (s) => s.copyWith(fontSize: ReaderSettings.maxFontSize));
+      await openPanel(tester, '排版');
+      bool enabled(String tooltip) =>
+          tester.widget<IconButton>(find.ancestor(of: find.byTooltip(tooltip), matching: find.byType(IconButton))).onPressed != null;
+      expect(enabled('增大字号'), isFalse);
+      expect(enabled('减小字号'), isTrue);
+    });
+
+    testWidgets('排版面板切换翻页方式，落盘', (tester) async {
+      await open(tester, startAt: 0);
+      await openPanel(tester, '排版');
+      await tester.tap(find.bySemanticsLabel('滚动'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
+      expect((await services.db.loadSettings())['reader.pageMode'], 'scroll');
+    });
+
+    testWidgets('改版前存下的行距 2.0：照常使用，三个预设都没选中；选宽松后变成 2.2', (tester) async {
+      await open(tester, startAt: 0);
+      await update(tester, (s) => s.copyWith(lineHeight: 2.0));
+      expect(painterOf(tester).layout.spec.lineHeight, 2.0);
+      await openPanel(tester, '排版');
+      for (final name in ['紧凑', '适中', '宽松']) {
+        expect(tester.getSemantics(find.bySemanticsLabel('$name行距')).hasFlag(SemanticsFlag.isSelected), isFalse, reason: name);
+      }
+      await tester.tap(find.bySemanticsLabel('宽松行距'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('滚动'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('跟随系统深色'));
-      await tester.pumpAndSettle();
-      final saved = await services.db.loadSettings();
-      expect((saved['reader.pageMode'], saved['reader.followSystemDark']), ('scroll', 'false'));
+      expect((await services.db.loadSettings())['reader.lineHeight'], '2.2');
     });
 
     testWidgets('状态栏图标的深浅跟着正文背景：暗主题用浅色图标，亮、护眼用深色', (tester) async {
@@ -563,12 +649,9 @@ void main() {
           .value
           .statusBarIconBrightness;
       expect(icons(), Brightness.dark);
-      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('阅读设置'));
-      await tester.pumpAndSettle();
+      await openPanel(tester, '外观');
       for (final (theme, expected) in [(ReaderTheme.dark, Brightness.light), (ReaderTheme.sepia, Brightness.dark)]) {
-        await tester.tap(find.text(theme.label));
+        await tester.tap(find.bySemanticsLabel('${theme.label}主题'));
         await tester.pumpAndSettle();
         expect(icons(), expected, reason: theme.label);
       }

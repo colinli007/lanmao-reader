@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ui/icons.dart';
+import '../ui/widgets.dart';
 import 'import_text.dart';
 import 'providers.dart';
 import 'replace_rule_edit_page.dart';
@@ -24,11 +26,11 @@ class _ReplaceRuleListPageState extends ConsumerState<ReplaceRuleListPage> {
       appBar: AppBar(
         title: const Text('替换净化规则'),
         actions: [
-          IconButton(tooltip: '新建', icon: const Icon(Icons.edit_note), onPressed: () => _edit(null)),
+          IconButton(tooltip: '新建', icon: const Icon(LucideIcons.pencil), onPressed: () => _edit(null)),
           ImportMenuButton(onSelected: _import),
           IconButton(
             tooltip: '导出全部',
-            icon: const Icon(Icons.ios_share),
+            icon: const Icon(LucideIcons.share),
             onPressed: entries.isEmpty ? null : () => _export(repository),
           ),
         ],
@@ -65,7 +67,7 @@ class _ReplaceRuleListPageState extends ConsumerState<ReplaceRuleListPage> {
       } on FormatException catch (e) {
         throw ImportException('不是替换规则 JSON：${e.message}');
       }
-      if (!mounted || await _confirm(preview) != true) return;
+      if (!mounted || !await _confirm(preview)) return;
       await repository.import(preview.rules);
       _snack('已导入 ${preview.rules.length} 条替换规则');
     } on ImportException catch (e) {
@@ -73,28 +75,15 @@ class _ReplaceRuleListPageState extends ConsumerState<ReplaceRuleListPage> {
     }
   }
 
-  Future<bool?> _confirm(ReplaceRuleImportPreview preview) => showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('导入替换规则'),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('新增 ${preview.added} 条，更新 ${preview.updated} 条，跳过 ${preview.skipped.length} 条'),
-            for (final skipped in preview.skipped) Text('第 ${skipped.index + 1} 项：${skipped.reason}'),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-        FilledButton(
-          onPressed: preview.rules.isEmpty ? null : () => Navigator.pop(context, true),
-          child: const Text('导入'),
-        ),
-      ],
-    ),
+  Future<bool> _confirm(ReplaceRuleImportPreview preview) => showConfirmDialog(
+    context,
+    title: '导入替换规则',
+    message: '新增 ${preview.added} 条，更新 ${preview.updated} 条，跳过 ${preview.skipped.length} 条',
+    content: preview.skipped.isEmpty
+        ? null
+        : SkippedList([for (final skipped in preview.skipped) '第 ${skipped.index + 1} 项：${skipped.reason}']),
+    confirmLabel: '导入',
+    confirmEnabled: preview.rules.isNotEmpty,
   );
 
   Future<void> _export(ReplaceRuleRepository repository) async {

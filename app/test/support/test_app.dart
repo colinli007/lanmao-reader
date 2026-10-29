@@ -18,6 +18,7 @@ import 'package:novel_reader/online/source_log.dart';
 import 'package:novel_reader/online/source_repository.dart';
 import 'package:novel_reader/reader/screen_awake.dart';
 import 'package:novel_reader/storage/database.dart';
+import 'package:novel_reader/ui/theme.dart';
 import 'package:rule_engine/rule_engine.dart';
 import 'package:rule_engine/rule_engine.dart' as rule_engine show loadReplaceRules, replaceRuleError;
 
@@ -139,7 +140,10 @@ final class TestServices {
     screenAwakeProvider.overrideWithValue(screen),
   ];
 
-  Widget app(Widget home) => ProviderScope(overrides: overrides, child: MaterialApp(home: home));
+  Widget app(Widget home) => ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(theme: appTheme(Brightness.light), darkTheme: appTheme(Brightness.dark), home: home),
+  );
 
   /// 导入书源：[sources] 是书源 JSON 对象。
   Future<void> addSources(List<Map<String, Object?>> sources) => repository.import(loadBookSources(jsonEncode(sources)).sources);
@@ -179,15 +183,15 @@ extension SimpleBook on TestServices {
           ChapterContent([for (var p = 0; p < paragraphs; p++) '${chapter.title}第$p段'].join('\n'), title: chapter.title));
   }
 
-  /// 直接把这本书放上书架（不经过界面）。
-  Future<void> shelveSimpleBook({int chapters = 5}) async {
-    final toc = await engine.onChapterList!(repository[SimpleBook.sourceUrl]!.source, Book(bookUrl: bookUrl, origin: sourceUrl, originName: '书源甲'));
+  /// 直接把这本书放上书架（不经过界面）。[url]、[name] 用来放多本不同的书。
+  Future<void> shelveSimpleBook({int chapters = 5, String url = bookUrl, String name = '三体'}) async {
+    final toc = await engine.onChapterList!(repository[SimpleBook.sourceUrl]!.source, Book(bookUrl: url, origin: sourceUrl, originName: '书源甲'));
     await db.saveBrowsingBook(
       ShelfBook(
-        bookUrl: bookUrl,
+        bookUrl: url,
         origin: sourceUrl,
         originName: '书源甲',
-        name: '三体',
+        name: name,
         author: '刘慈欣',
         latestChapterTitle: toc.chapters.last.title,
         durChapterIndex: 0,
@@ -197,7 +201,7 @@ extension SimpleBook on TestServices {
       ),
       [for (final chapter in toc.chapters) tocChapterOf(chapter)],
     );
-    await db.addToShelf(bookUrl, DateTime(2026));
+    await db.addToShelf(url, DateTime(2026));
     engine.calls.clear();
   }
 }

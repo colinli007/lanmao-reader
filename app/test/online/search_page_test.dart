@@ -70,7 +70,7 @@ void main() {
     expect(services.engine.calls, isEmpty);
   });
 
-  testWidgets('返回上一页后，未完成的搜索被取消', (tester) async {
+  testWidgets('点「取消」返回上一页后，未完成的搜索被取消', (tester) async {
     await services.addSources([{'bookSourceUrl': 'A', 'searchUrl': '/s'}]);
     services.engine.onSearch = (source, key) => Completer<List<SearchBook>>().future;
     await open(tester);
@@ -78,7 +78,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pump();
     expect(services.engine.batches.single.isStopped, isFalse);
-    await tester.pageBack();
+    await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
     expect(services.engine.batches.single.isStopped, isTrue);
   });

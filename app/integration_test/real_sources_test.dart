@@ -90,7 +90,9 @@ void main() {
   }
 
   Future<void> importFromUrl(WidgetTester tester, String url) async {
-    await tester.tap(find.byTooltip('书源'));
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书源'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('导入'));
     await tester.pumpAndSettle();
@@ -108,6 +110,8 @@ void main() {
     await tester.tap(find.text('导入').last);
     await tester.pumpAndSettle();
     await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
   }
 
@@ -213,7 +217,7 @@ void main() {
       navigator.push(MaterialPageRoute<void>(builder: (_) => BookDetailPage.search(merged)));
       final tocLoaded = await pumpUntil(
         tester,
-        () => find.textContaining('目录（').evaluate().isNotEmpty || find.text('重试').evaluate().isNotEmpty,
+        () => find.textContaining(RegExp(r'^共 \d+ 章$')).evaluate().isNotEmpty || find.text('重试').evaluate().isNotEmpty,
         timeout: const Duration(seconds: 90),
       );
       if (!tocLoaded || find.text('重试').evaluate().isNotEmpty) {
@@ -240,11 +244,13 @@ void main() {
       final firstOk = first && readerShown();
       var secondOk = false;
       if (firstOk) {
-        // 默认是分页模式：从菜单进下一章（窗口已经预加载过它）
+        // 默认是分页模式：从菜单的进度面板进下一章（窗口已经预加载过它）
         await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
         await tester.pumpAndSettle();
-        final next = find.widgetWithText(TextButton, '下一章');
-        if (tester.widget<TextButton>(next).onPressed != null) {
+        await tester.tap(find.byTooltip('进度'));
+        await tester.pumpAndSettle();
+        final next = find.ancestor(of: find.byTooltip('下一章'), matching: find.byType(IconButton));
+        if (tester.widget<IconButton>(next).onPressed != null) {
           await tester.tap(next);
           await tester.pump();
           secondOk = await pumpUntil(tester, readerShown, timeout: const Duration(seconds: 90));
@@ -282,7 +288,12 @@ void main() {
 
     // 刷新书架
     final watch = Stopwatch()..start();
-    await tester.tap(find.byTooltip('更新目录'));
+    // macOS 上有「更新目录」按钮，手机上下拉
+    if (find.byTooltip('更新目录').evaluate().isNotEmpty) {
+      await tester.tap(find.byTooltip('更新目录'));
+    } else {
+      await tester.fling(find.byType(Scrollable).first, const Offset(0, 400), 1000);
+    }
     await tester.pump();
     expect(await pumpUntil(tester, () => find.textContaining('正在更新目录').evaluate().isEmpty, timeout: const Duration(minutes: 3)), isTrue);
     final marks = find.textContaining('更新失败').evaluate().length + find.text('书源不存在').evaluate().length;

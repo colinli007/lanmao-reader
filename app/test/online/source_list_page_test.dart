@@ -15,12 +15,15 @@ void main() {
   setUp(() async => services = await TestServices.create());
   tearDown(() => services.db.close());
 
-  Map<String, Object?> source(String url, {String? name, Object? enabled, int? type}) => {
+  Map<String, Object?> source(String url, {String? name, Object? enabled, int? type, String? group}) => {
     'bookSourceUrl': url,
     'bookSourceName': name ?? url,
     'enabled': ?enabled,
     'bookSourceType': ?type,
+    'bookSourceGroup': ?group,
   };
+
+  List<String?> titles(WidgetTester tester) => tester.widgetList<ListTile>(find.byType(ListTile)).map((t) => (t.title as Text).data).toList();
 
   Future<void> pasteImport(WidgetTester tester, String text) async {
     await tester.tap(find.byTooltip('导入'));
@@ -89,6 +92,51 @@ void main() {
     await tester.pump();
     expect(find.text('笔趣阁'), findsNothing);
     expect(find.text('起点'), findsOneWidget);
+  });
+
+  testWidgets('按分组筛选：一个书源可以属于多个分组，没分组的归到「未分组」', (tester) async {
+    await services.addSources([
+      source('https://a.com', name: '书源甲', group: '文学, 常用'),
+      source('https://b.com', name: '书源乙', group: '常用；'),
+      source('https://c.com', name: '书源丙'),
+    ]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    await tester.tap(find.widgetWithText(ChoiceChip, '常用'));
+    await tester.pump();
+    expect(titles(tester), ['书源甲', '书源乙']);
+    await tester.tap(find.widgetWithText(ChoiceChip, '未分组'));
+    await tester.pump();
+    expect(titles(tester), ['书源丙']);
+    await tester.tap(find.widgetWithText(ChoiceChip, '全部'));
+    await tester.pump();
+    expect(titles(tester), ['书源甲', '书源乙', '书源丙']);
+  });
+
+  testWidgets('子串筛选和分组筛选同时生效', (tester) async {
+    await services.addSources([
+      source('https://a.com', name: '笔趣阁', group: '常用'),
+      source('https://b.com', name: '起点', group: '常用'),
+      source('https://c.com', name: '笔趣阁二', group: '备用'),
+    ]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    await tester.tap(find.widgetWithText(ChoiceChip, '常用'));
+    await tester.enterText(find.byType(TextField), '笔趣');
+    await tester.pump();
+    expect(titles(tester), ['笔趣阁']);
+  });
+
+  testWidgets('没有任何分组时不显示分组筛选', (tester) async {
+    await services.addSources([source('https://a.com'), source('https://b.com')]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    expect(find.byType(ChoiceChip), findsNothing);
+  });
+
+  testWidgets('上方显示已启用数和总数', (tester) async {
+    await services.addSources([
+      for (var i = 0; i < 10; i++) source('https://$i.com', enabled: i < 7),
+    ]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    expect(find.text('已启用 7 / 共 10'), findsOneWidget);
   });
 
   testWidgets('单个开关和多选批量启用、停用、删除（删除前确认）', (tester) async {

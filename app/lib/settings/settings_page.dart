@@ -3,36 +3,49 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/providers.dart';
 import '../online/replace_rule_list_page.dart';
+import '../online/source_list_page.dart';
 import '../storage/database.dart';
+import '../ui/icons.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 import 'about_page.dart';
 import 'byte_size.dart';
+import 'reader_settings_page.dart';
 
-/// 进入设置页时统计，离开就丢掉（设计 D3）：设置页和阅读页不会同时打开，统计期间缓存不会变。
+/// 进入设置页时统计，离开就丢掉（add-settings 设计 D3）：设置页和阅读页不会同时打开，统计期间缓存不会变。
+/// 设置页只在设置 tab 选中时构建（redesign-minimal-ui 设计 D1），所以每次切过去都重新统计。
 final contentCacheStatsProvider = FutureProvider.autoDispose<ContentCacheStats>(
   (ref) => ref.read(databaseProvider).contentCacheStats(),
 );
 
-/// 设置页（settings）：替换净化规则、正文缓存和关于。
+/// 设置页（settings「设置页入口」，redesign-minimal-ui 设计 D7）：浅灰底上三组卡片。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    Widget link(String title, Widget Function() page) => ListTile(
+      title: Text(title),
+      trailing: Icon(LucideIcons.chevronRight, size: 18, color: colors.textSecondary),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page())),
+    );
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      backgroundColor: colors.groupedBackground,
+      appBar: largeTitleAppBar(context, title: '设置', backgroundColor: colors.groupedBackground),
       body: ListView(
+        padding: const EdgeInsets.only(top: AppSpacing.item, bottom: AppSpacing.section),
         children: [
-          ListTile(
-            title: const Text('替换净化规则'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ReplaceRuleListPage())),
+          SettingsGroup(
+            children: [
+              link('书源', () => const SourceListPage()),
+              link('替换净化规则', () => const ReplaceRuleListPage()),
+            ],
           ),
-          const _ContentCacheTile(),
-          ListTile(
-            title: const Text('关于'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AboutPage())),
-          ),
+          const SizedBox(height: AppSpacing.section),
+          SettingsGroup(children: [link('阅读设置', () => const ReaderSettingsPage()), const _ContentCacheTile()]),
+          const SizedBox(height: AppSpacing.section),
+          SettingsGroup(children: [link('关于', () => const AboutPage())]),
         ],
       ),
     );
@@ -66,18 +79,14 @@ class _ContentCacheTileState extends ConsumerState<_ContentCacheTile> {
   }
 
   Future<void> _clear(int chapters) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清除正文缓存？'),
-        content: Text('会删除已缓存的 $chapters 章正文，之后阅读这些章节需要重新联网。书架、目录和阅读进度不受影响。'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('清除')),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: '清除正文缓存？',
+      message: '会删除已缓存的 $chapters 章正文，之后阅读这些章节需要重新联网。书架、目录和阅读进度不受影响。',
+      confirmLabel: '清除',
+      danger: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _clearing = true);
     await ref.read(databaseProvider).clearContents();
     // 等重新统计完再收起「清除中」，中间不闪一下「统计中」

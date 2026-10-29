@@ -24,7 +24,9 @@ import 'package:novel_reader/reader/paged/paged_view.dart';
 import 'package:novel_reader/reader/reader_page.dart';
 import 'package:novel_reader/reader/reader_settings.dart';
 import 'package:novel_reader/reader/scroll/scroll_view.dart';
+import 'package:novel_reader/reader/toc_page.dart';
 import 'package:novel_reader/storage/database.dart';
+import 'package:novel_reader/ui/theme.dart';
 import 'package:vm_service/vm_service.dart' show InstanceRef;
 import 'package:vm_service/vm_service_io.dart';
 
@@ -148,7 +150,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: await startServices(database: db),
-        child: const MaterialApp(home: ReaderPage(bookUrl: _bookUrl, startAt: 0)),
+        child: MaterialApp(theme: appTheme(Brightness.light), darkTheme: appTheme(Brightness.dark), home: const ReaderPage(bookUrl: _bookUrl, startAt: 0)),
       ),
     );
     await tester.pump(const Duration(seconds: 2));
@@ -198,14 +200,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.byTooltip('目录'));
       await tester.pump(const Duration(milliseconds: 500));
-      final tile = find.widgetWithText(ListTile, '第${chapter + 1}章');
-      // 目录打开时停在当前章节附近，目标绕回开头时在上面
-      await tester.scrollUntilVisible(tile, chapter > from ? 200 : -200, scrollable: find.byType(Scrollable).last);
+      final tile = find.descendant(of: find.byType(TocPage), matching: find.text('第${chapter + 1}章'));
+      // 目录页打开时停在当前章节附近，目标绕回开头时在上面
+      await tester.scrollUntilVisible(
+        tile.hitTestable(),
+        chapter > from ? 200 : -200,
+        scrollable: find.descendant(of: find.byType(TocPage), matching: find.byType(Scrollable)),
+      );
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(tile);
       final open = Stopwatch()..start();
-      // 只在正文视图里找（目录抽屉里也有一行「第 N 章」）；查 widget 树而不是语义树：
-      // 抽屉关闭动画期间遮罩会屏蔽下层的语义，查语义树等到的是抽屉关完的时间
+      // 只在正文视图里找（目录页里也有一行「第 N 章」）；查 widget 树而不是语义树：
+      // 目录页退出的过渡期间下层的语义被屏蔽，查语义树等到的是过渡结束的时间
       final title = '第${chapter + 1}章';
       final shown = find.descendant(
         of: find.byWidgetPredicate((w) => w is PagedView || w is ScrollReaderView),

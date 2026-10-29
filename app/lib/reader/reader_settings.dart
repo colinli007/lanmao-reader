@@ -65,6 +65,11 @@ final class ReaderSettings {
   static const minMargin = 8.0;
   static const maxMargin = 48.0;
 
+  /// 排版面板里行距、段距的三个预设：紧凑、适中、宽松（redesign-minimal-ui 设计 D6）。中间那个是默认值。
+  /// 落盘时按一位小数格式化，读回来能和预设精确比较；改版前存下的其它值仍在上面的范围内照常生效，只是没有预设被选中。
+  static const lineHeightPresets = [1.5, 1.8, 2.2];
+  static const paragraphSpacingPresets = [0.3, 0.6, 1.0];
+
   static const _fontSize = 'reader.fontSize';
   static const _lineHeight = 'reader.lineHeight';
   static const _theme = 'reader.theme';

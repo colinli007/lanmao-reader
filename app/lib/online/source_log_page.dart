@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ui/icons.dart';
 import 'providers.dart';
 
 /// 书源日志：新的在前，显示时间、书源名（书源已删除时显示地址）、字段和内容。
@@ -15,7 +16,7 @@ class SourceLogPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('书源日志'),
-        actions: [IconButton(tooltip: '清空', icon: const Icon(Icons.delete_sweep_outlined), onPressed: log.clear)],
+        actions: [IconButton(tooltip: '清空', icon: const Icon(LucideIcons.trash2), onPressed: log.clear)],
       ),
       body: entries.isEmpty
           ? const Center(child: Text('没有日志'))

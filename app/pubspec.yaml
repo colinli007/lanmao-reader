@@ -39,6 +39,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/LUCIDE_LICENSE.txt
+  fonts:
+    # 图标：lucide 的图标字体，常量在 lib/ui/icons.dart
+    - family: Lucide
+      fonts:
+        - asset: assets/fonts/lucide.ttf
 
 # app 图标：源文件和渲染命令见 design/README.md；改了图之后运行 dart run flutter_launcher_icons
 flutter_launcher_icons:

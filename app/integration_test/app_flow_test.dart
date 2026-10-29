@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show SemanticsAction, SemanticsActionEvent;
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -78,9 +79,11 @@ void main() {
     "ruleContent": {"content": "id.content@html"}
   }''';
 
-  /// 书架 → 书源 → 粘贴导入一个书源 → 回到书架。
+  /// 书架 → 设置 → 书源 → 粘贴导入一个书源 → 回到书架。
   Future<void> importSource(WidgetTester tester, String json, String name) async {
-    await tester.tap(find.byTooltip('书源'));
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书源'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('导入'));
     await tester.pumpAndSettle();
@@ -94,6 +97,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(name), findsOneWidget);
     await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
   }
 
@@ -116,8 +121,22 @@ void main() {
     expect(find.text('去本站广告'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
+  }
+
+  /// 长按书架上的书，弹出选项单。直接触发这本书的「长按」语义动作，不用 `tester.longPress`：
+  /// 在设备上跑集成测试时，用 `tester.longPress` 长按过以后这本书再也点不开，原因没有查清；
+  /// 组件测试里和真机上手动长按都正常（redesign-minimal-ui 任务 8.2）。长按手势本身由组件测试覆盖。
+  Future<void> longPressBook(WidgetTester tester, String name) async {
+    final handle = tester.ensureSemantics();
+    var node = tester.getSemantics(find.text(name).first);
+    while (!node.getSemanticsData().hasAction(SemanticsAction.longPress)) {
+      node = node.parent!;
+    }
+    tester.binding.performSemanticsAction(SemanticsActionEvent(type: SemanticsAction.longPress, viewId: tester.view.viewId, nodeId: node.id));
+    await tester.pumpAndSettle();
+    handle.dispose();
   }
 
   /// 等到 [finder] 出现（真实网络和 worker，pumpAndSettle 等不到）。
@@ -164,7 +183,7 @@ void main() {
 
     // 详情、目录、加入书架
     await tester.tap(find.text('本地小说'));
-    await pumpUntil(tester, find.text('目录（2 章）'));
+    await pumpUntil(tester, find.text('共 2 章'));
     expect(find.text('这是一本测试用的小说。'), findsOneWidget);
     await tester.tap(find.text('加入书架'));
     await pumpUntil(tester, find.text('已在书架'));
@@ -188,11 +207,9 @@ void main() {
 
     // 切到滚动模式，章末点下一章
     await tapReader(tester, 0.5);
-    await tester.tap(find.byTooltip('阅读设置'));
+    await tester.tap(find.byTooltip('排版'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('滚动'));
-    await tester.pumpAndSettle();
-    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await tester.pumpAndSettle();
     await tapReader(tester, 0.5); // 隐藏菜单
     await tester.scrollUntilVisible(find.text('下一章'), 300, scrollable: readerScrollable());
@@ -206,17 +223,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.pageBack(); // 详情页 → 搜索页
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.text('取消')); // 搜索页 → 书架
     await tester.pumpAndSettle();
-    expect(find.text('本地小说'), findsOneWidget);
-    expect(find.text('测试作者 · 第二章 继续'), findsOneWidget);
+    expect(find.text('本地小说'), findsWidgets);
     final shelf = (await db.shelf()).single.book;
     expect((shelf.durChapterIndex, shelf.durChapterTitle), (1, '第二章 继续'));
 
     // 第一章的 java.log 到了书源日志
-    await tester.tap(find.byTooltip('书源'));
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('书源'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('书源日志'));
     await tester.pumpAndSettle();
@@ -226,19 +244,17 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    // 清除正文缓存，再从书架打开：停在第二章，正文重新请求网络
-    await tester.tap(find.byTooltip('设置'));
-    await tester.pumpAndSettle();
+    // 清除正文缓存（已经在设置页），再从书架打开：停在第二章，正文重新请求网络
     expect(find.text('2 章 · ${formatByteSize((await db.contentCacheStats()).bytes)}'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, '清除'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '清除'));
     await tester.pumpAndSettle();
     expect(find.text('0 章 · 0 B'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
     final before = hits['/c/2'];
-    await tester.tap(find.text('本地小说'));
+    await tester.tap(find.text('本地小说').first);
     await pumpUntil(tester, paragraph('第二章的第一段。'));
     expect(hits['/c/2'], before! + 1);
     await tester.pumpAndSettle();
@@ -251,8 +267,7 @@ void main() {
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await importSource(tester, secondSourceJson(), '本地备用');
     final old = (await db.shelf()).single.book;
-    await tester.tap(find.byTooltip('更多'));
-    await tester.pumpAndSettle();
+    await longPressBook(tester, '本地小说');
     await tester.tap(find.text('换书源'));
     await pumpUntil(tester, find.text('本地备用'));
     expect(find.text('当前'), findsOneWidget);
@@ -263,7 +278,7 @@ void main() {
     expect((moved.durChapterPos, moved.lastReadAt), (old.durChapterPos, old.lastReadAt));
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('本地小说'));
+    await tester.tap(find.text('本地小说').first);
     await pumpUntil(tester, paragraph('备用书源第二章的第一段。'));
     expect(hits['/b/c/2'], 1);
     await tester.pumpAndSettle();

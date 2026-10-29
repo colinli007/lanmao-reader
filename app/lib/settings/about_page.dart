@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../app_info.dart';
+import '../ui/icons.dart';
 
 /// 安装包的版本号（设计 D4）：Flutter 构建时从 pubspec.yaml 写进安装包，这里读回来。
 final appVersionProvider = FutureProvider<String>((ref) async => (await PackageInfo.fromPlatform()).version);
@@ -27,7 +28,7 @@ class AboutPage extends ConsumerWidget {
           ListTile(
             title: const Text('源代码'),
             subtitle: const Text(sourceCodeUrl),
-            trailing: const Icon(Icons.copy),
+            trailing: const Icon(LucideIcons.copy, size: 18),
             onTap: () async {
               await Clipboard.setData(const ClipboardData(text: sourceCodeUrl));
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已复制')));
@@ -36,7 +37,7 @@ class AboutPage extends ConsumerWidget {
           const ListTile(title: Text('免责声明'), subtitle: Text(disclaimer)),
           ListTile(
             title: const Text('开源许可'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => showLicensePage(context: context, applicationName: appName, applicationVersion: version),
           ),
         ],

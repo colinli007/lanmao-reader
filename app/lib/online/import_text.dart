@@ -5,6 +5,9 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../ui/icons.dart';
+import '../ui/widgets.dart';
+
 /// 导入失败的原因（内容格式不对、下载失败），给用户看。
 final class ImportException implements Exception {
   const ImportException(this.reason);
@@ -27,7 +30,7 @@ class ImportMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PopupMenuButton<ImportFrom>(
     tooltip: '导入',
-    icon: const Icon(Icons.add),
+    icon: const Icon(LucideIcons.plus),
     onSelected: onSelected,
     itemBuilder: (_) => const [
       PopupMenuItem(value: ImportFrom.file, child: Text('从文件导入')),
@@ -52,14 +55,8 @@ Future<String?> readImportText(BuildContext context, ImportFrom from, {required 
 }
 
 /// 导入失败时的对话框。
-Future<void> showImportError(BuildContext context, ImportException error) => showDialog<void>(
-  context: context,
-  builder: (context) => AlertDialog(
-    title: const Text('无法导入'),
-    content: Text(error.reason),
-    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了'))],
-  ),
-);
+Future<void> showImportError(BuildContext context, ImportException error) =>
+    showMessageDialog(context, title: '无法导入', message: error.reason);
 
 /// 下载网址上的文本：主 isolate 上直接请求，不走引擎、不带 Cookie；按 UTF-8 解码（书源和规则 JSON 都是 UTF-8）。
 Future<String> downloadText(String url) async {
@@ -120,8 +117,8 @@ class _InputDialogState extends State<_InputDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
+  Widget build(BuildContext context) => AppDialog(
+    title: widget.title,
     content: TextField(
       controller: _controller,
       autofocus: true,
@@ -130,7 +127,7 @@ class _InputDialogState extends State<_InputDialog> {
       decoration: InputDecoration(hintText: widget.hint),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+      FillButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
       FilledButton(onPressed: () => Navigator.pop(context, _controller.text), child: const Text('确定')),
     ],
   );

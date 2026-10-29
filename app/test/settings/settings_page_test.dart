@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_reader/online/source_list_page.dart';
+import 'package:novel_reader/reader/reader_page.dart';
+import 'package:novel_reader/reader/reader_settings.dart';
 import 'package:novel_reader/settings/byte_size.dart';
 import 'package:novel_reader/settings/settings_page.dart';
 import 'package:novel_reader/storage/database.dart';
@@ -34,8 +37,9 @@ void main() {
     final bytes = await cache('a', 3) + await cache('b', 2);
     await pump(tester);
     expect(find.text('5 章 · ${formatByteSize(bytes)}'), findsOneWidget);
-    expect(find.text('关于'), findsOneWidget);
-    expect(find.text('替换净化规则'), findsOneWidget);
+    for (final item in ['书源', '替换净化规则', '阅读设置', '关于']) {
+      expect(find.text(item), findsOneWidget, reason: item);
+    }
   });
 
   testWidgets('没有缓存时显示 0 章，不能清除', (tester) async {
@@ -79,5 +83,44 @@ void main() {
     await tester.tap(find.text('替换净化规则'));
     await tester.pumpAndSettle();
     expect(find.text('还没有替换规则，点右上角导入或新建'), findsOneWidget);
+  });
+
+  testWidgets('点书源进入书源列表', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('书源'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SourceListPage), findsOneWidget);
+  });
+
+  group('阅读设置页', () {
+    /// 进入阅读设置页，点 [toggle] 那个开关，再打开一本书的阅读页。
+    Future<void> toggleThenRead(WidgetTester tester, String toggle) async {
+      await services.useSimpleBook();
+      await services.shelveSimpleBook();
+      await pump(tester);
+      await tester.tap(find.text('阅读设置'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(toggle));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.text(toggle))).push(
+        MaterialPageRoute<void>(builder: (_) => const ReaderPage(bookUrl: SimpleBook.bookUrl, startAt: 0)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('关掉跟随系统深色：系统是深色时阅读页用选的亮主题，并落盘', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await toggleThenRead(tester, '跟随系统深色');
+      final scaffold = tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first);
+      expect(scaffold.backgroundColor, ReaderTheme.light.background);
+      expect((await services.db.loadSettings())['reader.followSystemDark'], 'false');
+    });
+
+    testWidgets('打开屏幕常亮：进入阅读页时常亮，并落盘', (tester) async {
+      await toggleThenRead(tester, '屏幕常亮');
+      expect(services.screen.calls, [true]);
+      expect((await services.db.loadSettings())['reader.keepScreenOn'], 'true');
+    });
   });
 }

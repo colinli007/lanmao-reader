@@ -30,6 +30,28 @@ void main() {
     expect(const ReaderSettings(paragraphSpacing: 0.7000000000000001).toMap()['reader.paragraphSpacing'], '0.7');
   });
 
+  test('预设：默认值是中间那个；改版前存下的非预设值照常生效，选预设后变成预设值', () {
+    expect(ReaderSettings.lineHeightPresets[1], const ReaderSettings().lineHeight);
+    expect(ReaderSettings.paragraphSpacingPresets[1], const ReaderSettings().paragraphSpacing);
+
+    final old = ReaderSettings.fromMap(const {'reader.lineHeight': '2.0', 'reader.paragraphSpacing': '1.5'});
+    expect((old.lineHeight, old.paragraphSpacing), (2.0, 1.5));
+    expect(ReaderSettings.lineHeightPresets, isNot(contains(old.lineHeight)));
+    expect(ReaderSettings.paragraphSpacingPresets, isNot(contains(old.paragraphSpacing)));
+
+    final loose = old.copyWith(lineHeight: ReaderSettings.lineHeightPresets.last);
+    expect(ReaderSettings.fromMap(loose.toMap()).lineHeight, 2.2);
+  });
+
+  test('预设落盘后读回来和预设精确相等', () {
+    for (final preset in ReaderSettings.lineHeightPresets) {
+      expect(ReaderSettings.fromMap(ReaderSettings(lineHeight: preset).toMap()).lineHeight, preset);
+    }
+    for (final preset in ReaderSettings.paragraphSpacingPresets) {
+      expect(ReaderSettings.fromMap(ReaderSettings(paragraphSpacing: preset).toMap()).paragraphSpacing, preset);
+    }
+  });
+
   test('非法值回落到默认值，越界的数值截到范围内', () {
     final settings = ReaderSettings.fromMap(const {
       'reader.fontSize': '99',
