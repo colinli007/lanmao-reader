@@ -1,4 +1,4 @@
-name: novel_reader
+name: lanmao_reader
 description: "跨端开源小说阅读器，兼容 Legado 书源（社区版）。"
 publish_to: 'none'
 version: 0.1.0+1
@@ -41,6 +41,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/LUCIDE_LICENSE.txt
+    - assets/images/lazy-cat-logo.png
   fonts:
     # 图标：lucide 的图标字体，常量在 lib/ui/icons.dart
     - family: Lucide
@@ -51,8 +52,9 @@ flutter:
 flutter_launcher_icons:
   image_path: ../design/app-icon.png
   android: true
-  adaptive_icon_background: "#2F5D50"
+  adaptive_icon_background: "#202660"
   adaptive_icon_foreground: ../design/app-icon-foreground.png
+  adaptive_icon_foreground_inset: 20
   ios: true
   remove_alpha_ios: true
   macos:

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/library/relocate.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/library/relocate.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 import '../support/fixtures.dart';
 

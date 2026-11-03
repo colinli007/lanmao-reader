@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/reader/paged/page_turn.dart';
-import 'package:novel_reader/reader/reader_settings.dart';
+import 'package:lanmao_reader/reader/paged/page_turn.dart';
+import 'package:lanmao_reader/reader/reader_settings.dart';
 
 void main() {
   group('松手判定', () {

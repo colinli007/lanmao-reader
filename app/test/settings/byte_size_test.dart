@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/settings/byte_size.dart';
+import 'package:lanmao_reader/settings/byte_size.dart';
 
 void main() {
   test('1024 进位：不足 1KB 显示整数字节，其余一位小数', () {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/ui/theme.dart';
-import 'package:novel_reader/ui/tokens.dart';
+import 'package:lanmao_reader/ui/theme.dart';
+import 'package:lanmao_reader/ui/tokens.dart';
 
 void main() {
   Future<AppColors> colorsUnder(WidgetTester tester, Brightness platform) async {

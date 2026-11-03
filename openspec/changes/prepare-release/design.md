@@ -54,6 +54,8 @@
 
 ### D1 图标：一份 SVG 源文件，用 `flutter_launcher_icons` 生成各尺寸
 
+> 此节保留首次发布时的图标方案记录。2026-11-03 已改用 B5「月夜幻想」PNG 母图，旧 SVG 和未采用的候选图标已清理；现行素材及生成方法见 [design/README.md](../../../design/README.md)。
+
 - **源文件**：
   - `design/app-icon.svg` 是唯一的源文件。
   - 用 `magick` 从它渲染出三张 1024×1024 的 PNG，和 SVG 一起入库：
@@ -70,6 +72,8 @@
 - **备选**：用 `magick` 自己写脚本出各尺寸。没选，因为要自己维护 Android 的 `mipmap-*` 和 adaptive icon 的 XML，还有 iOS 和 macOS 的 `Contents.json`，正是这个工具替我们做的事。它只是 dev 依赖，不进安装包，所以不按运行时依赖的审查标准评估。
 
 ### D2 macOS 名称：改 Info.plist，不改 PRODUCT_NAME
+
+> 此节保留首次发布时的命名方案。2026-11-03 按用户确认统一更名为「懒猫阅读」，三端包标识为 `dev.lanmaoreader.app`，Flutter 包名及 macOS 构建产物名改为 `lanmao_reader`；发布脚本同步打包为「懒猫阅读.app」。以下原始决策用于历史追溯。
 
 - **做法**：
   - `macos/Runner/Info.plist` 里 `CFBundleName` 写成「小说阅读」，再加 `CFBundleDisplayName`，值也是「小说阅读」。

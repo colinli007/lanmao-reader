@@ -1,4 +1,4 @@
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 ShelfBook book(String url, {String name = '书', bool inShelf = false, DateTime? addedAt, DateTime? lastReadAt, int dur = 0}) =>
     ShelfBook(

@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:novel_reader/app.dart';
-import 'package:novel_reader/online/book_detail_page.dart';
-import 'package:novel_reader/online/search_controller.dart';
-import 'package:novel_reader/online/search_page.dart';
-import 'package:novel_reader/online/startup.dart';
-import 'package:novel_reader/reader/reader_page.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/app.dart';
+import 'package:lanmao_reader/online/book_detail_page.dart';
+import 'package:lanmao_reader/online/search_controller.dart';
+import 'package:lanmao_reader/online/search_page.dart';
+import 'package:lanmao_reader/online/startup.dart';
+import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/storage/database.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 真实书源走查（联网，结果取决于网站当时的状态，不进日常测试）：

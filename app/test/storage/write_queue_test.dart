@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/storage/write_queue.dart';
+import 'package:lanmao_reader/storage/write_queue.dart';
 
 void main() {
   test('按顺序执行；一次失败交给 onError，后面的照常执行', () async {

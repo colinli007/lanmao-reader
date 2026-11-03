@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:novel_reader/app.dart';
-import 'package:novel_reader/online/startup.dart';
-import 'package:novel_reader/reader/reader_page.dart';
-import 'package:novel_reader/settings/byte_size.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/app.dart';
+import 'package:lanmao_reader/online/startup.dart';
+import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/settings/byte_size.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 /// 端到端：本地 HTTP 服务器上的假书源，走完导入书源和替换规则 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架
 /// → 清除正文缓存后再打开 → 导入第二个书源，在书架上换过去，从对齐到的章节继续。

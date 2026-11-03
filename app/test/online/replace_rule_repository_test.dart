@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/replace_rule_repository.dart';
+import 'package:lanmao_reader/online/replace_rule_repository.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';

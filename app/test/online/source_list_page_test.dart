@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/source_list_page.dart';
+import 'package:lanmao_reader/online/source_list_page.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../support/test_app.dart';

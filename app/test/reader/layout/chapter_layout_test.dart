@@ -1,7 +1,7 @@
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/reader/chapter_format.dart';
-import 'package:novel_reader/reader/layout/chapter_layout.dart';
+import 'package:lanmao_reader/reader/chapter_format.dart';
+import 'package:lanmao_reader/reader/layout/chapter_layout.dart';
 
 /// 测试字体里每个字都是一个字宽（18），正文宽 335 不是字宽的整数倍，避免每行正好排满。
 const _spec = LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600));

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/online_content_source.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/online/online_content_source.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 import '../support/test_app.dart';
 

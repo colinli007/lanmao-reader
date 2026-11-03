@@ -77,22 +77,22 @@ ipa_version=$(unzip -p "$ipa" Payload/Runner.app/Info.plist | plutil -extract CF
 [[ $ipa_version == "$version" ]] || fail "IPA 的版本是 ${ipa_version}，应该是 $version"
 ok "IPA：arm64，含 quickjs，版本 ${ipa_version}，$(mb "$(stat -f%z "$ipa")")"
 
-# macOS：dmg 里是「小说阅读.app」和「应用程序」的快捷方式。.app 改名不影响签名（设计 D2）
+# macOS：dmg 里是「懒猫阅读.app」和「应用程序」的快捷方式。.app 改名不影响签名（设计 D2）
 flutter build macos --release
 mkdir "$stage/dmg"
-ditto build/macos/Build/Products/Release/novel_reader.app "$stage/dmg/小说阅读.app"
+ditto build/macos/Build/Products/Release/lanmao_reader.app "$stage/dmg/懒猫阅读.app"
 ln -s /Applications "$stage/dmg/应用程序"
-hdiutil create -quiet -volname 小说阅读 -srcfolder "$stage/dmg" -fs HFS+ -format UDZO "$dmg"
+hdiutil create -quiet -volname 懒猫阅读 -srcfolder "$stage/dmg" -fs HFS+ -format UDZO "$dmg"
 hdiutil verify -quiet "$dmg" || fail "dmg 校验失败"
 hdiutil attach -quiet -nobrowse -readonly -mountpoint "$stage/mnt" "$dmg"
-dmg_version=$(plutil -extract CFBundleShortVersionString raw "$stage/mnt/小说阅读.app/Contents/Info.plist")
+dmg_version=$(plutil -extract CFBundleShortVersionString raw "$stage/mnt/懒猫阅读.app/Contents/Info.plist")
 [[ $dmg_version == "$version" ]] || fail "dmg 里 app 的版本是 ${dmg_version}，应该是 $version"
 [[ -L $stage/mnt/应用程序 ]] || fail "dmg 里没有「应用程序」的快捷方式"
 hdiutil detach -quiet "$stage/mnt"
-ok "dmg：小说阅读.app，版本 ${dmg_version}，$(mb "$(stat -f%z "$dmg")")"
+ok "dmg：懒猫阅读.app，版本 ${dmg_version}，$(mb "$(stat -f%z "$dmg")")"
 
 if [[ -n $upload ]]; then
-  gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "小说阅读 $version" --notes-file "$notes" "$apk" "$ipa" "$dmg"
+  gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "懒猫阅读 $version" --notes-file "$notes" "$apk" "$ipa" "$dmg"
 else
   echo "产物在 ${out}（没有上传；发布用 --upload <说明文件>）"
 fi

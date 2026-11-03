@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/book_detail_page.dart';
-import 'package:novel_reader/online/search_controller.dart';
-import 'package:novel_reader/reader/reader_page.dart';
-import 'package:novel_reader/reader/toc_page.dart';
+import 'package:lanmao_reader/online/book_detail_page.dart';
+import 'package:lanmao_reader/online/search_controller.dart';
+import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/reader/toc_page.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';

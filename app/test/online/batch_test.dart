@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/batch.dart';
+import 'package:lanmao_reader/online/batch.dart';
 
 void main() {
   test('提交 20 个任务，同时最多 6 个', () async {

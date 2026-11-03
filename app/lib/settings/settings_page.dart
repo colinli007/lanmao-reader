@@ -36,6 +36,20 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(top: AppSpacing.item, bottom: AppSpacing.section),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.section),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.sheet),
+                child: Image.asset(
+                  'assets/images/lazy-cat-logo.png',
+                  width: 72,
+                  height: 72,
+                  semanticLabel: '懒猫 Logo',
+                ),
+              ),
+            ),
+          ),
           SettingsGroup(
             children: [
               link('书源', () => const SourceListPage()),

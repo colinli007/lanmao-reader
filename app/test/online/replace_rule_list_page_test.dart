@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/replace_rule_list_page.dart';
+import 'package:lanmao_reader/online/replace_rule_list_page.dart';
 
 import '../support/test_app.dart';
 

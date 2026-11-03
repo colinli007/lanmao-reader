@@ -1,6 +1,10 @@
-# novel-reader
+# 懒猫阅读
 
 跨端开源小说阅读器，兼容 Legado（开源阅读 3.0）书源。纯 Flutter 实现。
+
+应用名称：**懒猫阅读**。Android applicationId 与 iOS/macOS Bundle ID：`dev.lanmaoreader.app`；Flutter 包名：`lanmao_reader`。
+
+包标识已从 `dev.novelreader.app` 更换；旧版与新版会被系统视为不同应用，本地书架、书源和阅读进度不会自动迁移。
 
 约束：开源、完全免费、不上架应用市场；书源功能只放在不上架的社区版里。
 
@@ -35,15 +39,15 @@
 
 **macOS**：
 
-1. 打开 dmg，把「小说阅读」拖到「应用程序」。
-2. 第一次打开时，系统会提示 Apple 无法验证「小说阅读」，点「完成」。这是因为 app 没有做 Apple 公证。
-3. 打开「系统设置 → 隐私与安全性」，在下面找到「已阻止打开“小说阅读”」，点「仍要打开」，输入密码。
+1. 打开 dmg，把「懒猫阅读」拖到「应用程序」。
+2. 第一次打开时，系统会提示 Apple 无法验证「懒猫阅读」，点「完成」。这是因为 app 没有做 Apple 公证。
+3. 打开「系统设置 → 隐私与安全性」，在下面找到「已阻止打开“懒猫阅读”」，点「仍要打开」，输入密码。
 4. 再打开一次 app，在弹出的对话框里点「打开」。
 
 也可以在终端里执行下面这条命令，清除下载时加上的隔离属性，之后就能直接打开：
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/小说阅读.app"
+xattr -dr com.apple.quarantine "/Applications/懒猫阅读.app"
 ```
 
 ## 目录

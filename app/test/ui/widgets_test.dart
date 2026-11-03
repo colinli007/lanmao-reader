@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/ui/theme.dart';
-import 'package:novel_reader/ui/tokens.dart';
-import 'package:novel_reader/ui/widgets.dart';
+import 'package:lanmao_reader/ui/theme.dart';
+import 'package:lanmao_reader/ui/tokens.dart';
+import 'package:lanmao_reader/ui/widgets.dart';
 
 Widget _wrap(Widget child) => MaterialApp(theme: appTheme(Brightness.light), home: Scaffold(body: Center(child: child)));
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/source_log.dart';
-import 'package:novel_reader/online/source_log_page.dart';
+import 'package:lanmao_reader/online/source_log.dart';
+import 'package:lanmao_reader/online/source_log_page.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';

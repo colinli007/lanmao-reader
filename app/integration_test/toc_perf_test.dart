@@ -10,12 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:novel_reader/online/book_detail_page.dart';
-import 'package:novel_reader/online/startup.dart';
-import 'package:novel_reader/reader/reader_page.dart';
-import 'package:novel_reader/reader/toc_page.dart';
-import 'package:novel_reader/storage/database.dart';
-import 'package:novel_reader/ui/theme.dart';
+import 'package:lanmao_reader/online/book_detail_page.dart';
+import 'package:lanmao_reader/online/startup.dart';
+import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/reader/toc_page.dart';
+import 'package:lanmao_reader/storage/database.dart';
+import 'package:lanmao_reader/ui/theme.dart';
 
 const _bookUrl = 'local://toc';
 const _chapters = 2000;

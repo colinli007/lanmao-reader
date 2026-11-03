@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/reader/chapter_format.dart';
-import 'package:novel_reader/reader/layout/chapter_layout.dart';
-import 'package:novel_reader/reader/layout/page_painter.dart';
-import 'package:novel_reader/reader/paged/chapter_window.dart';
-import 'package:novel_reader/reader/paged/paged_view.dart';
-import 'package:novel_reader/reader/reader_settings.dart';
+import 'package:lanmao_reader/reader/chapter_format.dart';
+import 'package:lanmao_reader/reader/layout/chapter_layout.dart';
+import 'package:lanmao_reader/reader/layout/page_painter.dart';
+import 'package:lanmao_reader/reader/paged/chapter_window.dart';
+import 'package:lanmao_reader/reader/paged/paged_view.dart';
+import 'package:lanmao_reader/reader/reader_settings.dart';
 
 import '../../support/fixtures.dart' as fixtures;
 

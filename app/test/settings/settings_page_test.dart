@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/source_list_page.dart';
-import 'package:novel_reader/reader/reader_page.dart';
-import 'package:novel_reader/reader/reader_settings.dart';
-import 'package:novel_reader/settings/byte_size.dart';
-import 'package:novel_reader/settings/settings_page.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/online/source_list_page.dart';
+import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/reader/reader_settings.dart';
+import 'package:lanmao_reader/settings/byte_size.dart';
+import 'package:lanmao_reader/settings/settings_page.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 import '../support/test_app.dart';
 

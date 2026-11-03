@@ -5,9 +5,9 @@ import 'dart:typed_data';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/batch.dart';
-import 'package:novel_reader/online/engine_stack.dart';
-import 'package:novel_reader/online/source_engine.dart';
+import 'package:lanmao_reader/online/batch.dart';
+import 'package:lanmao_reader/online/engine_stack.dart';
+import 'package:lanmao_reader/online/source_engine.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 /// book-search「等网络的书源不妨碍其它书源」「慢的书源按超时失败」：真实的 worker 池，请求函数是假的。

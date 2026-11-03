@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/reader/toc_page.dart';
-import 'package:novel_reader/storage/database.dart';
-import 'package:novel_reader/ui/icons.dart';
+import 'package:lanmao_reader/reader/toc_page.dart';
+import 'package:lanmao_reader/storage/database.dart';
+import 'package:lanmao_reader/ui/icons.dart';
 
 import '../support/test_app.dart';
 

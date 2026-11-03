@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/reader/chapter_format.dart';
+import 'package:lanmao_reader/reader/chapter_format.dart';
 
 void main() {
   test('分段、去掉首尾空白（含全角空格）、丢弃空段；缩进不在正文里', () {

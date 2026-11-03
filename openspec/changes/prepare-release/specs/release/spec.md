@@ -11,7 +11,7 @@
 |---|---|---|
 | Android | `novel-reader-<版本>-android-arm64.apk` | 只含 arm64-v8a，不含 32 位 ARM 和 x86；体积 MUST NOT 超过 20MB |
 | iOS | `novel-reader-<版本>-ios-unsigned.ipa` | 未签名，用户自签后安装 |
-| macOS | `novel-reader-<版本>-macos.dmg` | 打开后是「小说阅读」app 和「应用程序」文件夹的快捷方式，拖过去就能安装；app 只做 ad-hoc 签名，不做公证 |
+| macOS | `novel-reader-<版本>-macos.dmg` | 打开后是「懒猫阅读」app 和「应用程序」文件夹的快捷方式，拖过去就能安装；app 只做 ad-hoc 签名，不做公证 |
 
 Release 的 tag 是 `v<版本>`，指向打包时的提交。打包 SHALL 在工作区没有未提交的改动、并且这个提交已经推送时进行，否则拒绝打包。Release SHALL 先建成草稿，由维护者检查后再发布。
 
@@ -28,7 +28,7 @@ Release 的 tag 是 `v<版本>`，指向打包时的提交。打包 SHALL 在工
 - **THEN** 拒绝打包，提示先提交
 
 #### Scenario: 安装 dmg
-- **WHEN** 用户打开 dmg，把「小说阅读」拖进「应用程序」，按安装说明放行后打开
+- **WHEN** 用户打开 dmg，把「懒猫阅读」拖进「应用程序」，按安装说明放行后打开
 - **THEN** app 正常启动，显示书架
 
 ### Requirement: Android 签名
@@ -60,7 +60,7 @@ Release 的 tag 是 `v<版本>`，指向打包时的提交。打包 SHALL 在工
 - **THEN** 拒绝打包，提示先改版本号
 
 ### Requirement: app 名称和图标
-app 在三个平台上 SHALL 都叫「小说阅读」，显示在这些地方：
+app 在三个平台上 SHALL 都叫「懒猫阅读」，显示在这些地方：
 
 - Android 和 iOS 的桌面图标下面
 - macOS 的菜单栏、程序坞和「应用程序」文件夹
@@ -69,7 +69,7 @@ app 在三个平台上 SHALL 都叫「小说阅读」，显示在这些地方：
 
 #### Scenario: macOS 上的名称
 - **WHEN** 用户在 macOS 上打开 app
-- **THEN** 菜单栏第一项和程序坞的提示都是「小说阅读」，不是 `novel_reader`
+- **THEN** 菜单栏第一项和程序坞的提示都是「懒猫阅读」，不是 `lanmao_reader`
 
 #### Scenario: 图标不是 Flutter 默认图标
 - **WHEN** 用户在任意一个平台上安装发布包

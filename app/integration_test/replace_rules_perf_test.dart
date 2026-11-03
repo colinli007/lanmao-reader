@@ -8,10 +8,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:novel_reader/library/providers.dart';
-import 'package:novel_reader/online/providers.dart';
-import 'package:novel_reader/online/startup.dart';
-import 'package:novel_reader/storage/database.dart';
+import 'package:lanmao_reader/library/providers.dart';
+import 'package:lanmao_reader/online/providers.dart';
+import 'package:lanmao_reader/online/startup.dart';
+import 'package:lanmao_reader/storage/database.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

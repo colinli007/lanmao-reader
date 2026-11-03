@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/app_info.dart';
-import 'package:novel_reader/settings/about_page.dart';
+import 'package:lanmao_reader/app_info.dart';
+import 'package:lanmao_reader/settings/about_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
   setUp(
     () => PackageInfo.setMockInitialValues(
       appName: appName,
-      packageName: 'novel_reader',
+      packageName: 'dev.lanmaoreader.app',
       version: '0.1.0',
       buildNumber: '',
       buildSignature: '',

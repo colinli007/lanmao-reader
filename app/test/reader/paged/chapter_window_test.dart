@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/library/content_source.dart';
-import 'package:novel_reader/reader/chapter_format.dart';
-import 'package:novel_reader/reader/layout/chapter_layout.dart';
-import 'package:novel_reader/reader/paged/chapter_window.dart';
+import 'package:lanmao_reader/library/content_source.dart';
+import 'package:lanmao_reader/reader/chapter_format.dart';
+import 'package:lanmao_reader/reader/layout/chapter_layout.dart';
+import 'package:lanmao_reader/reader/paged/chapter_window.dart';
 
 import '../../support/fixtures.dart';
 

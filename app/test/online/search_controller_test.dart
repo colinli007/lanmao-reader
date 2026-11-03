@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/search_controller.dart';
+import 'package:lanmao_reader/online/search_controller.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';

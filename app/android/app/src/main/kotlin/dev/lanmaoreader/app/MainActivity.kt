@@ -1,4 +1,4 @@
-package dev.novelreader.app
+package dev.lanmaoreader.app
 
 import android.content.pm.ApplicationInfo
 import android.os.Bundle

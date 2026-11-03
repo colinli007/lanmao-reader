@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/import_text.dart';
-import 'package:novel_reader/online/source_import.dart';
+import 'package:lanmao_reader/online/import_text.dart';
+import 'package:lanmao_reader/online/source_import.dart';
 
 import '../support/test_app.dart';
 

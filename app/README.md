@@ -1,4 +1,4 @@
-# novel_reader
+# lanmao_reader
 
 阅读器 app（社区版，iOS、macOS）：书源管理、多书源搜索、详情与目录、书架、滚动阅读，数据存在本机 SQLite（drift）里。
 

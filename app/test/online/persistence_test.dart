@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_reader/online/engine_stack.dart';
-import 'package:novel_reader/online/persistent_source_store.dart';
-import 'package:novel_reader/storage/database.dart';
-import 'package:novel_reader/storage/write_queue.dart';
+import 'package:lanmao_reader/online/engine_stack.dart';
+import 'package:lanmao_reader/online/persistent_source_store.dart';
+import 'package:lanmao_reader/storage/database.dart';
+import 'package:lanmao_reader/storage/write_queue.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 /// app-storage「书源级状态读写即时可见」「持久 Cookie」：重开数据库模拟重启。

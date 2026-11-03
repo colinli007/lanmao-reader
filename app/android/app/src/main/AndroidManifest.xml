@@ -2,7 +2,7 @@
     <!-- 书源请求要联网。模板只在 debug、profile 里声明了它，release 包会连不上网。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="小说阅读"
+        android:label="懒猫阅读"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
