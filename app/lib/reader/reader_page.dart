@@ -15,6 +15,7 @@ import 'paged/chapter_window.dart';
 import 'paged/paged_view.dart';
 import 'reader_settings.dart';
 import 'screen_awake.dart';
+import 'screen_brightness.dart';
 import 'scroll/scroll_view.dart';
 
 /// 阅读页：按翻页方式显示分页视图或滚动视图，两者共用一个三章窗口（add-paged-reader 设计 D1、D9）。
@@ -34,6 +35,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   late final AppDatabase _db = ref.read(databaseProvider);
   late final BookContentSource _source = ref.read(contentSourceProvider);
   late final ScreenAwake _screen = ref.read(screenAwakeProvider);
+  late final ScreenBrightness _brightness = ref.read(screenBrightnessProvider);
   final _menu = ValueNotifier(false);
   late final AppLifecycleListener _lifecycle;
 
@@ -50,7 +52,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   /// 进行中的正文请求，按章节地址；窗口里的三章共用，同一章同时只有一个。
   final Map<String, Future<ChapterText>> _loading = {};
 
-  /// app 在前台：退到后台时恢复系统的熄屏设置（complete-reader-settings 设计 D4）。
+  /// app 在前台：退到后台时恢复系统的熄屏设置和亮度（complete-reader-settings 设计 D4，add-reader-brightness 设计 D1）。
   bool _foreground = true;
 
   @override
@@ -72,12 +74,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     _open();
   }
 
-  /// 阅读页显示、app 在前台、设置打开时屏幕常亮（reader「屏幕常亮」）。
-  void _updateScreen() => _screen.set(_foreground && ref.read(readerSettingsProvider).keepScreenOn);
+  /// 阅读页显示、app 在前台时：设置打开就屏幕常亮（reader「屏幕常亮」），不跟随系统就用阅读页的亮度（reader「阅读页亮度」）。
+  void _updateScreen() {
+    final settings = ref.read(readerSettingsProvider);
+    _screen.set(_foreground && settings.keepScreenOn);
+    _brightness.set(_foreground && !settings.brightnessFollowSystem ? settings.brightness : null);
+  }
 
   @override
   void dispose() {
     _screen.set(false);
+    _brightness.set(null);
     _saveProgress();
     _lifecycle.dispose();
     _window?.dispose();
@@ -170,7 +177,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(readerSettingsProvider.select((settings) => settings.keepScreenOn), (_, _) => _updateScreen());
+    ref.listen(
+      readerSettingsProvider.select((settings) => (settings.keepScreenOn, settings.brightnessFollowSystem, settings.brightness)),
+      (_, _) => _updateScreen(),
+    );
     final settings = ref.watch(readerSettingsProvider);
     final theme = settings.effectiveTheme(MediaQuery.platformBrightnessOf(context));
     final book = _book;

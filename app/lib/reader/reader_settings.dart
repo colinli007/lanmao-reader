@@ -40,6 +40,8 @@ final class ReaderSettings {
     this.indent = 2,
     this.margin = 20,
     this.keepScreenOn = false,
+    this.brightnessFollowSystem = true,
+    this.brightness = 0.4,
   });
 
   factory ReaderSettings.fromMap(Map<String, String> map) => ReaderSettings(
@@ -52,6 +54,8 @@ final class ReaderSettings {
     indent: int.tryParse(map[_indent] ?? '')?.clamp(minIndent, maxIndent) ?? 2,
     margin: double.tryParse(map[_margin] ?? '')?.clamp(minMargin, maxMargin) ?? 20,
     keepScreenOn: bool.tryParse(map[_keepScreenOn] ?? '') ?? false,
+    brightnessFollowSystem: bool.tryParse(map[_brightnessFollowSystem] ?? '') ?? true,
+    brightness: double.tryParse(map[_brightness] ?? '')?.clamp(minBrightness, maxBrightness) ?? 0.4,
   );
 
   static const minFontSize = 12.0;
@@ -64,6 +68,10 @@ final class ReaderSettings {
   static const maxIndent = 4;
   static const minMargin = 8.0;
   static const maxMargin = 48.0;
+
+  /// 阅读页亮度的范围：下限不是 0，部分 Android 机型上 0 几乎全黑（add-reader-brightness 设计 D3）。
+  static const minBrightness = 0.01;
+  static const maxBrightness = 1.0;
 
   /// 排版面板里行距、段距的三个预设：紧凑、适中、宽松（redesign-minimal-ui 设计 D6）。中间那个是默认值。
   /// 落盘时按一位小数格式化，读回来能和预设精确比较；改版前存下的其它值仍在上面的范围内照常生效，只是没有预设被选中。
@@ -79,6 +87,8 @@ final class ReaderSettings {
   static const _indent = 'reader.indent';
   static const _margin = 'reader.margin';
   static const _keepScreenOn = 'reader.keepScreenOn';
+  static const _brightnessFollowSystem = 'reader.brightnessFollowSystem';
+  static const _brightness = 'reader.brightness';
 
   final double fontSize;
   final double lineHeight;
@@ -98,6 +108,10 @@ final class ReaderSettings {
   /// 阅读页显示期间屏幕不自动熄灭（reader「屏幕常亮」）。
   final bool keepScreenOn;
 
+  /// 打开时阅读页不改屏幕亮度；关闭时阅读页显示期间用 [brightness]（reader「阅读页亮度」）。
+  final bool brightnessFollowSystem;
+  final double brightness;
+
   /// 实际显示的主题（设计 D14）。
   ReaderTheme effectiveTheme(Brightness platform) => followSystemDark && platform == Brightness.dark ? ReaderTheme.dark : theme;
 
@@ -111,6 +125,8 @@ final class ReaderSettings {
     int? indent,
     double? margin,
     bool? keepScreenOn,
+    bool? brightnessFollowSystem,
+    double? brightness,
   }) => ReaderSettings(
     fontSize: fontSize ?? this.fontSize,
     lineHeight: lineHeight ?? this.lineHeight,
@@ -121,6 +137,8 @@ final class ReaderSettings {
     indent: indent ?? this.indent,
     margin: margin ?? this.margin,
     keepScreenOn: keepScreenOn ?? this.keepScreenOn,
+    brightnessFollowSystem: brightnessFollowSystem ?? this.brightnessFollowSystem,
+    brightness: brightness ?? this.brightness,
   );
 
   Map<String, String> toMap() => {
@@ -133,6 +151,8 @@ final class ReaderSettings {
     _indent: '$indent',
     _margin: '$margin',
     _keepScreenOn: '$keepScreenOn',
+    _brightnessFollowSystem: '$brightnessFollowSystem',
+    _brightness: '$brightness',
   };
 }
 

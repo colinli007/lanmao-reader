@@ -30,6 +30,15 @@ void main() {
     expect(const ReaderSettings(paragraphSpacing: 0.7000000000000001).toMap()['reader.paragraphSpacing'], '0.7');
   });
 
+  test('亮度：默认跟随系统、40%；越界截到 1% 到 100%，非法值回落到默认值', () {
+    final defaults = ReaderSettings.fromMap(const {});
+    expect((defaults.brightnessFollowSystem, defaults.brightness), (true, 0.4));
+    expect(ReaderSettings.fromMap(const {'reader.brightness': '0'}).brightness, 0.01);
+    expect(ReaderSettings.fromMap(const {'reader.brightness': '1.5'}).brightness, 1.0);
+    final invalid = ReaderSettings.fromMap(const {'reader.brightness': 'dim', 'reader.brightnessFollowSystem': 'no'});
+    expect((invalid.brightnessFollowSystem, invalid.brightness), (true, 0.4));
+  });
+
   test('预设：默认值是中间那个；改版前存下的非预设值照常生效，选预设后变成预设值', () {
     expect(ReaderSettings.lineHeightPresets[1], const ReaderSettings().lineHeight);
     expect(ReaderSettings.paragraphSpacingPresets[1], const ReaderSettings().paragraphSpacing);
@@ -88,6 +97,8 @@ void main() {
       indent: 0,
       margin: 36,
       keepScreenOn: true,
+      brightnessFollowSystem: false,
+      brightness: 0.15,
     );
     container.read(readerSettingsProvider.notifier).update(changed);
     final reread = ReaderSettings.fromMap(await services.db.loadSettings());

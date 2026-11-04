@@ -17,6 +17,7 @@ import 'package:lanmao_reader/online/source_engine.dart';
 import 'package:lanmao_reader/online/source_log.dart';
 import 'package:lanmao_reader/online/source_repository.dart';
 import 'package:lanmao_reader/reader/screen_awake.dart';
+import 'package:lanmao_reader/reader/screen_brightness.dart';
 import 'package:lanmao_reader/storage/database.dart';
 import 'package:lanmao_reader/ui/theme.dart';
 import 'package:rule_engine/rule_engine.dart';
@@ -112,6 +113,14 @@ final class FakeScreenAwake extends ScreenAwake {
   void apply(bool on) => calls.add(on);
 }
 
+/// 记录阅读页亮度的调用，不交给平台。
+final class FakeScreenBrightness extends ScreenBrightness {
+  final List<double?> calls = [];
+
+  @override
+  void apply(double? value) => calls.add(value);
+}
+
 /// app 的全部依赖：内存数据库、假的链路执行方、假的屏幕常亮，其余和正式启动一样。
 final class TestServices {
   TestServices._(this.db, this.repository, this.replaceRules, this.log, this.engine);
@@ -122,6 +131,7 @@ final class TestServices {
   final SourceLogBuffer log;
   final FakeEngine engine;
   final FakeScreenAwake screen = FakeScreenAwake();
+  final FakeScreenBrightness brightness = FakeScreenBrightness();
 
   /// [file] 不为空时用文件数据库（关闭后重新 create 模拟重启），否则用内存数据库。
   static Future<TestServices> create({File? file}) async {
@@ -140,6 +150,7 @@ final class TestServices {
     replaceRuleRepositoryProvider.overrideWith((ref) => replaceRules),
     sourceLogProvider.overrideWith((ref) => log),
     screenAwakeProvider.overrideWithValue(screen),
+    screenBrightnessProvider.overrideWithValue(brightness),
   ];
 
   Widget app(Widget home) => ProviderScope(

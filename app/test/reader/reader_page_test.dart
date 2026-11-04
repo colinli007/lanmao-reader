@@ -258,6 +258,46 @@ void main() {
     });
   });
 
+  group('阅读页亮度', () {
+    testWidgets('跟随系统时不改亮度；关掉后用自己的亮度，调整立即生效，再打开跟随系统时恢复', (tester) async {
+      await open(tester, startAt: 0);
+      expect(services.brightness.calls, isEmpty);
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false));
+      expect(services.brightness.calls, [0.4]);
+      await update(tester, (s) => s.copyWith(brightness: 0.1));
+      expect(services.brightness.calls, [0.4, 0.1]);
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: true));
+      expect(services.brightness.calls, [0.4, 0.1, null]);
+    });
+
+    testWidgets('进入阅读页用自己的亮度，app 退到后台恢复、回到前台再用，返回后恢复', (tester) async {
+      await open(tester, startAt: 0);
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.1));
+      await back(tester);
+      services.brightness.calls.clear();
+
+      await open(tester, startAt: 0);
+      expect(services.brightness.calls, [0.1]);
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      expect(services.brightness.calls, [0.1, null]);
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      expect(services.brightness.calls, [0.1, null, 0.1]);
+      await back(tester);
+      expect(services.brightness.calls, [0.1, null, 0.1, null]);
+    });
+
+    testWidgets('macOS 上不改亮度', (tester) async {
+      await open(tester, startAt: 0);
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.1));
+      await back(tester);
+      expect(services.brightness.calls, isEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+  });
+
   group('分页：章节之间连续翻页', () {
     testWidgets('翻进下一章：显示第 4 章第 1 页，进度面板里的章节名变成第 4 章', (tester) async {
       await open(tester, startAt: 3);
@@ -594,6 +634,28 @@ void main() {
       final scaffold = tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first);
       expect(scaffold.backgroundColor, ReaderTheme.dark.background);
     });
+
+    testWidgets('外观面板的亮度：跟随系统时滑块不可用；关掉后拖动立即生效并落盘', (tester) async {
+      await open(tester, startAt: 0);
+      await openPanel(tester, '外观');
+      expect(tester.widget<Slider>(find.byType(Slider)).onChanged, isNull);
+      await tester.tap(find.text('跟随系统'));
+      await tester.pumpAndSettle();
+      expect(services.brightness.calls, [0.4]);
+      await tester.drag(find.byType(Slider), const Offset(-1000, 0));
+      await tester.pumpAndSettle();
+      expect(services.brightness.calls.last, ReaderSettings.minBrightness);
+      final saved = await services.db.loadSettings();
+      expect((saved['reader.brightnessFollowSystem'], saved['reader.brightness']), ('false', '0.01'));
+    });
+
+    testWidgets('macOS 上外观面板只有主题', (tester) async {
+      await open(tester, startAt: 0);
+      await openPanel(tester, '外观');
+      expect(find.byType(Slider), findsNothing);
+      expect(find.text('跟随系统'), findsNothing);
+      expect(find.bySemanticsLabel('暗主题'), findsOneWidget);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
     testWidgets('排版面板：缩进、边距加到最大，段距选宽松，都落盘', (tester) async {
       await open(tester, startAt: 0);

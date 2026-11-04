@@ -20,13 +20,19 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        // 阅读页的屏幕常亮（complete-reader-settings 设计 D4）。可调试的构建一直常亮，见 onCreate，关闭时不清掉
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "novel_reader/screen").setMethodCallHandler { call, result ->
-            if (call.method != "keepOn") return@setMethodCallHandler result.notImplemented()
-            if (call.arguments as Boolean) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            } else if (!debuggable) {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            when (call.method) {
+                // 阅读页的屏幕常亮（complete-reader-settings 设计 D4）。可调试的构建一直常亮，见 onCreate，关闭时不清掉
+                "keepOn" -> if (call.arguments as Boolean) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else if (!debuggable) {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+                // 阅读页亮度（add-reader-brightness 设计 D2）：只改这个窗口，null 恢复成系统的亮度
+                "brightness" -> window.attributes = window.attributes.apply {
+                    screenBrightness = (call.arguments as Double?)?.toFloat() ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                }
+                else -> return@setMethodCallHandler result.notImplemented()
             }
             result.success(null)
         }

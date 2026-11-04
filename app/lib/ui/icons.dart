@@ -31,6 +31,7 @@ abstract final class LucideIcons {
   static const search = IconData(0xe151, fontFamily: 'Lucide');
   static const settings = IconData(0xe154, fontFamily: 'Lucide');
   static const share = IconData(0xe155, fontFamily: 'Lucide');
+  static const sun = IconData(0xe178, fontFamily: 'Lucide');
   static const trash2 = IconData(0xe18e, fontFamily: 'Lucide');
   static const x = IconData(0xe1b2, fontFamily: 'Lucide');
 }
