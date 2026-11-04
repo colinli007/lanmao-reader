@@ -211,6 +211,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('滚动'));
     await tester.pumpAndSettle();
+    // 先收起面板：排版面板最高占屏幕的六成，macOS 默认窗口这样的矮屏上会盖住正中间
+    await tester.tap(find.byTooltip('排版'));
+    await tester.pumpAndSettle();
     await tapReader(tester, 0.5); // 隐藏菜单
     await tester.scrollUntilVisible(find.text('下一章'), 300, scrollable: readerScrollable());
     await tester.tap(find.text('下一章'));
