@@ -8,11 +8,12 @@ import '../ui/tokens.dart';
 import '../ui/widgets.dart';
 import 'import_text.dart';
 import 'providers.dart';
+import 'source_check.dart';
 import 'source_import.dart';
 import 'source_log_page.dart';
 import 'source_repository.dart';
 
-/// 书源管理：导入、筛选、启用与停用、多选批量操作、导出（source-management）。
+/// 书源管理：导入、筛选、启用与停用、多选批量操作、导出（source-management），校验（source-check）。
 class SourceListPage extends ConsumerStatefulWidget {
   const SourceListPage({super.key});
 
@@ -21,7 +22,8 @@ class SourceListPage extends ConsumerStatefulWidget {
 }
 
 class _SourceListPageState extends ConsumerState<SourceListPage> {
-  String _filter = '';
+  /// 子串筛选：校验结束时会被设成「失效」，所以是受控的（add-source-check 设计 D5）。
+  final _filter = TextEditingController();
 
   /// 分组筛选：null 是全部，空字符串是未分组（拆分组时丢掉了空的，不会和真的分组重名），其它是分组名。
   String? _group;
@@ -30,16 +32,24 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
   Set<String>? _selected;
 
   @override
+  void dispose() {
+    _filter.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final repository = ref.watch(sourceRepositoryProvider);
+    final check = ref.watch(sourceCheckProvider);
+    ref.listen(sourceCheckProvider, _onCheckChanged);
     final colors = AppColors.of(context);
-    final keyword = _filter.trim();
+    final keyword = _filter.text.trim();
     final group = _group;
     final groups = {for (final entry in repository.entries) ...entry.groups}.toList()..sort();
     final hasUngrouped = repository.entries.any((entry) => entry.groups.isEmpty);
     final entries = [
       for (final entry in repository.entries)
-        if ((keyword.isEmpty || entry.source.bookSourceName.contains(keyword) || entry.url.contains(keyword)) &&
+        if ((keyword.isEmpty || _matches(entry.source, keyword)) &&
             switch (group) {
               null => true,
               '' => entry.groups.isEmpty,
@@ -67,13 +77,14 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.page, 4, AppSpacing.page, AppSpacing.item),
             child: TextField(
+              controller: _filter,
               decoration: InputDecoration(
                 prefixIcon: Icon(LucideIcons.search, size: 18, color: colors.textSecondary),
-                hintText: '按名字或地址筛选',
+                hintText: '按名字、地址、分组筛选',
                 isDense: true,
                 border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(999)), borderSide: BorderSide.none),
               ),
-              onChanged: (value) => setState(() => _filter = value),
+              onChanged: (_) => setState(() {}),
             ),
           ),
           // 没有任何分组时不显示分组筛选
@@ -95,6 +106,7 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
               padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.item, AppSpacing.page, 4),
               child: Text('已启用 $enabled / 共 ${repository.entries.length}', style: TextStyle(color: colors.textSecondary, fontSize: 13)),
             ),
+          if (check.running) _checkProgress(check, colors),
           Expanded(
             child: repository.entries.isEmpty
                 ? Center(child: Text('还没有书源，点右上角导入', style: TextStyle(color: colors.textSecondary)))
@@ -141,14 +153,23 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
         onPressed: selected.isEmpty ? null : () => repository.setEnabled(selected, false),
       ),
       IconButton(
-        tooltip: '导出',
-        icon: const Icon(LucideIcons.share),
-        onPressed: selected.isEmpty ? null : () => _export(repository, selected),
-      ),
-      IconButton(
         tooltip: '删除',
         icon: const Icon(LucideIcons.trash2),
         onPressed: selected.isEmpty ? null : () => _delete(repository, selected),
+      ),
+      // 不常用的收进「更多」，标题「已选 N 个」才放得下
+      PopupMenuButton<_MoreAction>(
+        tooltip: '更多',
+        icon: const Icon(LucideIcons.ellipsisVertical),
+        enabled: selected.isNotEmpty,
+        onSelected: (action) => switch (action) {
+          _MoreAction.check => _check(repository, selected),
+          _MoreAction.export => _export(repository, selected),
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: _MoreAction.check, child: Text('校验')),
+          PopupMenuItem(value: _MoreAction.export, child: Text('导出')),
+        ],
       ),
     ],
   );
@@ -218,10 +239,57 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
     setState(() => _selected = null);
   }
 
+  /// 子串筛选匹配名字、地址、分组原文和注释，和 Legado 的书源搜索一致（source-management「书源列表」）。
+  static bool _matches(BookSource source, String keyword) => [
+    source.bookSourceName,
+    source.bookSourceUrl,
+    source.json['bookSourceGroup'],
+    source.json['bookSourceComment'],
+  ].any((field) => field is String && field.contains(keyword));
+
+  Widget _checkProgress(SourceCheckState check, AppColors colors) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('校验中 ${check.done} / ${check.total}', style: TextStyle(color: colors.textSecondary, fontSize: 13)),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(value: check.done / check.total),
+            ],
+          ),
+        ),
+        TextButton(onPressed: () => ref.read(sourceCheckProvider.notifier).stop(), child: const Text('停止')),
+      ],
+    ),
+  );
+
+  /// 校验选中的书源（source-check「发起校验」）：先确认关键词，开始后退出多选。
+  Future<void> _check(SourceRepository repository, Set<String> selected) async {
+    if (ref.read(sourceCheckProvider).running) return _snack('正在校验，等完成后再试');
+    final keyword = await showInputDialog(context, title: '校验书源', hint: '搜索用的关键词', initial: '我的');
+    if (keyword == null || keyword.trim().isEmpty || !mounted) return;
+    final sources = [for (final entry in repository.entries) if (selected.contains(entry.url)) entry.source];
+    ref.read(sourceCheckProvider.notifier).start(sources, keyword.trim());
+    setState(() => _selected = null);
+  }
+
+  /// 校验结束时有失效的书源、筛选框是空的，就筛出失效书源（Legado 的做法，设计 D5）。
+  void _onCheckChanged(SourceCheckState? previous, SourceCheckState next) {
+    if (previous?.running != true || next.running || next.invalid == 0 || _filter.text.trim().isNotEmpty) return;
+    setState(() => _filter.text = '失效');
+    _snack('发现有失效书源，已为您自动筛选');
+  }
+
   void _snack(String message) {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }
+
+/// 多选栏「更多」菜单里的操作。
+enum _MoreAction { check, export }
 
 const _typeLabels = {
   BookSourceType.audio: '音频',

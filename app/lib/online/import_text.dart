@@ -48,10 +48,10 @@ Future<String?> readImportText(BuildContext context, ImportFrom from, {required 
     case ImportFrom.file:
       return _pickFile(kind);
     case ImportFrom.url:
-      final url = await _askInput(context, title: '从网址导入', hint: 'https://…', maxLines: 1);
+      final url = await showInputDialog(context, title: '从网址导入', hint: 'https://…', maxLines: 1);
       return url == null ? null : downloadText(url);
     case ImportFrom.text:
-      return _askInput(context, title: '粘贴$kind JSON', hint: hint, maxLines: 8);
+      return showInputDialog(context, title: '粘贴$kind JSON', hint: hint, maxLines: 8);
   }
 }
 
@@ -97,48 +97,4 @@ Future<String?> _pickFile(String kind) async {
   if (file == null) return null;
   // 自己按 UTF-8 解码（和从网址导入一致）：Android 上的 XFile 是内存里的字节，它的 readAsString 不认编码，按 Latin-1 解出来中文是乱码
   return utf8.decode(await file.readAsBytes(), allowMalformed: true);
-}
-
-Future<String?> _askInput(BuildContext context, {required String title, required String hint, required int maxLines}) =>
-    showDialog<String>(
-      context: context,
-      builder: (_) => _InputDialog(title: title, hint: hint, maxLines: maxLines),
-    );
-
-/// 输入网址或文本的对话框，确定时把输入的文本作为结果返回。
-class _InputDialog extends StatefulWidget {
-  const _InputDialog({required this.title, required this.hint, required this.maxLines});
-
-  final String title;
-  final String hint;
-  final int maxLines;
-
-  @override
-  State<_InputDialog> createState() => _InputDialogState();
-}
-
-class _InputDialogState extends State<_InputDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AppDialog(
-    title: widget.title,
-    content: TextField(
-      controller: _controller,
-      autofocus: true,
-      minLines: widget.maxLines,
-      maxLines: widget.maxLines,
-      decoration: InputDecoration(hintText: widget.hint),
-    ),
-    actions: [
-      FillButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-      FilledButton(onPressed: () => Navigator.pop(context, _controller.text), child: const Text('确定')),
-    ],
-  );
 }

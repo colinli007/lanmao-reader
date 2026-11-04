@@ -45,8 +45,9 @@ final class FakeEngine implements SourceEngine {
   }
 
   @override
-  Future<Book> bookInfo(BookSource source, Book book) {
+  Future<Book> bookInfo(BookSource source, Book book, {Batch? batch}) {
     calls.add('info ${book.bookUrl}');
+    if (batch != null) batches.add(batch);
     return onBookInfo!(source, book);
   }
 
@@ -58,8 +59,9 @@ final class FakeEngine implements SourceEngine {
   }
 
   @override
-  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) {
+  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl, Batch? batch}) {
     calls.add('content ${chapter.url}');
+    if (batch != null) batches.add(batch);
     return onContent!(source, book, chapter, nextChapterUrl);
   }
 

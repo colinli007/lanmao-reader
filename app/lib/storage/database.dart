@@ -168,6 +168,10 @@ class AppDatabase extends _$AppDatabase {
     });
   });
 
+  /// 只改书源的 JSON，位置和启用状态不变（书源校验写回标记，add-source-check 设计 D2）。
+  Future<void> updateSourceJson(String url, String json) =>
+      (update(sources)..where((s) => s.url.equals(url))).write(SourcesCompanion(json: Value(json)));
+
   Future<void> setSourcesEnabled(Iterable<String> urls, bool enabled) =>
       (update(sources)..where((s) => s.url.isIn(urls))).write(SourcesCompanion(enabled: Value(enabled)));
 

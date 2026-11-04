@@ -161,6 +161,56 @@ class SkippedList extends StatelessWidget {
   }
 }
 
+/// 输入一段文字的对话框：确定时返回输入的文字，取消时为 null。[initial] 是输入框里预先填好的内容。
+Future<String?> showInputDialog(
+  BuildContext context, {
+  required String title,
+  required String hint,
+  int maxLines = 1,
+  String initial = '',
+}) => showDialog<String>(
+  context: context,
+  builder: (_) => _InputDialog(title: title, hint: hint, maxLines: maxLines, initial: initial),
+);
+
+class _InputDialog extends StatefulWidget {
+  const _InputDialog({required this.title, required this.hint, required this.maxLines, required this.initial});
+
+  final String title;
+  final String hint;
+  final int maxLines;
+  final String initial;
+
+  @override
+  State<_InputDialog> createState() => _InputDialogState();
+}
+
+class _InputDialogState extends State<_InputDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AppDialog(
+    title: widget.title,
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      minLines: widget.maxLines,
+      maxLines: widget.maxLines,
+      decoration: InputDecoration(hintText: widget.hint),
+    ),
+    actions: [
+      FillButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+      FilledButton(onPressed: () => Navigator.pop(context, _controller.text), child: const Text('确定')),
+    ],
+  );
+}
+
 /// 提示弹框：只有一个「知道了」。
 Future<void> showMessageDialog(BuildContext context, {required String title, required String message}) => showDialog<void>(
   context: context,

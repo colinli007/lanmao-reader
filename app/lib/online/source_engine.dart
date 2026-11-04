@@ -10,12 +10,12 @@ abstract interface class SourceEngine {
   /// 批量任务，经限流器提交。
   Future<List<SearchBook>> search(BookSource source, String key, Batch batch);
 
-  Future<Book> bookInfo(BookSource source, Book book);
+  /// 详情、目录、正文：[batch] 不为空时是批量任务（书架更新、书源校验），经限流器提交。
+  Future<Book> bookInfo(BookSource source, Book book, {Batch? batch});
 
-  /// [batch] 不为空时是批量任务（书架更新），经限流器提交。
   Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch});
 
-  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl});
+  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl, Batch? batch});
 
   /// 执行一条正则替换规则，超过规则的超时时间时抛出 [TaskTimeoutException]（add-replace-rules 设计 D2、D5）。
   Future<String> replace(String input, ReplaceRule rule);
@@ -90,16 +90,18 @@ final class PoolSourceEngine implements SourceEngine {
   }
 
   @override
-  Future<Book> bookInfo(BookSource source, Book book) => _pool.run(bookInfoTask(source, book));
+  Future<Book> bookInfo(BookSource source, Book book, {Batch? batch}) => _submit(bookInfoTask(source, book), batch);
 
   @override
-  Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch}) => batch == null
-      ? _pool.run(chapterListTask(source, book))
-      : _limiter.run(batch, (token) => _pool.run(chapterListTask(source, book), cancelToken: token));
+  Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch}) => _submit(chapterListTask(source, book), batch);
 
   @override
-  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
-      _pool.run(contentTask(source, book, chapter, nextChapterUrl: nextChapterUrl));
+  Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl, Batch? batch}) =>
+      _submit(contentTask(source, book, chapter, nextChapterUrl: nextChapterUrl), batch);
+
+  /// 交互任务直接提交；批量任务经限流器，随批次取消。
+  Future<R> _submit<R>(R Function() task, Batch? batch) =>
+      batch == null ? _pool.run(task) : _limiter.run(batch, (token) => _pool.run(task, cancelToken: token));
 
   @override
   Future<String> replace(String input, ReplaceRule rule) =>

@@ -25,6 +25,10 @@ sealed class RuleEngineException implements Exception {
 final class RuleException extends RuleEngineException {
   RuleException(super.message, {super.sourceName, super.field});
 
+  /// 目录链路取到 0 章、正文链路取到空内容时的消息；书源校验据此区分「目录失效」「正文失效」。
+  static const String tocEmpty = '目录为空';
+  static const String contentEmpty = '正文为空';
+
   @override
   String get _kind => '规则错误';
 }

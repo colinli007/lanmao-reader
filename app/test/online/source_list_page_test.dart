@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanmao_reader/online/source_list_page.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';
 
@@ -77,6 +79,13 @@ void main() {
     expect(services.repository['https://a.com']!.enabled, isFalse);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
+
+  Future<void> tapMore(WidgetTester tester, String action) async {
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(action));
+    await tester.pumpAndSettle();
+  }
 
   testWidgets('列表按首次导入顺序，标出非文本类型，按名字或地址筛选', (tester) async {
     await services.addSources([source('https://x.com', name: '笔趣阁'), source('https://y.com', name: '起点', type: 2)]);
@@ -164,6 +173,82 @@ void main() {
     await tester.tap(find.text('删除').last);
     await tester.pumpAndSettle();
     expect([for (final e in services.repository.entries) e.url], ['https://a.com']);
+  });
+
+  testWidgets('子串筛选也匹配分组原文和注释', (tester) async {
+    await services.addSources([
+      {...source('https://a.com', name: '书源甲', group: '常用'), 'bookSourceComment': '作者：张三'},
+      source('https://b.com', name: '书源乙'),
+    ]);
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    await tester.enterText(find.byType(TextField), '常用');
+    await tester.pump();
+    expect(titles(tester), ['书源甲']);
+    await tester.enterText(find.byType(TextField), '张三');
+    await tester.pump();
+    expect(titles(tester), ['书源甲']);
+  });
+
+  testWidgets('多选后校验：确认关键词，显示进度，进行中再发起被拒绝，结束时自动筛出失效书源', (tester) async {
+    await services.addSources([
+      source('https://a.com', name: '书源甲'),
+      {...source('https://b.com', name: '书源乙'), 'searchUrl': '/s'},
+      {...source('https://c.com', name: '书源丙'), 'searchUrl': '/s'},
+    ]);
+    final pending = <String, Completer<List<SearchBook>>>{};
+    final keys = <String>[];
+    services.engine.onSearch = (source, key) {
+      keys.add(key);
+      return (pending[source.bookSourceUrl] = Completer()).future;
+    };
+    await tester.pumpWidget(services.app(const SourceListPage()));
+    await tester.longPress(find.text('书源甲'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('全选'));
+    await tester.pump();
+    await tapMore(tester, '校验');
+    expect(find.widgetWithText(TextField, '我的'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '斗破');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    expect(keys, ['斗破', '斗破']);
+    // 书源甲没有搜索地址，直接标记，不发请求
+    expect(find.text('校验中 1 / 3'), findsOneWidget);
+    expect(find.text('停止'), findsOneWidget);
+
+    await tester.longPress(find.text('书源乙'));
+    await tester.pump();
+    await tapMore(tester, '校验');
+    expect(find.text('正在校验，等完成后再试'), findsOneWidget);
+    await tester.tap(find.byTooltip('退出多选'));
+    // 等这条提示显示完再消失，后面的提示才会显示
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    pending['https://b.com']!.complete(const []);
+    pending['https://c.com']!.complete([
+      SearchBook(bookUrl: 'https://c.com/b', origin: 'https://c.com', originName: '书源丙')..name = '书',
+    ]);
+    services.engine
+      ..onBookInfo = ((source, book) async => book)
+      ..onChapterList = ((source, book) async => (
+        book: book,
+        chapters: [
+          BookChapter(bookUrl: book.bookUrl, baseUrl: book.bookUrl)
+            ..title = '第一章'
+            ..url = '/1',
+        ],
+      ))
+      ..onContent = ((source, book, chapter, next) async => ChapterContent('正文', title: chapter.title));
+    await tester.pumpAndSettle();
+    expect(find.text('发现有失效书源，已为您自动筛选'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '失效'), findsOneWidget);
+    // 和 Legado 一样，「搜索链接规则为空」不带「失效」，筛选「失效」时看不到
+    expect(titles(tester), ['书源乙']);
+    expect(services.repository['https://a.com']!.source.json['bookSourceGroup'], '搜索链接规则为空');
+    expect(services.repository['https://b.com']!.source.json['bookSourceGroup'], '搜索失效');
+    expect(services.repository['https://c.com']!.source.json['bookSourceGroup'], isNull);
   });
 
   testWidgets('导出：原始内容，enabled 是当前状态；没选中时导出全部', (tester) async {

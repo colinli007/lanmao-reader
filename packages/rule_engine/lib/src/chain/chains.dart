@@ -322,7 +322,7 @@ List<BookChapter> _analyzeChapterList(
       chapters.addAll(pageData.chapters);
     }
   }
-  if (chapters.isEmpty) throw RuleException('目录为空', field: rules.field('chapterList'));
+  if (chapters.isEmpty) throw RuleException(RuleException.tocEmpty, field: rules.field('chapterList'));
 
   // 没有 - 时：倒过来去重再倒回来，重复的保留最后一次；有 - 时：去重后整体倒序。
   // 书籍设置了目录倒序（JS 的 book.setReverseToc）时不再倒回来
@@ -521,7 +521,7 @@ ChapterContent _analyzeContent(
     content = task.inField(rules.field('replaceRegex'), () => analyzeRule.getString(replaceRegex, content: content));
     content = content.split('\n').map((line) => '$paragraphIndent$line').join('\n');
   }
-  if (!chapter.isVolume && content.trim().isEmpty) throw RuleException('正文为空', field: rules.field('content'));
+  if (!chapter.isVolume && content.trim().isEmpty) throw RuleException(RuleException.contentEmpty, field: rules.field('content'));
   return ChapterContent(content, title: title, reviewImg: reviewImg);
 }
 
