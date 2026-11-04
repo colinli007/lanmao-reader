@@ -65,7 +65,7 @@ void main() {
     await tester.pumpWidget(services.app(const SourceListPage()));
     await pasteImport(tester, 'hello');
     expect(find.text('无法导入'), findsOneWidget);
-    expect(find.textContaining('不是书源 JSON'), findsOneWidget);
+    expect(find.text('不是书源。内容开头：hello'), findsOneWidget);
     expect(services.repository.entries, isEmpty);
   });
 

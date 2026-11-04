@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:rule_engine/rule_engine.dart' show defaultUserAgent;
 
 import '../ui/icons.dart';
 import '../ui/widgets.dart';
@@ -58,11 +59,20 @@ Future<String?> readImportText(BuildContext context, ImportFrom from, {required 
 Future<void> showImportError(BuildContext context, ImportException error) =>
     showMessageDialog(context, title: '无法导入', message: error.reason);
 
+/// 网址末尾的这个标记表示请求不带 User-Agent（Legado 的导入写法）。
+const String _withoutUserAgentMark = '#requestWithoutUA';
+
 /// 下载网址上的文本：主 isolate 上直接请求，不走引擎、不带 Cookie；按 UTF-8 解码（书源和规则 JSON 都是 UTF-8）。
+/// User-Agent 和书源请求的默认值相同，网址以 [_withoutUserAgentMark] 结尾时去掉标记、不带 User-Agent（improve-source-import 设计 D4）。
 Future<String> downloadText(String url) async {
-  final uri = Uri.tryParse(url.trim());
+  var address = url.trim();
+  final withoutUserAgent = address.endsWith(_withoutUserAgentMark);
+  if (withoutUserAgent) address = address.substring(0, address.length - _withoutUserAgentMark.length);
+  final uri = Uri.tryParse(address);
   if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) throw const ImportException('不是有效的网址');
-  final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+  final client = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 15)
+    ..userAgent = withoutUserAgent ? null : defaultUserAgent;
   try {
     final response = await (await client.getUrl(uri)).close().timeout(const Duration(seconds: 30));
     final bytes = await response.fold<List<int>>([], (all, chunk) => all..addAll(chunk)).timeout(const Duration(seconds: 30));

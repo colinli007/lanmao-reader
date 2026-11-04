@@ -104,15 +104,22 @@ final class BookSource {
 /// 被跳过的条目：在输入数组里的下标和原因。
 typedef SkippedSource = ({int index, String reason});
 
-/// 载入结果：可用的书源和被跳过的条目。
+/// 订阅源条目（有 `sourceUrl`、没有 `bookSourceUrl`）被跳过的原因，导入时据此判断内容是不是整份订阅源。
+const String rssSourceSkipReason = '是订阅源，不是书源';
+
+/// 载入结果：可用的书源和被跳过的条目；内容是 Legado 的网址列表时，只有 [sourceUrls]。
 final class BookSourceLoadResult {
-  const BookSourceLoadResult(this.sources, this.skipped);
+  const BookSourceLoadResult(this.sources, this.skipped, {this.sourceUrls = const []});
 
   final List<BookSource> sources;
   final List<SkippedSource> skipped;
+
+  /// `{"sourceUrls": [...]}` 里的网址，书源要从这些网址下载（Legado 的导入写法）。
+  final List<String> sourceUrls;
 }
 
-/// 载入书源 JSON：单个书源对象或书源数组。不是 JSON 对象的条目、没有书源地址的条目被跳过并报告原因。
+/// 载入书源 JSON：单个书源对象、书源数组，或网址列表 `{"sourceUrls": [...]}`。
+/// 不是 JSON 对象的条目、没有书源地址的条目被跳过并报告原因。
 /// 整个输入不是合法 JSON，或者顶层既不是对象也不是数组时，抛出 [FormatException]。
 BookSourceLoadResult loadBookSources(String text) {
   // 去掉 UTF-8 BOM；MD3 用 Gson 宽松模式解析，严格解析失败时再按宽松语法解析
@@ -122,6 +129,10 @@ BookSourceLoadResult loadBookSources(String text) {
     root = jsonDecode(content);
   } on FormatException {
     root = parseLenientJson(content);
+  }
+  // 和 Legado 的顺序一致：先认网址列表，认不到再当单个书源
+  if (root case {'sourceUrls': final List<Object?> urls}) {
+    return BookSourceLoadResult(const [], const [], sourceUrls: [...urls.whereType<String>()]);
   }
   final entries = switch (root) {
     List<Object?>() => root,
@@ -136,6 +147,8 @@ BookSourceLoadResult loadBookSources(String text) {
       skipped.add((index: index, reason: '不是 JSON 对象'));
     } else if (entry['bookSourceUrl'] case final String url when url.trim().isNotEmpty) {
       sources.add(BookSource._(entry));
+    } else if (entry.containsKey('sourceUrl')) {
+      skipped.add((index: index, reason: rssSourceSkipReason));
     } else {
       skipped.add((index: index, reason: '缺少书源地址'));
     }

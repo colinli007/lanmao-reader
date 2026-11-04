@@ -180,7 +180,8 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
     try {
       final text = await readImportText(context, from, kind: '书源', hint: '单个书源对象或书源数组');
       if (text == null || !mounted) return;
-      final preview = previewImport(text, repository);
+      final preview = await previewImport(text, repository);
+      if (!mounted) return;
       if (!await _confirm(preview)) return;
       await repository.import(preview.sources);
       _snack('已导入 ${preview.sources.length} 个书源');
@@ -193,9 +194,7 @@ class _SourceListPageState extends ConsumerState<SourceListPage> {
     context,
     title: '导入书源',
     message: '新增 ${preview.added} 个，更新 ${preview.updated} 个，跳过 ${preview.skipped.length} 个',
-    content: preview.skipped.isEmpty
-        ? null
-        : SkippedList([for (final skipped in preview.skipped) '第 ${skipped.index + 1} 项：${skipped.reason}']),
+    content: preview.skipped.isEmpty ? null : SkippedList(preview.skipped),
     confirmLabel: '导入',
     confirmEnabled: preview.sources.isNotEmpty,
   );

@@ -91,6 +91,29 @@ void main() {
     ]);
   });
 
+  test('混入订阅源：原因是订阅源', () {
+    final result = loadBookSources(
+      jsonEncode([
+        source('https://a.com'),
+        {'sourceUrl': 'https://rss.com', 'sourceName': '订阅'},
+      ]),
+    );
+    expect(result.sources, hasLength(1));
+    expect(result.skipped, [(index: 1, reason: rssSourceSkipReason)]);
+  });
+
+  test('网址列表：只带回网址，不载入书源；同时有书源地址也按网址列表处理', () {
+    final result = loadBookSources(
+      jsonEncode({
+        'bookSourceUrl': 'https://a.com',
+        'sourceUrls': ['https://a.com/1.json', 'https://a.com/2.json', 3],
+      }),
+    );
+    expect(result.sources, isEmpty);
+    expect(result.skipped, isEmpty);
+    expect(result.sourceUrls, ['https://a.com/1.json', 'https://a.com/2.json']);
+  });
+
   test('不是合法 JSON 时报错', () {
     expect(() => loadBookSources('[{'), throwsFormatException);
     expect(() => loadBookSources('"x"'), throwsFormatException);

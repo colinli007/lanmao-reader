@@ -21,6 +21,7 @@ export 'src/core/errors.dart';
 export 'src/host/cookie_store.dart' show CookieStore;
 export 'src/host/rule_host.dart';
 export 'src/host/source_store.dart' show MemorySourceStore, SourceStore, runStoreRequest;
+export 'src/request/analyze_url.dart' show defaultUserAgent;
 export 'src/source/book_source.dart';
 export 'src/source/replace_rule.dart';
 export 'src/worker/tasks.dart';
