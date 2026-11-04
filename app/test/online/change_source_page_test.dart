@@ -100,6 +100,7 @@ void main() {
     expect(find.text('书源乙'), findsOneWidget);
     expect(find.text('书源丙'), findsNothing);
     expect(find.text('搜索结束，共 2 个候选'), findsOneWidget);
+    expect(await services.db.select(services.db.searchKeywords).get(), isEmpty, reason: '换书源按书名搜，不记入搜索历史');
   });
 
   testWidgets('当前书源和已在书架的不能选', (tester) async {

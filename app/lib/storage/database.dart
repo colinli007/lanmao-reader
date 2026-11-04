@@ -122,13 +122,24 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// 搜索历史：关键词、使用次数、最后使用时间，和 Legado 的 `search_keywords` 相同（add-search-history 设计 D1）。
+@DataClassName('SearchKeywordRow')
+class SearchKeywords extends Table {
+  TextColumn get word => text()();
+  IntColumn get usage => integer()();
+  DateTimeColumn get lastUsed => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {word};
+}
+
 /// 书架上的一本书和它的未读章节数（排在当前章节之后的非卷章节数）。
 typedef ShelfEntry = ({ShelfBook book, int unread});
 
 /// 已缓存正文的章节数和正文的 UTF-8 字节数。
 typedef ContentCacheStats = ({int chapters, int bytes});
 
-@DriftDatabase(tables: [Sources, ReplaceRules, Books, Chapters, Contents, SourceKv, Cookies, Settings])
+@DriftDatabase(tables: [Sources, ReplaceRules, Books, Chapters, Contents, SourceKv, Cookies, Settings, SearchKeywords])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
@@ -138,13 +149,14 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
-  /// 2：新增 replace_rules（add-replace-rules）。
+  /// 2：新增 replace_rules（add-replace-rules）；3：新增 search_keywords（add-search-history）。
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.createTable(replaceRules);
+      if (from < 3) await m.createTable(searchKeywords);
     },
   );
 
@@ -374,4 +386,31 @@ class AppDatabase extends _$AppDatabase {
   Future<Map<String, String>> loadSettings() async => {for (final row in await select(settings).get()) row.key: row.value};
 
   Future<void> putSetting(String key, String value) => into(settings).insertOnConflictUpdate(SettingRow(key: key, value: value));
+
+  // ---------------------------------------------------------------- 搜索历史
+
+  /// 记下一次搜索：已有的次数加一，没有的新加一条（book-search「搜索历史」）。
+  Future<void> useSearchKeyword(String word, DateTime now) => into(searchKeywords).insert(
+    SearchKeywordRow(word: word, usage: 1, lastUsed: now),
+    onConflict: DoUpdate((old) => SearchKeywordsCompanion.custom(usage: old.usage + const Constant(1), lastUsed: Variable(now))),
+  );
+
+  /// [filter] 为空时是全部历史，最近用过的在前；不为空时是包含它的历史，用得多的在前（Legado 的 `flowByTime`、`flowSearch`）。
+  Stream<List<String>> watchSearchKeywords(String filter) {
+    final query = select(searchKeywords);
+    if (filter.isEmpty) {
+      query.orderBy([(k) => OrderingTerm.desc(k.lastUsed)]);
+    } else {
+      // 按字面包含：转义 LIKE 的通配符
+      final literal = filter.replaceAllMapped(RegExp(r'[\\%_]'), (m) => '\\${m[0]}');
+      query
+        ..where((k) => k.word.like('%$literal%', escapeChar: r'\'))
+        ..orderBy([(k) => OrderingTerm.desc(k.usage), (k) => OrderingTerm.desc(k.lastUsed)]);
+    }
+    return query.watch().map((rows) => [for (final row in rows) row.word]);
+  }
+
+  Future<void> deleteSearchKeyword(String word) => (delete(searchKeywords)..where((k) => k.word.equals(word))).go();
+
+  Future<void> clearSearchKeywords() => delete(searchKeywords).go();
 }

@@ -3160,6 +3160,269 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $SearchKeywordsTable extends SearchKeywords
+    with TableInfo<$SearchKeywordsTable, SearchKeywordRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SearchKeywordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _wordMeta = const VerificationMeta('word');
+  @override
+  late final GeneratedColumn<String> word = GeneratedColumn<String>(
+    'word',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usageMeta = const VerificationMeta('usage');
+  @override
+  late final GeneratedColumn<int> usage = GeneratedColumn<int>(
+    'usage',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastUsedMeta = const VerificationMeta(
+    'lastUsed',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUsed = GeneratedColumn<DateTime>(
+    'last_used',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [word, usage, lastUsed];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'search_keywords';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SearchKeywordRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('word')) {
+      context.handle(
+        _wordMeta,
+        word.isAcceptableOrUnknown(data['word']!, _wordMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_wordMeta);
+    }
+    if (data.containsKey('usage')) {
+      context.handle(
+        _usageMeta,
+        usage.isAcceptableOrUnknown(data['usage']!, _usageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usageMeta);
+    }
+    if (data.containsKey('last_used')) {
+      context.handle(
+        _lastUsedMeta,
+        lastUsed.isAcceptableOrUnknown(data['last_used']!, _lastUsedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lastUsedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {word};
+  @override
+  SearchKeywordRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SearchKeywordRow(
+      word: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}word'],
+      )!,
+      usage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}usage'],
+      )!,
+      lastUsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_used'],
+      )!,
+    );
+  }
+
+  @override
+  $SearchKeywordsTable createAlias(String alias) {
+    return $SearchKeywordsTable(attachedDatabase, alias);
+  }
+}
+
+class SearchKeywordRow extends DataClass
+    implements Insertable<SearchKeywordRow> {
+  final String word;
+  final int usage;
+  final DateTime lastUsed;
+  const SearchKeywordRow({
+    required this.word,
+    required this.usage,
+    required this.lastUsed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['word'] = Variable<String>(word);
+    map['usage'] = Variable<int>(usage);
+    map['last_used'] = Variable<DateTime>(lastUsed);
+    return map;
+  }
+
+  SearchKeywordsCompanion toCompanion(bool nullToAbsent) {
+    return SearchKeywordsCompanion(
+      word: Value(word),
+      usage: Value(usage),
+      lastUsed: Value(lastUsed),
+    );
+  }
+
+  factory SearchKeywordRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SearchKeywordRow(
+      word: serializer.fromJson<String>(json['word']),
+      usage: serializer.fromJson<int>(json['usage']),
+      lastUsed: serializer.fromJson<DateTime>(json['lastUsed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'word': serializer.toJson<String>(word),
+      'usage': serializer.toJson<int>(usage),
+      'lastUsed': serializer.toJson<DateTime>(lastUsed),
+    };
+  }
+
+  SearchKeywordRow copyWith({String? word, int? usage, DateTime? lastUsed}) =>
+      SearchKeywordRow(
+        word: word ?? this.word,
+        usage: usage ?? this.usage,
+        lastUsed: lastUsed ?? this.lastUsed,
+      );
+  SearchKeywordRow copyWithCompanion(SearchKeywordsCompanion data) {
+    return SearchKeywordRow(
+      word: data.word.present ? data.word.value : this.word,
+      usage: data.usage.present ? data.usage.value : this.usage,
+      lastUsed: data.lastUsed.present ? data.lastUsed.value : this.lastUsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SearchKeywordRow(')
+          ..write('word: $word, ')
+          ..write('usage: $usage, ')
+          ..write('lastUsed: $lastUsed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(word, usage, lastUsed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchKeywordRow &&
+          other.word == this.word &&
+          other.usage == this.usage &&
+          other.lastUsed == this.lastUsed);
+}
+
+class SearchKeywordsCompanion extends UpdateCompanion<SearchKeywordRow> {
+  final Value<String> word;
+  final Value<int> usage;
+  final Value<DateTime> lastUsed;
+  final Value<int> rowid;
+  const SearchKeywordsCompanion({
+    this.word = const Value.absent(),
+    this.usage = const Value.absent(),
+    this.lastUsed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SearchKeywordsCompanion.insert({
+    required String word,
+    required int usage,
+    required DateTime lastUsed,
+    this.rowid = const Value.absent(),
+  }) : word = Value(word),
+       usage = Value(usage),
+       lastUsed = Value(lastUsed);
+  static Insertable<SearchKeywordRow> custom({
+    Expression<String>? word,
+    Expression<int>? usage,
+    Expression<DateTime>? lastUsed,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (word != null) 'word': word,
+      if (usage != null) 'usage': usage,
+      if (lastUsed != null) 'last_used': lastUsed,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SearchKeywordsCompanion copyWith({
+    Value<String>? word,
+    Value<int>? usage,
+    Value<DateTime>? lastUsed,
+    Value<int>? rowid,
+  }) {
+    return SearchKeywordsCompanion(
+      word: word ?? this.word,
+      usage: usage ?? this.usage,
+      lastUsed: lastUsed ?? this.lastUsed,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (word.present) {
+      map['word'] = Variable<String>(word.value);
+    }
+    if (usage.present) {
+      map['usage'] = Variable<int>(usage.value);
+    }
+    if (lastUsed.present) {
+      map['last_used'] = Variable<DateTime>(lastUsed.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SearchKeywordsCompanion(')
+          ..write('word: $word, ')
+          ..write('usage: $usage, ')
+          ..write('lastUsed: $lastUsed, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3171,6 +3434,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SourceKvTable sourceKv = $SourceKvTable(this);
   late final $CookiesTable cookies = $CookiesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $SearchKeywordsTable searchKeywords = $SearchKeywordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3184,6 +3448,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     sourceKv,
     cookies,
     settings,
+    searchKeywords,
   ];
 }
 
@@ -4857,6 +5122,174 @@ typedef $$SettingsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$SearchKeywordsTableCreateCompanionBuilder =
+    SearchKeywordsCompanion Function({
+      required String word,
+      required int usage,
+      required DateTime lastUsed,
+      Value<int> rowid,
+    });
+typedef $$SearchKeywordsTableUpdateCompanionBuilder =
+    SearchKeywordsCompanion Function({
+      Value<String> word,
+      Value<int> usage,
+      Value<DateTime> lastUsed,
+      Value<int> rowid,
+    });
+
+class $$SearchKeywordsTableFilterComposer
+    extends Composer<_$AppDatabase, $SearchKeywordsTable> {
+  $$SearchKeywordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get word => $composableBuilder(
+    column: $table.word,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get usage => $composableBuilder(
+    column: $table.usage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastUsed => $composableBuilder(
+    column: $table.lastUsed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SearchKeywordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SearchKeywordsTable> {
+  $$SearchKeywordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get word => $composableBuilder(
+    column: $table.word,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get usage => $composableBuilder(
+    column: $table.usage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastUsed => $composableBuilder(
+    column: $table.lastUsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SearchKeywordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SearchKeywordsTable> {
+  $$SearchKeywordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get word =>
+      $composableBuilder(column: $table.word, builder: (column) => column);
+
+  GeneratedColumn<int> get usage =>
+      $composableBuilder(column: $table.usage, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUsed =>
+      $composableBuilder(column: $table.lastUsed, builder: (column) => column);
+}
+
+class $$SearchKeywordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SearchKeywordsTable,
+          SearchKeywordRow,
+          $$SearchKeywordsTableFilterComposer,
+          $$SearchKeywordsTableOrderingComposer,
+          $$SearchKeywordsTableAnnotationComposer,
+          $$SearchKeywordsTableCreateCompanionBuilder,
+          $$SearchKeywordsTableUpdateCompanionBuilder,
+          (
+            SearchKeywordRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SearchKeywordsTable,
+              SearchKeywordRow
+            >,
+          ),
+          SearchKeywordRow,
+          PrefetchHooks Function()
+        > {
+  $$SearchKeywordsTableTableManager(
+    _$AppDatabase db,
+    $SearchKeywordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SearchKeywordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SearchKeywordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SearchKeywordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> word = const Value.absent(),
+                Value<int> usage = const Value.absent(),
+                Value<DateTime> lastUsed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SearchKeywordsCompanion(
+                word: word,
+                usage: usage,
+                lastUsed: lastUsed,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String word,
+                required int usage,
+                required DateTime lastUsed,
+                Value<int> rowid = const Value.absent(),
+              }) => SearchKeywordsCompanion.insert(
+                word: word,
+                usage: usage,
+                lastUsed: lastUsed,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SearchKeywordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SearchKeywordsTable,
+      SearchKeywordRow,
+      $$SearchKeywordsTableFilterComposer,
+      $$SearchKeywordsTableOrderingComposer,
+      $$SearchKeywordsTableAnnotationComposer,
+      $$SearchKeywordsTableCreateCompanionBuilder,
+      $$SearchKeywordsTableUpdateCompanionBuilder,
+      (
+        SearchKeywordRow,
+        BaseReferences<_$AppDatabase, $SearchKeywordsTable, SearchKeywordRow>,
+      ),
+      SearchKeywordRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4877,4 +5310,6 @@ class $AppDatabaseManager {
       $$CookiesTableTableManager(_db, _db.cookies);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$SearchKeywordsTableTableManager get searchKeywords =>
+      $$SearchKeywordsTableTableManager(_db, _db.searchKeywords);
 }

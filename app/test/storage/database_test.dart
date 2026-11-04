@@ -224,4 +224,48 @@ void main() {
     expect(await db.loadSettings(), {'k': '2'});
   });
 
+  test('搜索历史：次数和最后使用时间，空输入按时间、有输入按次数，按字面包含', () async {
+    final t = DateTime(2026);
+    await db.useSearchKeyword('三体', t);
+    await db.useSearchKeyword('三体前传', t.add(const Duration(minutes: 1)));
+    await db.useSearchKeyword('斗罗', t.add(const Duration(minutes: 2)));
+    await db.useSearchKeyword('三体前传', t.add(const Duration(minutes: 3)));
+    await db.useSearchKeyword('三体前传', t.add(const Duration(minutes: 4)));
+    await db.useSearchKeyword('50%_off', t.add(const Duration(minutes: 5)));
+    await db.useSearchKeyword('三体', t.add(const Duration(minutes: 6)));
+    expect(await db.watchSearchKeywords('').first, ['三体', '50%_off', '三体前传', '斗罗']);
+    expect(await db.watchSearchKeywords('三体').first, ['三体前传', '三体']);
+    expect(await db.watchSearchKeywords('%').first, ['50%_off']);
+    expect(await db.watchSearchKeywords('0_').first, isEmpty);
+    expect([for (final row in await db.select(db.searchKeywords).get()) (row.word, row.usage)], containsAll([('三体', 2), ('三体前传', 3)]));
+
+    await db.deleteSearchKeyword('斗罗');
+    expect(await db.watchSearchKeywords('').first, ['三体', '50%_off', '三体前传']);
+    await db.clearSearchKeywords();
+    expect(await db.watchSearchKeywords('').first, isEmpty);
+  });
+
+  test('从没有搜索历史的版本（v2）升级：原有数据都在，搜索历史为空、可以写入', () async {
+    final dir = Directory.systemTemp.createTempSync('db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = File('${dir.path}/app.sqlite');
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    var fileDb = AppDatabase(NativeDatabase(file));
+    await fileDb.importSources([(url: 's', json: '{}', enabled: true)]);
+    await fileDb.putReplaceRules([const ReplaceRuleRow(id: 1, json: '{}', enabled: true)]);
+    await fileDb.putSetting('k', 'v');
+    // 退回 v2 的样子：没有 search_keywords 表
+    await fileDb.customStatement('DROP TABLE search_keywords');
+    await fileDb.customStatement('PRAGMA user_version = 2');
+    await fileDb.close();
+
+    fileDb = AppDatabase(NativeDatabase(file));
+    addTearDown(fileDb.close);
+    expect((await fileDb.allSources()).single.url, 's');
+    expect(await fileDb.allReplaceRules(), hasLength(1));
+    expect(await fileDb.loadSettings(), {'k': 'v'});
+    expect(await fileDb.watchSearchKeywords('').first, isEmpty);
+    await fileDb.useSearchKeyword('三体', DateTime(2026));
+    expect(await fileDb.watchSearchKeywords('').first, ['三体']);
+  });
 }
