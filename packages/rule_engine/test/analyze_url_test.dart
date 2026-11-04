@@ -89,6 +89,14 @@ void main() {
       expect(build('/s,{"js":"null"}').url, 'https://a.com/s');
     });
 
+    test('URL 的 JS 里 java.url、java.ruleUrl 是当前地址和地址规则，赋值被忽略', () {
+      // Rhino 把 AnalyzeUrl 的 url、ruleUrl 当成属性；书源常写 java.ajax(java.url)、java.connect(java.ruleUrl)
+      expect(build('/s?q={{key}},{"js":"java.url + \'#u\'"}', key: 'k').url, 'https://a.com/s?q=k#u');
+      // ruleUrl 是替换过 {{}} 的地址规则，和 MD3 一样还带着选项
+      expect(build('/s?q={{key}},{"js":"java.ruleUrl.substring(0, 7)"}', key: 'k').url, '/s?q=k,');
+      expect(build('''/s,{"js":"java.url = 'x'; java.url"}''').url, 'https://a.com/s');
+    });
+
     test('bodyJs 选项留到拿到响应之后执行', () {
       final request = build('/s,{"bodyJs":"java.base64Decode(result)"}');
       expect(request.bodyJs, 'java.base64Decode(result)');

@@ -7,11 +7,15 @@
 ## Requirements
 
 ### Requirement: 三种 java 对象
-`java` SHALL 按进入点区分：规则里的 JS 拿到规则上下文对象，URL 里的 JS 和 `loginCheckJs` 拿到 URL 上下文对象，书源 `header` 的 JS 拿到书源对象。编码、摘要与加解密、时间、文本、日志和网络方法三种对象都有；回调规则方法（`getString`、`getStringList`、`getElement`、`getElements`、`setContent`）只在规则上下文；`getStrResponse`、`initUrl`、`headerMap` 只在 URL 上下文。调用当前对象上没有的方法 MUST 以 JS 错误结束。
+`java` SHALL 按进入点区分：规则里的 JS 拿到规则上下文对象，URL 里的 JS 和 `loginCheckJs` 拿到 URL 上下文对象，书源 `header` 的 JS 拿到书源对象。编码、摘要与加解密、时间、文本、日志和网络方法三种对象都有；回调规则方法（`getString`、`getStringList`、`getElement`、`getElements`、`setContent`）只在规则上下文；`getStrResponse`、`initUrl`、`headerMap` 只在 URL 上下文。URL 上下文对象还 SHALL 有只读属性 `url`（当前请求的地址）和 `ruleUrl`（替换过 `{{}}`、还带着选项的地址规则），对应 MD3 `AnalyzeUrl` 的公开属性，每次读取时取当前值，赋值被忽略。调用当前对象上没有的方法 MUST 以 JS 错误结束。
 
 #### Scenario: URL 里调用回调规则
 - **WHEN** 搜索地址里执行 `java.getString('tag.a@text')`
 - **THEN** 以 JS 错误结束
+
+#### Scenario: 选项 js 里读当前地址
+- **WHEN** 书源地址是 `https://a.com`，搜索地址是 `/s?q={{key}},{"js":"java.url + '#u'"}`，关键词是 `k`
+- **THEN** 请求的地址是 `https://a.com/s?q=k#u`
 
 ### Requirement: 变量读写
 规则上下文的 `java.put(键, 值)` SHALL 只写入第一个存在的对象：当前章节、当前书籍（搜索列表阶段是当前结果项）、本次链路的变量；三者都不存在时写入书源级变量。`java.get(键)` SHALL 按同样的顺序返回第一个非空值，都没有时返回空串；`bookName` 和 `title` 分别返回书名和章节名。规则里的 `@put`、`@get` 与 `java.put`、`java.get` 读写同一份数据。URL 上下文的 `put` SHALL 只写当前章节或本次链路的变量，两者都没有时丢弃；`get` 不读书源级变量。书源对象（书源 `header` 的 JS）上的 `put`、`get` 读写书源级变量。`java.put` 返回写入的值。`java.put` 的值是 null 时 MUST 以 JS 错误结束。

@@ -144,6 +144,10 @@ const String sourceJsPrelude = r'''
     hidden(headerMap, name, method('headerMap.' + name));
   });
   hidden(urlJava, 'headerMap', headerMap);
+  // AnalyzeUrl 的公开属性，Rhino 当成属性读：当前请求的地址、处理过的地址规则；只读，赋值被忽略
+  ['url', 'ruleUrl'].forEach(function (name) {
+    Object.defineProperty(urlJava, name, { get: method('urlJava.' + name), configurable: true });
+  });
 
   var cookie = {};
   ['getCookie', 'getKey', 'setCookie', 'replaceCookie', 'removeCookie', 'cookieToMap', 'mapToCookie']

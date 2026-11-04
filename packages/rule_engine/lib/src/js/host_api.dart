@@ -216,6 +216,8 @@ final Map<String, _Api> _networkApis = {
     _urlRequest(c).initUrl();
     return null;
   },
+  'urlJava.url': (c) => _urlRequest(c).url,
+  'urlJava.ruleUrl': (c) => _urlRequest(c).ruleUrl,
   'headerMap.put': (c) => _urlRequest(c).headers[c.str(0)] = c.str(1),
   'headerMap.get': (c) => _urlRequest(c).headers[c.str(0)],
   'headerMap.remove': (c) => _urlRequest(c).headers.remove(c.str(0)),

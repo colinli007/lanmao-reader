@@ -55,7 +55,7 @@
 - **THEN** 结果为 `undefined`
 
 ### Requirement: 书籍、章节和书源对象
-`book`、`chapter`、`source` SHALL 以对象形式提供 MD3 bean 的同名属性（如 `book.name`、`book.author`、`book.bookUrl`、`book.durChapterTitle`、`chapter.title`、`chapter.index`、`source.bookSourceUrl`、`source.bookSourceComment`）和下面「宿主 API」里列出的方法。给 `book` 的属性赋值 SHALL 写回书籍并随链路结果返回；给 `chapter`、`source` 的属性赋值 MUST 被忽略，属性值不变。
+`book`、`chapter`、`source` SHALL 以对象形式提供 MD3 bean 的同名属性（如 `book.name`、`book.author`、`book.bookUrl`、`book.durChapterTitle`、`chapter.title`、`chapter.index`、`source.bookSourceUrl`、`source.bookSourceComment`）和下面「宿主 API」里列出的方法。Rhino 把无参 getter 当成同名属性，所以 `source` 还 SHALL 有 `key`（书源地址，同 `getKey()`）和 `tag`（书源名，同 `getTag()`）。给 `book` 的属性赋值 SHALL 写回书籍并随链路结果返回；给 `chapter`、`source` 的属性赋值 MUST 被忽略，属性值不变。
 
 #### Scenario: 修改书名
 - **WHEN** 详情的简介规则里执行 `book.name = '新名'; result`
@@ -64,6 +64,10 @@
 #### Scenario: 章节只读
 - **WHEN** 目录项规则里执行 `chapter.title = 'x'; chapter.title`
 - **THEN** 结果是原来的章节名
+
+#### Scenario: 书源的 key 和 tag
+- **WHEN** 书源地址是 `https://www.a.com`、书源名是 `测试源`，搜索地址里执行 `source.key + source.tag`
+- **THEN** 结果是 `https://www.a.com测试源`
 
 ### Requirement: 值转换
 JS 返回值交给规则引擎时 SHALL 按下面的规则转换：字符串原样；`undefined` 和 null 为 null；布尔转 `true`/`false`；数组转列表，元素各自转换；普通对象转键值对象；元素包装对象转回对应的元素或元素列表。数字转字符串时，整数值输出不带小数点的整数（`2`），其余按 JS 的数字格式（`2.5`）。转字符串时 null 的去向取决于进入点：规则取字符串时为空串；URL 的 `{{}}` 为空串；URL 的 `@js:`、`<js>`、`bodyJs` 和书源 `header` 的 JS 为字符串 `null`；URL 选项 `js` 和 `formatJs` 返回 null 时保持原值不变。规则取字符串时，返回值是数组或对象则按 JS 的 `String()` 转换（数组为逗号连接，对象为 `[object Object]`）。规则取字符串列表时，返回字符串按换行切开，返回数组直接作为列表，其他类型为空列表。规则取元素列表时，返回数组作为元素列表，返回 null 为空列表，其他类型 MUST 以错误结束。

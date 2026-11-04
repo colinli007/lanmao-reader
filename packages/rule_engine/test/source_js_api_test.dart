@@ -303,6 +303,9 @@ void main() {
   group('书源对象的方法', () {
     test('键、名字、自定义变量', () {
       expect(js("source.getKey() + source.getTag()"), 'https://www.a.com测试源');
+      // Rhino 把 getKey()、getTag() 当成属性 key、tag，书源里常写 cookie.removeCookie(source.key)
+      expect(js("source.key + source.tag"), 'https://www.a.com测试源');
+      expect(js("source.key = 'x'; source.key"), 'https://www.a.com');
       expect(js("source.setVariable('v1'); source.getVariable()"), 'v1');
       expect(js("source.putVariable(null); source.getVariable()"), '');
     });

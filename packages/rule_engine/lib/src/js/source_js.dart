@@ -200,8 +200,13 @@ final class SourceJs {
 
   static Map<String, Object?> _sourceTag(SourceTask task) => {hostObjectTag: 'source', 'id': task.handles.add(task.source)};
 
-  /// 书源对象的字段：书源 JSON 的全部字段。
-  static Map<String, Object?> sourceFields(BookSource source) => source.json;
+  /// 书源对象的字段：书源 JSON 的全部字段，加上 MD3 `getKey()`、`getTag()` 对应的属性 `key`、`tag`
+  /// （Rhino 把无参 getter 当成同名属性，书源里常写 `source.key`；add-source-key-property）。
+  static Map<String, Object?> sourceFields(BookSource source) => {
+    ...source.json,
+    'key': source.bookSourceUrl,
+    'tag': source.bookSourceName,
+  };
 
   Object? _toJs(JsFrame frame, Object? value) => toJsValue(value, frame.task.handles, hostObject: (value) {
     return switch (value) {
