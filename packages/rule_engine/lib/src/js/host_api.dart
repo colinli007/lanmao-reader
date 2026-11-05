@@ -113,6 +113,7 @@ final Map<String, _Api> _apis = {
   ..._responseApis,
   ..._ruleApis,
   ..._elementApis,
+  ..._jsoupApis,
   ..._codecApis,
   ..._cryptoApis,
   ..._textApis,
@@ -352,6 +353,7 @@ final Map<String, _Api> _elementApis = {
   'el.text': (c) => jsoupText(c.element()),
   'el.ownText': (c) => jsoupOwnText(c.element()),
   'el.html': (c) => jsoupInnerHtml(c.element()),
+  'el.data': (c) => jsoupData(c.element()),
   'el.outerHtml': (c) => jsoupOuterHtml(c.element()),
   'el.attr': (c) => jsoupAttr(c.element(), c.str(1)),
   'el.hasAttr': (c) => _hasAttr(c.element(), c.str(1)),
@@ -366,6 +368,10 @@ final Map<String, _Api> _elementApis = {
     _ => null,
   },
   'el.parentNode': (c) => c.element().parentNode,
+  'el.remove': (c) {
+    c.element().remove();
+    return null;
+  },
   // jsoup Elements：text 用空格连接（跳过开头的空文本），html 用换行连接，attr 取第一个有这个属性的元素
   'els.text': (c) => _joinNonEmptyStart(c.elements().map(jsoupText), ' '),
   'els.html': (c) => _joinNonEmptyStart(c.elements().map(jsoupInnerHtml), '\n'),
@@ -393,8 +399,20 @@ final Map<String, _Api> _elementApis = {
     for (final element in c.elements())
       if (_hasAttr(element, c.str(1))) jsoupAttr(element, c.str(1)),
   ],
+  'els.remove': (c) {
+    for (final element in c.elements()) {
+      element.remove();
+    }
+    return null;
+  },
   'els.first': (c) => c.elements().firstOrNull,
   'els.last': (c) => c.elements().lastOrNull,
+};
+
+/// `org.jsoup.Jsoup`（source-js-api「Jsoup」）：解析成文档，用现有的 jsoup 兼容实现（add-rhino-compat 设计 D1）。
+final Map<String, _Api> _jsoupApis = {
+  'jsoup.parse': (c) => parseJsoupDocument(c.str(0), baseUri: c.optStr(1)),
+  'jsoup.parseBodyFragment': (c) => parseJsoupDocument(c.str(0)),
 };
 
 /// jsoup 的 StringBuilder 拼接：已有内容时才加分隔符，所以开头的空串不留下分隔符。
@@ -406,6 +424,11 @@ String _joinNonEmptyStart(Iterable<String> parts, String separator) {
   }
   return out.toString();
 }
+
+/// `getWebViewUA()`：MD3 返回系统 WebView 的 UA，我们没有 WebView，用一个固定的 Android WebView UA（add-rhino-compat 设计 D5）。
+const String webViewUserAgent =
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Version/4.0 Chrome/131.0.6778.135 Mobile Safari/537.36';
 
 /// jsoup 的 `Element.hasText`：有非空白的文本（`Elements.eachText` 只取这样的元素）。
 bool _hasText(Node node) => jsoupText(node).trim().isNotEmpty;
@@ -506,6 +529,7 @@ final Map<String, _Api> _textApis = {
   },
   'htmlFormat': (c) => formatKeepImg(c.str(0), null),
   'randomUUID': (c) => randomUuid(),
+  'getWebViewUA': (c) => webViewUserAgent,
 };
 
 // ---------------------------------------------------------------- 日志

@@ -35,23 +35,41 @@ struct QjsEngine {
 //
 // jsLib 的 Proxy：has / get 只认 jsLib 新增的全局名（和 Object.prototype 上的名字，与没有 jsLib 时一致），
 // set 把值定义到接收者（变量层）上，所以给 jsLib 的名字赋值只遮蔽、不修改。
+//
+// 宿主全局（setGlobals，如规则引擎的 Java 包对象）：定义在全局对象上，也放在 hostProto 上。变量层和 jsLib 的 Proxy
+// 都以 hostProto 为底，所以变量层的 this 上也能读到（Rhino 里作用域对象的原型链通到顶层作用域）；
+// jsLib 的 realm 执行之前，initLib 把它们复制到 jsLib 的全局对象上，jsLib 的代码也能直接用。
 static const char PRELUDE[] =
     "(function () {\n"
     "  'use strict';\n"
     "  var G = globalThis, ownKeys = Reflect.ownKeys, objectProto = Object.prototype;\n"
+    "  var hostProto = Object.create(objectProto);\n"
     "  var run = Function('with (arguments[0]) return eval(arguments[1]);');\n"
     "  var layers = new Map(), libs = new Map(), nextLayer = 1;\n"
     "  function own(value) { return { value: value, writable: true, enumerable: true, configurable: true }; }\n"
     "  var state = { revive: null, replacer: null };\n"
+    "  state.setGlobals = function (globals) {\n"
+    "    var names = Object.keys(globals);\n"
+    "    for (var i = 0; i < names.length; i++) {\n"
+    "      var desc = { value: globals[names[i]], writable: true, configurable: true };\n"
+    "      Reflect.defineProperty(G, names[i], desc);\n"
+    "      Reflect.defineProperty(hostProto, names[i], desc);\n"
+    "    }\n"
+    "  };\n"
+    "  state.initLib = function (lib) {\n"
+    "    var names = ownKeys(hostProto);\n"
+    "    for (var i = 0; i < names.length; i++)\n"
+    "      Reflect.defineProperty(lib, names[i], Reflect.getOwnPropertyDescriptor(hostProto, names[i]));\n"
+    "  };\n"
     "  state.newLayer = function () { var id = nextLayer++; layers.set(id, {}); return id; };\n"
     "  state.freeLayer = function (id) { layers.delete(id); };\n"
     "  state.addLib = function (id, lib, before, after) {\n"
     "    var known = new Set(before), names = new Set();\n"
     "    for (var i = 0; i < after.length; i++) if (!known.has(after[i])) names.add(after[i]);\n"
     "    libs.set(id, new Proxy({}, {\n"
-    "      has: function (target, key) { return names.has(key) || key in objectProto; },\n"
+    "      has: function (target, key) { return names.has(key) || key in hostProto; },\n"
     "      get: function (target, key, receiver) {\n"
-    "        return names.has(key) ? lib[key] : Reflect.get(objectProto, key, receiver);\n"
+    "        return names.has(key) ? lib[key] : Reflect.get(hostProto, key, receiver);\n"
     "      },\n"
     "      set: function (target, key, value, receiver) { return Reflect.defineProperty(receiver, key, own(value)); }\n"
     "    }));\n"
@@ -60,7 +78,7 @@ static const char PRELUDE[] =
     "  state.enterScope = function (layerId, libId, vars) {\n"
     "    var layer = layers.get(layerId);\n"
     "    if (layer === undefined) throw new Error('变量层不存在：' + layerId);\n"
-    "    var proto = objectProto;\n"
+    "    var proto = hostProto;\n"
     "    if (libId !== 0) {\n"
     "      proto = libs.get(libId);\n"
     "      if (proto === undefined) throw new Error('jsLib 不存在：' + libId);\n"
@@ -464,7 +482,9 @@ int32_t qjs_lib_new(QjsEngine *engine, const char *code, const char *filename, i
     } else {
         JS_SetContextOpaque(lib, engine);
         JSValue global = JS_GetGlobalObject(lib);
-        JSValue before = global_names(lib);
+        JSValue inited = call_state(engine, "initLib", 1, &global);
+        JSValue before = JS_IsException(inited) ? JS_EXCEPTION : global_names(lib);
+        JS_FreeValue(engine->ctx, inited);
         JSValue result = JS_IsException(before) ? JS_EXCEPTION : JS_Eval(lib, code, strlen(code), filename,
                                                                            JS_EVAL_TYPE_GLOBAL);
         JSValue after = JS_IsException(result) ? JS_EXCEPTION : global_names(lib);

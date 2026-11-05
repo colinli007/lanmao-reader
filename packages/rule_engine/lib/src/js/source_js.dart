@@ -16,6 +16,7 @@ import 'crypto.dart' as crypto;
 import 'host_api.dart';
 import 'js_values.dart';
 import 'prelude.dart';
+import 'rhino_syntax.dart';
 
 /// 书源 JS 运行时：每个 isolate 一个引擎（worker 里一次只执行一个任务），规则引擎所有进入 JS 的地方都走这里。
 ///
@@ -146,12 +147,13 @@ final class SourceJs {
   Object? _run(JsFrame frame, String code, Map<String, Object?> vars, {JsLayer? layer, bool withLib = true}) {
     final task = frame.task;
     if (_frames.length >= maxDepth) throw _raise(JsEvalException('嵌套求值超过 $maxDepth 层'));
-    final lib = withLib ? _lib(task) : null;
-    final encoded = {for (final MapEntry(:key, :value) in vars.entries) key: _toJs(frame, value)};
     final scope = layer ?? JsLayer(engine);
+    // jsLib 第一次执行时也在这一帧里：它的顶层代码可能调用宿主（如 Java 包对象），宿主 API 要有当前帧
     _frames.add(frame);
     try {
-      final json = engine.evalScoped(code, layer: scope, lib: lib, vars: encoded, abortSignal: task.env.abortSignal);
+      final lib = withLib ? _lib(task) : null;
+      final encoded = {for (final MapEntry(:key, :value) in vars.entries) key: _toJs(frame, value)};
+      final json = engine.evalScoped(rhinoCompatible(code), layer: scope, lib: lib, vars: encoded, abortSignal: task.env.abortSignal);
       return _fromJs(frame, json);
     } on JsException catch (e) {
       throw _jsError(e, task);
@@ -198,15 +200,13 @@ final class SourceJs {
     final cached = _libs.remove(key);
     if (cached != null) return _libs[key] = cached;
     try {
-      final lib = JsLib(engine, code, abortSignal: task.env.abortSignal);
+      final lib = JsLib(engine, rhinoCompatible(code), abortSignal: task.env.abortSignal);
       _libs[key] = lib;
       if (_libs.length > maxLibs) _libs.remove(_libs.keys.first)!.dispose();
       return lib;
     } on JsException catch (e) {
-      if (e.uncatchable) {
-        task.env.checkCancelled();
-        if (_frames.isNotEmpty) rethrow;
-      }
+      // 中止、超时和宿主要求的不可捕获错误原样往外，由 [_run] 还原
+      if (e.uncatchable) rethrow;
       throw _raise(JsEvalException('jsLib 执行出错：${_firstLine(e.message)}'));
     }
   }

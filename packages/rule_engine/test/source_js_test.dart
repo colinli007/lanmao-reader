@@ -308,9 +308,50 @@ void main() {
   });
 
   group('Rhino 专有写法', () {
-    test('使用 Packages', () {
-      expect(() => analyze('x').getString('@js:Packages.java.lang.System.currentTimeMillis()'),
-          throwsA(isA<JsEvalException>().having((e) => e.message, 'message', contains('Packages'))));
+    test('使用 Packages：以「不支持的宿主 API：类名」结束，try/catch 拦不住', () {
+      expect(() => analyze('x').getString('@js:try { Packages.java.lang.System.currentTimeMillis() } catch (e) { "caught" }'),
+          throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'Packages.java.lang.System.currentTimeMillis')));
+      expect(() => analyze('x').getString('@js:new org.apache.commons.Foo()'),
+          throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'org.apache.commons.Foo')));
+    });
+
+    test('解构箭头函数：执行前加括号', () {
+      expect(analyze('x').getString('@js:[["男频","1"],["女频","2"]].map([t,id]=>t+id).join(",")'), '男频1,女频2');
+      expect(analyze('x').getString('@js:"[a]=>" + [1][0]'), '[a]=>1');
+    });
+
+    test('jsLib 里能用 Java 包对象：顶层、函数里、从 this 解构', () {
+      final s = loadBookSources(jsonEncode({
+        'bookSourceUrl': 'https://lib2.com',
+        'bookSourceName': 'lib2',
+        'jsLib': '''
+          var J = Packages.org.jsoup.Jsoup;
+          function first(html) { return org.jsoup.Jsoup.parse(html).select("p").first().text(); }
+          function viaThis(html) { const { java, Packages } = this; return Packages.org.jsoup.Jsoup.parse(html).select("p").size() + java.md5Encode("a").length; }
+        ''',
+      })).sources.single;
+      final rule = AnalyzeRule(SourceTask(env, s))..setContent('x');
+      expect(rule.getString('@js:first("<p>甲</p><p>乙</p>") + J.parse("<p>丙</p>").text() + viaThis("<p>1</p>")'), '甲丙33');
+    });
+
+    test('jsLib 顶层调用不支持的 Java 类：以「不支持的宿主 API」结束', () {
+      final s = loadBookSources(jsonEncode({
+        'bookSourceUrl': 'https://lib3.com',
+        'bookSourceName': 'lib3',
+        'jsLib': 'var t = Packages.java.lang.System.currentTimeMillis();',
+      })).sources.single;
+      expect(() => (AnalyzeRule(SourceTask(env, s))..setContent('x')).getString('@js:t'),
+          throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'Packages.java.lang.System.currentTimeMillis')));
+    });
+
+    test('jsLib 里的解构箭头函数', () {
+      final s = loadBookSources(jsonEncode({
+        'bookSourceUrl': 'https://lib.com',
+        'bookSourceName': 'lib',
+        'jsLib': 'function pairs(list) { return list.map([a,b]=>a+b).join(","); }',
+      })).sources.single;
+      final rule = AnalyzeRule(SourceTask(env, s))..setContent('x');
+      expect(rule.getString('@js:pairs([[1,2],[3,4]])'), '3,7');
     });
 
     test('宿主返回的是 JS 原生字符串', () {

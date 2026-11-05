@@ -6,8 +6,10 @@
 library;
 
 import 'package:html/dom.dart';
+import 'package:html/parser.dart' as html_parser;
 
 import '../core/environment.dart';
+import '../net/java_url.dart';
 import '../regex/source_regex.dart';
 import 'jsoup_text.dart';
 
@@ -93,12 +95,38 @@ String? _attribute(Node node, String key) {
   return null;
 }
 
-/// jsoup `Element.attr`：没有时为空串；`abs:` 前缀按空的 baseUri 解析，只有绝对地址能取到。
+/// jsoup `Element.attr`：没有时为空串；`abs:` 前缀按文档的基准地址解析（[parseJsoupDocument]），
+/// 没有基准地址时只有绝对地址能取到，解析不了时为空串（jsoup 的 `absUrl`）。
 String jsoupAttr(Node node, String key) {
   final value = _attribute(node, key) ?? '';
   if (value.isNotEmpty || !key.toLowerCase().startsWith('abs:')) return value;
   final relative = _attribute(node, key.substring(4));
-  return relative != null && _uriScheme.hasMatch(relative) ? relative : '';
+  if (relative == null) return '';
+  final base = JavaUrl.tryParse(_baseUris[_root(node)] ?? '');
+  if (base == null) return _uriScheme.hasMatch(relative) ? relative : '';
+  try {
+    return JavaUrl.resolve(base, relative).toString();
+  } on FormatException {
+    return '';
+  }
+}
+
+/// JS 里的 `org.jsoup.Jsoup.parse(html, baseUri)`：基准地址记在文档上，[jsoupAttr] 的 `abs:` 用它
+/// （add-rhino-compat 设计 D2）。规则引擎自己解析的页面不设基准地址，和 MD3 一样。
+Document parseJsoupDocument(String html, {String? baseUri}) {
+  final document = html_parser.parse(html);
+  if (baseUri != null && baseUri.isNotEmpty) _baseUris[document] = baseUri;
+  return document;
+}
+
+final Expando<String> _baseUris = Expando();
+
+Node _root(Node node) {
+  var current = node;
+  while (current.parentNode != null) {
+    current = current.parentNode!;
+  }
+  return current;
 }
 
 final RegExp _uriScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+\-.]*:');

@@ -189,6 +189,17 @@ void _scopedTests() {
     expect(evalOnce('this.result + result.length', vars: {'result': 'abc'}), 'abc3');
   });
 
+  test('宿主全局：全局、变量层的 this、jsLib 的顶层和函数里都能用，jsLib 新增的名字不含它们', () {
+    engine.eval('__qjs.setGlobals({ hostThing: { name: "h" } })');
+    expect(evalOnce('hostThing.name + this.hostThing.name'), 'hh');
+    final lib = JsLib(engine, 'var atInit = hostThing.name; function later() { return hostThing.name + this.hostThing.name; }');
+    addTearDown(lib.dispose);
+    expect(evalOnce('atInit + later() + Object.keys(this).length', lib: lib), 'hhh0');
+    // 变量层上赋值只遮蔽本次求值
+    expect(evalOnce('hostThing = 1; hostThing'), 1);
+    expect(evalOnce('hostThing.name'), 'h');
+  });
+
   test('复用变量层', () {
     final layer = JsLayer(engine);
     addTearDown(layer.dispose);

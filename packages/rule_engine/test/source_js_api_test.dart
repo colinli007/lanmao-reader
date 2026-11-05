@@ -48,7 +48,7 @@ void main() {
   group('不支持的宿主 API', () {
     const apis = [
       'startBrowser', 'startBrowserAwait', 'getVerificationCode', 'openUrl', 'webView', 'webViewGetSource',
-      'webViewGetOverrideUrl', 'getWebViewUA', 'androidId', 'getReadBookConfig', 'getThemeMode', 'getThemeConfig',
+      'webViewGetOverrideUrl', 'androidId', 'getReadBookConfig', 'getThemeMode', 'getThemeConfig',
       'downloadFile', 'cacheFile', 'importScript', 'getFile', 'readFile', 'readTxtFile', 'unzipFile', 'queryTTF',
       'replaceFont', 't2s', 's2t', 'createAsymmetricCrypto', 'createSign', 'refreshTocUrl', 'reGetBook', 'refreshExplore',
     ];
@@ -168,6 +168,44 @@ void main() {
       expect(book.author, '作者');
       expect(book.intro, '新');
       expect(() => js('java.setContent(null)'), throwsA(isA<JsEvalException>()));
+    });
+  });
+
+  group('Jsoup', () {
+    const page = '<div class="d"><p>甲</p><script>var x = 1;</script><a href="/b/1">乙</a></div>';
+
+    test('parse 之后选择、取文本和属性', () {
+      expect(js('var doc = org.jsoup.Jsoup.parse(result); doc.select("a").first().text() + doc.select("a").attr("href")', content: page),
+          '乙/b/1');
+      expect(js('Packages.org.jsoup.Jsoup.parse(result).select("p").text()', content: page), '甲');
+      expect(js('org.jsoup.Jsoup.parseBodyFragment("<p>丙</p>").select("body > p").text()'), '丙');
+    });
+
+    test('基准地址：abs: 转成绝对地址；没有基准地址时取不到相对地址', () {
+      expect(js('org.jsoup.Jsoup.parse(\'<a href="/b/1">x</a>\', "https://a.com/s").select("a").attr("abs:href")'), 'https://a.com/b/1');
+      expect(js('org.jsoup.Jsoup.parse(\'<a href="/b/1">x</a>\').select("a").attr("abs:href")'), '');
+      expect(js('org.jsoup.Jsoup.parse(\'<a href="https://c.com/1">x</a>\').select("a").attr("abs:href")'), 'https://c.com/1');
+    });
+
+    test('data、remove', () {
+      expect(js('var doc = org.jsoup.Jsoup.parse(result); doc.select("script").first().data()', content: page), 'var x = 1;');
+      expect(js('var doc = org.jsoup.Jsoup.parse(result); doc.select("script").remove(); doc.select("div").text()', content: page),
+          '甲 乙');
+      expect(js('var doc = org.jsoup.Jsoup.parse(result); doc.select("a").first().remove(); doc.select("div").html().indexOf("乙")', content: page),
+          '-1');
+    });
+
+    test('元素列表的 remove(下标) 和 remove(元素) 是 Java 列表的写法', () {
+      expect(js('var l = org.jsoup.Jsoup.parse("<p>1</p><p>2</p><p>3</p>").select("p"); var r = l.remove(0); r.text() + l.size() + l.text()'),
+          '122 3');
+      expect(js('var l = org.jsoup.Jsoup.parse("<p>1</p><p>2</p>").select("p"); var e = l.get(1); l.remove(e) + "" + l.size()'), 'true1');
+    });
+  });
+
+  group('WebView 的 User-Agent', () {
+    test('java 和 source 上都能取', () {
+      expect(js('java.getWebViewUA()'), allOf(contains('; wv)'), contains('Mobile Safari')));
+      expect(js('source.getWebViewUA() == java.getWebViewUA()'), 'true');
     });
   });
 

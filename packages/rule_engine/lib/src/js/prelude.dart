@@ -44,8 +44,8 @@ const String sourceJsPrelude = r'''
   // ---------------------------------------------------------------- 元素
 
   function JsElement(id) { hidden(this, H, id); }
-  ['text', 'ownText', 'html', 'outerHtml', 'attr', 'hasAttr', 'hasClass', 'id', 'tagName', 'select',
-    'selectFirst', 'children', 'parent', 'parentNode'].forEach(function (name) {
+  ['text', 'ownText', 'html', 'outerHtml', 'data', 'attr', 'hasAttr', 'hasClass', 'id', 'tagName', 'select',
+    'selectFirst', 'children', 'parent', 'parentNode', 'remove'].forEach(function (name) {
     hidden(JsElement.prototype, name, function () {
       return call('el.' + name, [this[H]].concat(slice.call(arguments)));
     });
@@ -64,6 +64,18 @@ const String sourceJsPrelude = r'''
     ['text', 'html', 'attr', 'select', 'eq', 'first', 'last', 'outerHtml', 'hasClass', 'hasAttr', 'eachText', 'eachAttr']
       .forEach(function (name) {
       hidden(list, name, function () { return call('els.' + name, [ids(this)].concat(slice.call(arguments))); });
+    });
+    // jsoup Elements.remove()：不带参数时从文档里删掉这些元素；带参数时是 Java 列表的 remove(下标) 或 remove(元素)
+    hidden(list, 'remove', function (item) {
+      if (arguments.length === 0) {
+        call('els.remove', [ids(this)]);
+        return this;
+      }
+      if (typeof item === 'number') return this.splice(item, 1)[0];
+      var at = this.indexOf(item);
+      if (at < 0) return false;
+      this.splice(at, 1);
+      return true;
     });
     hidden(list, 'toString', function () { return this.outerHtml(); });
     hidden(list, 'toJSON', function () { var tag = {}; tag[E] = ids(this); return tag; });
@@ -114,15 +126,41 @@ const String sourceJsPrelude = r'''
     'aesEncodeToBase64String', 'aesEncodeArgsBase64Str', 'desDecodeToString', 'desBase64DecodeToString',
     'desEncodeToString', 'desEncodeToBase64String', 'tripleDESDecodeStr', 'tripleDESDecodeArgsBase64Str',
     'tripleDESEncodeBase64Str', 'tripleDESEncodeArgsBase64Str', 'timeFormat', 'timeFormatUTC', 'toNumChapter',
-    'htmlFormat', 'randomUUID'];
+    'htmlFormat', 'randomUUID', 'getWebViewUA'];
   // 不支持的宿主 API：调用时以「不支持的宿主 API」结束，JS 的 try/catch 拦不住
   var unsupported = ['startBrowser', 'startBrowserAwait', 'getVerificationCode', 'openUrl', 'webView',
-    'webViewGetSource', 'webViewGetOverrideUrl', 'getWebViewUA', 'androidId', 'getReadBookConfig',
+    'webViewGetSource', 'webViewGetOverrideUrl', 'androidId', 'getReadBookConfig',
     'getReadBookConfigMap', 'getThemeMode', 'getThemeConfig', 'getThemeConfigMap', 'downloadFile', 'cacheFile',
     'importScript', 'getFile', 'readFile', 'readTxtFile', 'deleteFile', 'unzipFile', 'un7zFile', 'unrarFile',
     'unArchiveFile', 'getTxtInFolder', 'getZipStringContent', 'getRarStringContent', 'get7zStringContent',
     'getZipByteArrayContent', 'getRarByteArrayContent', 'get7zByteArrayContent', 'queryTTF', 'queryBase64TTF',
     'replaceFont', 't2s', 's2t', 'createAsymmetricCrypto', 'createSign', 'refreshExplore'];
+
+  // ---------------------------------------------------------------- Java 包（add-rhino-compat 设计 D1、D3）
+
+  // Rhino 的 Java 包：已知的路径返回实现，其余任何属性都是下一层包，调用或 new 时以「不支持的宿主 API：类名」结束
+  function javaPackage(path, known) {
+    return new Proxy(function () {}, {
+      get: function (target, name) {
+        if (typeof name !== 'string') return undefined;
+        if (known && Object.prototype.hasOwnProperty.call(known, name)) return known[name];
+        return javaPackage(path + '.' + name, null);
+      },
+      apply: function () { hostCall('unsupported', [path]); },
+      construct: function () { hostCall('unsupported', [path]); }
+    });
+  }
+
+  var org = javaPackage('org', {
+    jsoup: javaPackage('org.jsoup', {
+      Jsoup: javaPackage('org.jsoup.Jsoup', {
+        parse: method('jsoup.parse'),
+        parseBodyFragment: method('jsoup.parseBodyFragment')
+      })
+    })
+  });
+  // 宿主全局：jsLib 的代码和变量层的 this 上也能用（Rhino 的顶层作用域就有它们）
+  __qjs.setGlobals({ org: org, Packages: javaPackage('Packages', { org: org }) });
 
   function javaObject(own, owner) {
     var target = {};
