@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../chain/chains.dart';
+import '../chain/explore_kind.dart';
 import '../chain/models.dart';
 import '../core/environment.dart';
 import '../source/book_source.dart';
@@ -35,6 +36,12 @@ TocResult Function() chapterListTask(BookSource source, Book book) => () {
 
 ChapterContent Function() contentTask(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
     () => getContent(const WorkerRuleEnvironment(), source, book, chapter, nextChapterUrl: nextChapterUrl);
+
+/// 发现分类和发现（add-explore 设计 D1）。
+List<ExploreKind> Function() exploreKindsTask(BookSource source) => () => getExploreKinds(const WorkerRuleEnvironment(), source);
+
+List<SearchBook> Function() exploreTask(BookSource source, String url, {int page = 1}) =>
+    () => exploreBooks(const WorkerRuleEnvironment(), source, url, page: page);
 
 /// 正文里的一张图片（add-content-images 设计 D9）。
 Uint8List Function() imageTask(BookSource source, Book book, String src) =>

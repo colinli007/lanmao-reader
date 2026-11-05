@@ -13,6 +13,7 @@ abstract final class LucideIcons {
   static const chevronDown = IconData(0xe06d, fontFamily: 'Lucide');
   static const chevronLeft = IconData(0xe06e, fontFamily: 'Lucide');
   static const chevronRight = IconData(0xe06f, fontFamily: 'Lucide');
+  static const compass = IconData(0xe09b, fontFamily: 'Lucide');
   static const copy = IconData(0xe09e, fontFamily: 'Lucide');
   static const ellipsisVertical = IconData(0xe0b7, fontFamily: 'Lucide');
   static const filePlus = IconData(0xe0c9, fontFamily: 'Lucide');

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
 import 'bookshelf/bookshelf_page.dart';
+import 'online/explore_page.dart';
 import 'settings/settings_page.dart';
 import 'ui/icons.dart';
 import 'ui/tokens.dart';
 
-enum _Tab { shelf, settings }
+enum _Tab { shelf, explore, settings }
 
-/// 外壳（app-shell「底部 tab」，设计 D1）：底部书架、设置两个 tab。
+/// 外壳（app-shell「底部 tab」，设计 D1）：底部书架、发现、设置三个 tab。
 ///
 /// - 书架常驻（`Offstage`），切走再切回时滚动位置和进行中的更新目录都还在。
+/// - 发现也常驻：筛选、展开的书源和滚动位置都还在（add-explore 设计 D5）。
 /// - 设置页只在选中时构建：正文缓存的统计跟着页面重建，每次切过去重新统计。
 ///
 /// 其它页面 push 到根导航器，盖住底部 tab。
@@ -56,6 +58,10 @@ class _AppShellState extends State<AppShell> {
             offstage: _tab != _Tab.shelf,
             child: TickerMode(enabled: _tab == _Tab.shelf, child: const BookshelfPage()),
           ),
+          Offstage(
+            offstage: _tab != _Tab.explore,
+            child: TickerMode(enabled: _tab == _Tab.explore, child: const ExplorePage()),
+          ),
           if (_tab == _Tab.settings) const SettingsPage(),
         ],
       ),
@@ -71,6 +77,7 @@ class _AppShellState extends State<AppShell> {
             child: Row(
               children: [
                 item(_Tab.shelf, LucideIcons.libraryBig, '书架'),
+                item(_Tab.explore, LucideIcons.compass, '发现'),
                 item(_Tab.settings, LucideIcons.settings, '设置'),
               ],
             ),

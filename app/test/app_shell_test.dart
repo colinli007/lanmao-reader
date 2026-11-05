@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lanmao_reader/app_shell.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
 import 'package:lanmao_reader/storage/database.dart';
+import 'package:rule_engine/rule_engine.dart';
 
 import 'support/test_app.dart';
 
@@ -37,6 +38,26 @@ void main() {
     await tester.tap(find.byTooltip('书架'));
     await tester.pumpAndSettle();
     expect(shelfOffset(tester), offset);
+  });
+
+  testWidgets('切到书架再切回，发现 tab 展开的书源还在', (tester) async {
+    await services.addSources([
+      {'bookSourceUrl': 'https://e.com', 'bookSourceName': '发现源', 'exploreUrl': '玄幻::/xh'},
+    ]);
+    services.engine.onExploreKinds = (source) async => const [ExploreKind('玄幻', url: '/xh')];
+    await pump(tester);
+    await tester.tap(find.byTooltip('发现'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('发现源'));
+    await tester.pumpAndSettle();
+    expect(find.text('玄幻'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('书架'));
+    await tester.pumpAndSettle();
+    expect(find.text('玄幻'), findsNothing);
+    await tester.tap(find.byTooltip('发现'));
+    await tester.pumpAndSettle();
+    expect(find.text('玄幻'), findsOneWidget);
   });
 
   testWidgets('打开阅读页时没有底部 tab，返回后回到书架', (tester) async {

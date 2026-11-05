@@ -21,6 +21,7 @@ import '../rule/analyze_rule.dart';
 import '../rule/rule_data.dart';
 import '../source/book_source.dart';
 import '../text/html_unescape.dart';
+import 'explore_kind.dart';
 import 'formatter.dart';
 import 'models.dart';
 
@@ -75,21 +76,25 @@ List<SearchBook> finishSearch(SearchStep step, HttpResult result) {
   });
 }
 
+/// 书籍列表（MD3 的 `BookList.analyzeBookList`）。[explore] 是发现：不判断 `bookUrlPattern`，
+/// 规则用 `ruleExplore`，它的 `bookList` 为空时用 `ruleSearch`。
 List<SearchBook> _analyzeBookList(
   SourceTask task,
   ChainData ruleData,
   SourceRequest request,
-  _Response response,
-) {
+  _Response response, {
+  bool explore = false,
+}) {
   final baseUrl = response.url;
   final body = response.body;
-  final rules = task.source.ruleSearch;
+  final source = task.source;
+  final rules = explore && (source.ruleExplore['bookList']?.trim().isNotEmpty ?? false) ? source.ruleExplore : source.ruleSearch;
   final analyzeRule = AnalyzeRule(task, ruleData: ruleData)
     ..setContent(body, baseUrl: baseUrl)
     ..setRedirectUrl(baseUrl);
 
-  final pattern = task.source.bookUrlPattern;
-  if (pattern != null) {
+  final pattern = source.bookUrlPattern;
+  if (pattern != null && !explore) {
     final regex = task.inField('bookUrlPattern', () => SourceRegex.tryCompile(pattern) ?? (throw RuleException('正则无法编译：$pattern')));
     if (regex.matchesEntire(task.env, baseUrl)) {
       final item = _infoItem(task, analyzeRule, request, body, baseUrl, ruleData, response.redirected);
@@ -185,6 +190,40 @@ SearchBook? _infoItem(
     ..intro = book.intro
     ..wordCount = book.wordCount
     ..latestChapterTitle = book.latestChapterTitle;
+}
+
+// ---------------------------------------------------------------- 发现
+
+/// 发现分类（MD3 的 `BookSource.exploreKinds`）：`exploreUrl` 以 `<js>`、`@js:` 开头时先用书源级的 JS 上下文执行，
+/// 再按 [parseExploreKinds] 解析。没有发现地址时没有分类；JS 出错、JSON 不合法时抛出错误。
+List<ExploreKind> getExploreKinds(RuleEnvironment env, BookSource source) {
+  final exploreUrl = source.exploreUrl;
+  if (exploreUrl == null || exploreUrl.trim().isEmpty) return const [];
+  return _withTask(env, source, 'exploreUrl', (task) {
+    final lower = exploreUrl.toLowerCase();
+    final text = lower.startsWith('@js:')
+        ? _jsText(SourceJs.instance.evalSource(task, exploreUrl.substring(4)))
+        : lower.startsWith('<js>')
+        ? _jsText(SourceJs.instance.evalSource(task, exploreUrl.substring(4, exploreUrl.lastIndexOf('<'))))
+        : exploreUrl;
+    try {
+      return parseExploreKinds(text);
+    } on FormatException catch (e) {
+      throw RuleException('发现地址不是合法的 JSON：${e.message}');
+    }
+  });
+}
+
+/// Kotlin 的 `toString()`：null 是 `null`。
+String _jsText(Object? value) => value == null ? 'null' : valueToString(value);
+
+/// 发现（MD3 的 `WebBook.exploreBook`）：请求分类地址的第 [page] 页，执行 `loginCheckJs`，按发现模式解析书籍列表。
+List<SearchBook> exploreBooks(RuleEnvironment env, BookSource source, String url, {int page = 1}) {
+  return _withTask(env, source, 'exploreUrl', (task) {
+    final ruleData = ChainData();
+    final request = buildSourceRequest(task, url, page: page, baseUrl: task.source.bookSourceUrl, ruleData: ruleData);
+    return _analyzeBookList(task, ruleData, request, _fetch(task, request, loginCheck: true), explore: true);
+  });
 }
 
 // ---------------------------------------------------------------- 详情

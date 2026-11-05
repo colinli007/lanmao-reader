@@ -18,6 +18,10 @@ final class SourceEntry {
 
   /// 参与搜索：启用、文本类、搜索地址不为空（book-search「发起搜索」）。
   bool get searchable => enabled && source.bookSourceType == BookSourceType.text && (source.searchUrl?.trim().isNotEmpty ?? false);
+
+  /// 出现在发现页：启用、文本类、没有关掉发现、发现地址不为空（explore「发现页的书源」，add-explore 设计 D2）。
+  bool get explorable =>
+      enabled && source.bookSourceType == BookSourceType.text && source.enabledExplore && (source.exploreUrl?.trim().isNotEmpty ?? false);
 }
 
 /// 分组：`bookSourceGroup` 按中英文逗号、分号拆开，去掉首尾空白，丢弃空的（source-management「书源列表」）。

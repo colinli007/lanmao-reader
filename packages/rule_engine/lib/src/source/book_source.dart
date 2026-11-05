@@ -41,10 +41,13 @@ final class BookSource {
       concurrentRate = _string(json['concurrentRate']),
       bookUrlPattern = _string(json['bookUrlPattern']),
       searchUrl = _string(json['searchUrl']),
+      exploreUrl = _string(json['exploreUrl']),
+      enabledExplore = json['enabledExplore'] != false,
       jsLib = _string(json['jsLib']),
       loginUi = _string(json['loginUi']),
       loginCheckJs = _string(json['loginCheckJs']),
       ruleSearch = _group(json, 'ruleSearch'),
+      ruleExplore = _group(json, 'ruleExplore'),
       ruleBookInfo = _group(json, 'ruleBookInfo'),
       ruleToc = _group(json, 'ruleToc'),
       ruleContent = _group(json, 'ruleContent');
@@ -60,6 +63,12 @@ final class BookSource {
   final String? bookUrlPattern;
   final String? searchUrl;
 
+  /// 发现地址：分类的 JSON 数组、`标题::地址` 文本，或生成它们的 JS（book-chains「发现分类」）。
+  final String? exploreUrl;
+
+  /// 是否在发现页显示，缺少这个字段时为真。
+  final bool enabledExplore;
+
   /// 书源共用的 JS（代码；JSON 对象形式按地址引用外部脚本，本引擎不支持）。
   final String? jsLib;
 
@@ -69,6 +78,9 @@ final class BookSource {
   /// 每次链路请求得到响应后执行的 JS。
   final String? loginCheckJs;
   final RuleGroup ruleSearch;
+
+  /// 发现的书籍列表规则，`bookList` 为空时发现也用 [ruleSearch]。
+  final RuleGroup ruleExplore;
   final RuleGroup ruleBookInfo;
   final RuleGroup ruleToc;
   final RuleGroup ruleContent;

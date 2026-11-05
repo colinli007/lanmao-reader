@@ -21,6 +21,12 @@ abstract interface class SourceEngine {
   /// 正文里的一张图片的字节（book-chains「正文图片」）。交互任务，直接提交。
   Future<Uint8List> image(BookSource source, Book book, String src);
 
+  /// 书源的发现分类（book-chains「发现分类」）。交互任务，直接提交。
+  Future<List<ExploreKind>> exploreKinds(BookSource source);
+
+  /// 分类地址的第 [page] 页书籍（book-chains「发现」）。交互任务，直接提交，超过 [PoolSourceEngine.exploreTimeout] 按超时失败。
+  Future<List<SearchBook>> explore(BookSource source, String url, int page);
+
   /// 执行一条正则替换规则，超过规则的超时时间时抛出 [TaskTimeoutException]（add-replace-rules 设计 D2、D5）。
   Future<String> replace(String input, ReplaceRule rule);
 
@@ -45,6 +51,7 @@ final class PoolSourceEngine implements SourceEngine {
     int batchLimit = 4,
     int networkLimit = 32,
     this.searchTimeout = const Duration(seconds: 30),
+    this.exploreTimeout = const Duration(seconds: 30),
   }) : _limiter = BatchLimiter(batchLimit),
        _network = BatchLimiter(networkLimit);
 
@@ -53,6 +60,9 @@ final class PoolSourceEngine implements SourceEngine {
   final BatchLimiter _limiter;
   final BatchLimiter _network;
   final Duration searchTimeout;
+
+  /// 发现一页的超时，和 Legado 的发现页相同（add-explore 设计 D1）。
+  final Duration exploreTimeout;
 
   /// 三步各自排队：构造请求（批量限流）→ 发出请求（网络限流）→ 解析响应（批量限流）。
   @override
@@ -105,6 +115,13 @@ final class PoolSourceEngine implements SourceEngine {
 
   @override
   Future<Uint8List> image(BookSource source, Book book, String src) => _pool.run(imageTask(source, book, src));
+
+  @override
+  Future<List<ExploreKind>> exploreKinds(BookSource source) => _pool.run(exploreKindsTask(source));
+
+  @override
+  Future<List<SearchBook>> explore(BookSource source, String url, int page) =>
+      _pool.run(exploreTask(source, url, page: page), timeout: exploreTimeout);
 
   /// 交互任务直接提交；批量任务经限流器，随批次取消。
   Future<R> _submit<R>(R Function() task, Batch? batch) =>

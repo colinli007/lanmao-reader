@@ -31,6 +31,8 @@ final class FakeEngine implements SourceEngine {
   Future<TocResult> Function(BookSource source, Book book)? onChapterList;
   Future<ChapterContent> Function(BookSource source, Book book, BookChapter chapter, String? next)? onContent;
   Future<Uint8List> Function(BookSource source, Book book, String src)? onImage;
+  Future<List<ExploreKind>> Function(BookSource source)? onExploreKinds;
+  Future<List<SearchBook>> Function(BookSource source, String url, int page)? onExplore;
 
   /// 不为空时代替正则替换规则的执行（注入超时等），否则在当前 isolate 里执行规则。
   Future<String> Function(String input, ReplaceRule rule)? onReplace;
@@ -72,6 +74,18 @@ final class FakeEngine implements SourceEngine {
   Future<Uint8List> image(BookSource source, Book book, String src) {
     calls.add('image $src');
     return onImage!(source, book, src);
+  }
+
+  @override
+  Future<List<ExploreKind>> exploreKinds(BookSource source) {
+    calls.add('kinds ${source.bookSourceUrl}');
+    return onExploreKinds!(source);
+  }
+
+  @override
+  Future<List<SearchBook>> explore(BookSource source, String url, int page) {
+    calls.add('explore $url $page');
+    return onExplore!(source, url, page);
   }
 
   @override

@@ -14,7 +14,19 @@
 library;
 
 export 'src/chain/chains.dart'
-    show SearchStep, chapterAbsoluteUrl, finishSearch, getBookInfo, getChapterList, getContent, getContentImage, prepareSearch, searchBooks;
+    show
+        SearchStep,
+        chapterAbsoluteUrl,
+        exploreBooks,
+        finishSearch,
+        getBookInfo,
+        getChapterList,
+        getContent,
+        getContentImage,
+        getExploreKinds,
+        prepareSearch,
+        searchBooks;
+export 'src/chain/explore_kind.dart';
 export 'src/chain/models.dart';
 export 'src/core/environment.dart';
 export 'src/core/errors.dart';
