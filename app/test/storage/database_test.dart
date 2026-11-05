@@ -324,4 +324,19 @@ void main() {
       expect(await fileDb.getContentImage('b', 'src'), png);
     });
   });
+
+  test('缓存计数：每本书不是卷的章节总数和已缓存的章数，写入正文后跟着变', () async {
+    await db.saveBrowsingBook(book('a'), [
+      TocChapter(bookUrl: 'a', idx: 0, url: '/v', title: '第一卷', isVolume: true, isVip: false, isPay: false, sourceData: '{}'),
+      ...toc('a', 3).map((c) => c.copyWith(idx: c.idx + 1)),
+    ]);
+    await db.saveBrowsingBook(book('b'), toc('b', 2));
+    final counts = db.watchCacheCounts();
+    expect(await counts.first, {'a': (cached: 0, total: 3), 'b': (cached: 0, total: 2)});
+    final chapter = (await db.chaptersOf('a')).last;
+    await db.putContent(ContentRow(bookUrl: 'a', chapterUrl: chapter.url, title: chapter.title, content: '正文'));
+    await db.putContent(const ContentRow(bookUrl: 'a', chapterUrl: '/v', title: '第一卷', content: ''));
+    expect((await counts.first)['a'], (cached: 1, total: 3), reason: '卷不算');
+    expect(await db.cachedChapterUrls('a'), {chapter.url, '/v'});
+  });
 }

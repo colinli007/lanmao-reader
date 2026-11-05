@@ -150,6 +150,9 @@ class SearchKeywords extends Table {
 /// 书架上的一本书和它的未读章节数（排在当前章节之后的非卷章节数）。
 typedef ShelfEntry = ({ShelfBook book, int unread});
 
+/// 一本书不是卷的章节总数和其中已缓存正文的章数。
+typedef BookCacheCount = ({int cached, int total});
+
 /// 已缓存正文的章节数和正文的 UTF-8 字节数。
 typedef ContentCacheStats = ({int chapters, int bytes});
 
@@ -366,6 +369,23 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> putContentImage(String bookUrl, String src, Uint8List bytes) =>
       into(cachedImages).insertOnConflictUpdate(ContentImageRow(bookUrl: bookUrl, src: src, bytes: bytes));
+
+  /// 一本书已缓存正文的章节地址（缓存全本按它跳过已缓存的章节，add-book-cache 设计 D4）。
+  Future<Set<String>> cachedChapterUrls(String bookUrl) async {
+    final query = selectOnly(contents)
+      ..addColumns([contents.chapterUrl])
+      ..where(contents.bookUrl.equals(bookUrl));
+    return {for (final row in await query.get()) row.read(contents.chapterUrl)!};
+  }
+
+  /// 每本书不是卷的章节总数和其中已缓存正文的章数，按书的地址（缓存管理页，add-book-cache 设计 D5）。
+  Stream<Map<String, BookCacheCount>> watchCacheCounts() => customSelect(
+    'SELECT c.book_url AS book_url, COUNT(*) AS total, COUNT(t.chapter_url) AS cached FROM chapters c '
+    'LEFT JOIN contents t ON t.book_url = c.book_url AND t.chapter_url = c.url WHERE c.is_volume = 0 GROUP BY c.book_url',
+    readsFrom: {chapters, contents},
+  ).watch().map((rows) => {
+    for (final row in rows) row.read<String>('book_url'): (cached: row.read<int>('cached'), total: row.read<int>('total')),
+  });
 
   /// 正文缓存的大小：清除时会删掉的那些正文和正文图片（add-settings 设计 D1，add-content-images 设计 D7）。
   Future<ContentCacheStats> contentCacheStats() async {

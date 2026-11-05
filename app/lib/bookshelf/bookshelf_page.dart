@@ -12,6 +12,8 @@ import '../storage/database.dart';
 import '../ui/icons.dart';
 import '../ui/tokens.dart';
 import '../ui/widgets.dart';
+import 'book_cache.dart';
+import 'cache_page.dart';
 import 'shelf_refresh.dart';
 
 /// 书架（bookshelf）：封面宫格，点击继续阅读，长按打开选项单，下拉刷新更新目录（redesign-minimal-ui 设计 D3）。
@@ -153,6 +155,7 @@ class _ShelfTile extends ConsumerWidget {
       items: [
         if (mark != null) (value: _Action.failure, label: '失败原因', danger: false),
         (value: _Action.detail, label: '详情', danger: false),
+        (value: _Action.cache, label: '缓存', danger: false),
         (value: _Action.changeSource, label: '换书源', danger: false),
         (value: _Action.remove, label: '移出书架', danger: true),
       ],
@@ -163,6 +166,11 @@ class _ShelfTile extends ConsumerWidget {
         await showMessageDialog(context, title: mark == '书源不存在' ? mark! : '更新失败', message: mark!);
       case _Action.detail:
         await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => BookDetailPage.shelf(book.bookUrl)));
+      case _Action.cache:
+        final messenger = ScaffoldMessenger.of(context);
+        if (await chooseCacheRange(context, ref, book)) {
+          messenger.showSnackBar(SnackBar(content: Text('开始缓存《${book.name}》，进度在「设置 → 正文缓存」里查看')));
+        }
       case _Action.changeSource:
         await _changeSource(context, ref, book);
       case _Action.remove:
@@ -178,6 +186,8 @@ class _ShelfTile extends ConsumerWidget {
       MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: book.bookUrl)),
     );
     if (bookUrl == null) return;
+    // 旧书源的书已经删掉，它的缓存任务跟着停（add-book-cache 设计 D2）
+    ref.read(bookCacheProvider.notifier).stop(book.bookUrl);
     final changed = await db.getBook(bookUrl);
     messenger.showSnackBar(SnackBar(content: Text('已换到${changed!.originName}')));
   }
@@ -191,8 +201,10 @@ class _ShelfTile extends ConsumerWidget {
       confirmLabel: '移出',
       danger: true,
     );
-    if (confirmed) await db.removeBook(book.bookUrl);
+    if (!confirmed) return;
+    ref.read(bookCacheProvider.notifier).stop(book.bookUrl);
+    await db.removeBook(book.bookUrl);
   }
 }
 
-enum _Action { failure, detail, changeSource, remove }
+enum _Action { failure, detail, cache, changeSource, remove }

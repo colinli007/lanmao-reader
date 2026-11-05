@@ -47,20 +47,24 @@ Future<T?> showActionSheet<T>(BuildContext context, {String? message, required L
   );
   return showModalBottomSheet<T>(
     context: context,
+    // 按内容的高度弹出，不受默认的屏幕高 9/16 限制；矮窗口里放不下时可以滚动
+    isScrollControlled: true,
     builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (message != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, AppSpacing.item),
-              child: Text(message, style: textTheme.bodyMedium?.copyWith(color: colors.textSecondary), textAlign: TextAlign.center),
-            ),
-          for (final item in items)
-            option(item.label, item.danger ? colors.danger : colors.textPrimary, () => Navigator.pop(context, item.value)),
-          Container(height: 8, color: colors.fill),
-          option('取消', colors.textPrimary, () => Navigator.pop(context)),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, AppSpacing.item),
+                child: Text(message, style: textTheme.bodyMedium?.copyWith(color: colors.textSecondary), textAlign: TextAlign.center),
+              ),
+            for (final item in items)
+              option(item.label, item.danger ? colors.danger : colors.textPrimary, () => Navigator.pop(context, item.value)),
+            Container(height: 8, color: colors.fill),
+            option('取消', colors.textPrimary, () => Navigator.pop(context)),
+          ],
+        ),
       ),
     ),
   );

@@ -9,6 +9,7 @@ import 'package:lanmao_reader/library/book_cover.dart';
 import 'package:lanmao_reader/online/book_detail_page.dart';
 import 'package:lanmao_reader/online/search_page.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/storage/database.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';
@@ -122,6 +123,37 @@ void main() {
     await pump(tester);
     await longPressAndChoose(tester, '详情');
     expect(find.byType(BookDetailPage), findsOneWidget);
+  });
+
+  Future<void> cacheChapters(Iterable<int> indices) async {
+    final toc = await services.db.chaptersOf(SimpleBook.bookUrl);
+    for (final i in indices) {
+      await services.db.putContent(ContentRow(bookUrl: SimpleBook.bookUrl, chapterUrl: toc[i].url, title: toc[i].title, content: '正文'));
+    }
+  }
+
+  testWidgets('长按选缓存：说明总章数和已缓存章数，选范围后开始缓存并提示去哪里看进度', (tester) async {
+    await services.shelveSimpleBook(chapters: 100);
+    await services.db.saveProgress(SimpleBook.bookUrl, index: 30, url: '/30.html', title: '第30章', position: 0, now: DateTime(2026));
+    await cacheChapters([for (var i = 0; i < 40; i++) i]);
+    await pump(tester);
+    await longPressAndChoose(tester, '缓存');
+    expect(find.text('共 100 章，已缓存 40 章'), findsOneWidget);
+    expect(find.text('从当前章往后（60 章）'), findsOneWidget);
+    await tester.tap(find.text('全部章节（60 章）'));
+    await tester.pumpAndSettle();
+    expect(find.text('开始缓存《三体》，进度在「设置 → 正文缓存」里查看'), findsOneWidget);
+    expect(services.engine.calls, contains('content /40.html'));
+    expect(services.engine.calls, isNot(contains('content /39.html')));
+  });
+
+  testWidgets('整本都已缓存时提示，不弹范围选择', (tester) async {
+    await services.shelveSimpleBook(chapters: 100);
+    await cacheChapters([for (var i = 0; i < 100; i++) i]);
+    await pump(tester);
+    await longPressAndChoose(tester, '缓存');
+    expect(find.text('已经全部缓存'), findsOneWidget);
+    expect(find.textContaining('全部章节'), findsNothing);
   });
 
   testWidgets('长按选移出书架，确认后移出', (tester) async {

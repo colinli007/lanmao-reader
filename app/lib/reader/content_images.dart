@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../library/content_cache.dart';
 import '../library/content_source.dart';
 import '../storage/database.dart';
 import 'layout/chapter_layout.dart';
@@ -62,7 +63,7 @@ final class ContentImages extends ChangeNotifier implements ImageBitmaps {
         final src = queue.removeFirst();
         try {
           // whenComplete 会等回调返回的 Future：回调不能返回 _loading.remove 的结果（就是这个 Future 自己）
-          sizes[src] = await (_loading[src] ??= _load(src).whenComplete(() {
+          sizes[src] = await (_loading[src] ??= cacheContentImage(_db, _source, book, src).whenComplete(() {
             _loading.remove(src);
           }));
         } catch (e) {
@@ -74,28 +75,6 @@ final class ContentImages extends ChangeNotifier implements ImageBitmaps {
     final workers = math.min(concurrency, queue.length);
     await Future.wait([for (var i = 0; i < workers; i++) worker()]);
     return sizes;
-  }
-
-  Future<Size> _load(String src) async {
-    final cached = await _db.getContentImage(book.bookUrl, src);
-    if (cached != null) return sizeOf(cached);
-    final bytes = await _source.loadImage(book, src);
-    final size = await sizeOf(bytes);
-    await _db.putContentImage(book.bookUrl, src, bytes);
-    return size;
-  }
-
-  /// 图片的原始尺寸：只读图片头，不解码整张图；不是图片时抛出错误。
-  static Future<Size> sizeOf(Uint8List bytes) async {
-    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    try {
-      final descriptor = await ui.ImageDescriptor.encoded(buffer);
-      final size = Size(descriptor.width.toDouble(), descriptor.height.toDouble());
-      descriptor.dispose();
-      return size;
-    } finally {
-      buffer.dispose();
-    }
   }
 
   // ---------------------------------------------------------------- 画

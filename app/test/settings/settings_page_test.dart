@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanmao_reader/bookshelf/cache_page.dart';
 import 'package:lanmao_reader/online/source_list_page.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
 import 'package:lanmao_reader/reader/reader_settings.dart';
@@ -40,6 +41,13 @@ void main() {
     for (final item in ['书源', '替换净化规则', '阅读设置', '关于']) {
       expect(find.text(item), findsOneWidget, reason: item);
     }
+  });
+
+  testWidgets('点「正文缓存」这一行进入缓存管理页', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('正文缓存'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CachePage), findsOneWidget);
   });
 
   testWidgets('没有缓存时显示 0 章，不能清除', (tester) async {

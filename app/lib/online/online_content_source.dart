@@ -15,7 +15,10 @@ import 'source_repository.dart';
 
 /// 书架和阅读器的在线内容来源：用书源执行目录、正文链路，按替换净化规则处理正文。停用的书源照样能用（只影响搜索）。
 final class OnlineContentSource implements BookContentSource {
-  OnlineContentSource(this._engine, this._sources, this._rules);
+  OnlineContentSource(this._engine, this._sources, this._rules, {this.cacheRetryDelay = const Duration(seconds: 1)});
+
+  /// 缓存全本时一章失败后等多久重试（Legado 等 1 秒）；测试里改短。
+  final Duration cacheRetryDelay;
 
   final SourceEngine _engine;
   final SourceRepository _sources;
@@ -93,6 +96,61 @@ final class OnlineContentSource implements BookContentSource {
 
   @override
   ShelfRefresh refreshShelf(List<ShelfBook> books) => _ShelfRefresh(this, books);
+
+  @override
+  ChapterCaching cacheChapters(ShelfBook book, List<TocChapter> toc, Iterable<int> indices) => _ChapterCaching(this, book, toc, indices);
+}
+
+/// 缓存全本（add-book-cache 设计 D1）：一个 [Batch]，每章经批量限流器执行正文链路，和书架更新一样不挤占交互任务；
+/// 失败的等 [OnlineContentSource.cacheRetryDelay] 重试，同一章最多请求 [attempts] 次（Legado 相同）。
+final class _ChapterCaching implements ChapterCaching {
+  _ChapterCaching(OnlineContentSource owner, ShelfBook book, List<TocChapter> toc, Iterable<int> indices) {
+    final pending = [
+      for (final index in indices)
+        _cache(owner, book, toc, index).then((result) {
+          if (!_batch.isStopped) _results.add(result);
+        }, onError: (Object _) {}), // 只有停止时的取消错误会到这里
+    ];
+    unawaited(Future.wait(pending).whenComplete(_results.close));
+  }
+
+  static const attempts = 3;
+
+  final Batch _batch = Batch();
+  final StreamController<ChapterCacheResult> _results = StreamController();
+
+  @override
+  Stream<ChapterCacheResult> get results => _results.stream;
+
+  @override
+  void stop() {
+    _batch.stop();
+    unawaited(_results.close());
+  }
+
+  Future<ChapterCacheResult> _cache(OnlineContentSource owner, ShelfBook book, List<TocChapter> toc, int index) async {
+    final entry = owner._sources[book.origin];
+    if (entry == null) return (index: index, text: null, error: const ContentLoadException.sourceMissing().message);
+    final next = index + 1 < toc.length ? chapterAbsoluteUrl(engineChapterOf(toc[index + 1])) : null;
+    for (var attempt = 1; ; attempt++) {
+      try {
+        final content = await owner._engine.content(
+          entry.source,
+          engineBookOf(book),
+          engineChapterOf(toc[index]),
+          nextChapterUrl: next,
+          batch: _batch,
+        );
+        return (index: index, text: (title: content.title, content: content.content), error: null);
+      } on TaskCancelledException {
+        rethrow;
+      } catch (e) {
+        if (attempt >= attempts) return (index: index, text: null, error: describeError(e));
+      }
+      await Future.any([Future<void>.delayed(owner.cacheRetryDelay), _batch.stopped]);
+      if (_batch.isStopped) throw const TaskCancelledException();
+    }
+  }
 }
 
 final class _ShelfRefresh implements ShelfRefresh {

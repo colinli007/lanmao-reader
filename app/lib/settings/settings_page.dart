@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../bookshelf/cache_page.dart';
 import '../library/providers.dart';
 import '../online/replace_rule_list_page.dart';
 import '../online/source_list_page.dart';
@@ -83,6 +84,8 @@ class _ContentCacheTileState extends ConsumerState<_ContentCacheTile> {
     final clearable = stats != null && stats.chapters > 0 && !_clearing;
     return ListTile(
       title: const Text('正文缓存'),
+      // 点这一行进入缓存管理页，右边的「清除」照旧（add-book-cache 设计 D5）
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CachePage())),
       subtitle: Text(switch (stats) {
         _ when _clearing => '清除中',
         null => '统计中',

@@ -140,7 +140,7 @@ final class TestServices {
   final FakeEngine engine;
   final FakeScreenAwake screen = FakeScreenAwake();
   final FakeScreenBrightness brightness = FakeScreenBrightness();
-  late final OnlineContentSource contentSource = OnlineContentSource(engine, repository, replaceRules);
+  late final OnlineContentSource contentSource = OnlineContentSource(engine, repository, replaceRules, cacheRetryDelay: Duration.zero);
 
   /// [file] 不为空时用文件数据库（关闭后重新 create 模拟重启），否则用内存数据库。
   static Future<TestServices> create({File? file}) async {
