@@ -5,9 +5,13 @@
 /// 但需要 JS、WebView 的错误不吞：MD3 里这些规则能正常执行，跳过会得到不同的结果。
 library;
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../core/environment.dart';
 import '../core/errors.dart';
 import '../core/source_task.dart';
+import '../js/host_api.dart' show jsBytes;
 import '../js/source_js.dart';
 import '../net/java_url.dart';
 import '../regex/source_regex.dart';
@@ -439,6 +443,36 @@ ChapterContent getContent(
     final response = _fetch(task, request, loginCheck: true);
     return _analyzeContent(task, book, chapter, baseUrl: absoluteUrl, redirectUrl: response.url, body: response.body, nextChapterUrl: nextChapterUrl);
   });
+}
+
+/// 正文里的一张图片（book-chains「正文图片」，add-content-images 设计 D9；MD3 `BookHelp.saveImage`）：
+/// `data:` 地址直接解码，其余按书源构造请求取原始字节，非 2xx 报错；再执行 `ruleContent.imageDecode`。
+Uint8List getContentImage(RuleEnvironment env, BookSource source, Book book, String src) {
+  return _withTask(env, source, 'image', (task) {
+    final bytes = src.startsWith('data:') ? _dataUriBytes(src) : _imageResponseBytes(task, book, src);
+    final decode = task.source.ruleContent['imageDecode'];
+    if (decode == null || decode.trim().isEmpty) return bytes;
+    return task.inField('ruleContent.imageDecode', () {
+      final result = SourceJs.instance.evalImageDecode(task, decode, book: book, bytes: bytes, src: src);
+      if (result == null) throw RuleException('图片解密的结果为空');
+      return jsBytes(result);
+    });
+  });
+}
+
+/// `data:[类型][;base64],数据`：只认 base64（MD3 的 `AnalyzeUrl` 也只解 base64）。
+Uint8List _dataUriBytes(String src) {
+  final comma = src.indexOf(',');
+  if (comma < 0 || !src.substring(0, comma).contains(';base64')) throw RuleException('不支持的图片地址：${_take(src, 40)}');
+  return base64Decode(src.substring(comma + 1).trim());
+}
+
+Uint8List _imageResponseBytes(SourceTask task, Book book, String src) {
+  final request = buildSourceRequest(task, src, ruleData: book);
+  task.env.checkCancelled();
+  final result = task.env.fetch(request.http);
+  if (result.statusCode < 200 || result.statusCode >= 300) throw RuleException('图片请求失败：HTTP ${result.statusCode}');
+  return result.body;
 }
 
 ChapterContent _analyzeContent(

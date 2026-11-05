@@ -69,7 +69,7 @@ final class _Call {
   };
 
   /// 字节数组参数：JS 数组（-128 到 127）或文本（按 UTF-8）。
-  Uint8List bytes(int index) => _bytes(this[index]);
+  Uint8List bytes(int index) => jsBytes(this[index]);
 
   SymmetricCrypto cipher() => task.handles.get<_Cipher>(this[0] as int).crypto;
 
@@ -86,7 +86,8 @@ String _text(Object value) => switch (value) {
   _ => jsString(value),
 };
 
-Uint8List _bytes(Object? value) => switch (value) {
+/// JS 交来的字节数组（-128 到 127 的数组，或按 UTF-8 编码的文本）转成字节；宿主 API 的参数和 `imageDecode` 的返回值都用它。
+Uint8List jsBytes(Object? value) => switch (value) {
   Uint8List() => value,
   List() => Uint8List.fromList([for (final b in value) (b as num).toInt() & 0xFF]),
   String() => Uint8List.fromList(utf8.encode(value)),

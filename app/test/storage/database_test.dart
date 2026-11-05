@@ -268,4 +268,60 @@ void main() {
     await fileDb.useSearchKeyword('三体', DateTime(2026));
     expect(await fileDb.watchSearchKeywords('').first, ['三体']);
   });
+
+  group('正文图片', () {
+    final png = Uint8List.fromList([1, 2, 3, 4]);
+
+    test('按书和地址读写，算进正文缓存的大小', () async {
+      await db.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/0', title: '第0章', content: '正文'));
+      await db.putContentImage('b', 'https://a.com/1.png', png);
+      await db.putContentImage('b', 'https://a.com/1.png,{"headers":{}}', Uint8List(2));
+      expect(await db.getContentImage('b', 'https://a.com/1.png'), png);
+      expect(await db.getContentImage('other', 'https://a.com/1.png'), isNull);
+      expect(await db.contentCacheStats(), (chapters: 1, bytes: utf8.encode('正文').length + 6));
+    });
+
+    test('移出书架、启动清理浏览中的书、换书源、清除正文缓存时和正文一起删除', () async {
+      for (final url in ['shelf', 'browsing', 'old', 'new']) {
+        await db.saveBrowsingBook(book(url), toc(url, 2));
+        await db.putContentImage(url, 'src', png);
+      }
+      for (final url in ['shelf', 'old']) {
+        await db.addToShelf(url, DateTime(2026));
+      }
+      await db.purgeBrowsingBooks();
+      expect(await db.getContentImage('browsing', 'src'), isNull);
+      expect(await db.getContentImage('new', 'src'), isNull, reason: '浏览中的书，启动时清掉');
+      await db.putContentImage('new', 'src', png);
+      await db.changeSource('old', book('new', inShelf: true, addedAt: DateTime(2026)), toc('new', 2));
+      expect(await db.getContentImage('old', 'src'), isNull);
+      expect(await db.getContentImage('new', 'src'), png, reason: '新地址已有的图片保留');
+      await db.removeBook('new');
+      expect(await db.getContentImage('new', 'src'), isNull);
+      await db.clearContents();
+      expect(await db.getContentImage('shelf', 'src'), isNull);
+      expect(await db.contentCacheStats(), (chapters: 0, bytes: 0));
+    });
+
+    test('从没有正文图片的版本（v3）升级：原有数据都在，图片缓存为空、可以写入', () async {
+      final dir = Directory.systemTemp.createTempSync('db');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final file = File('${dir.path}/app.sqlite');
+      driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+      var fileDb = AppDatabase(NativeDatabase(file));
+      await fileDb.putContent(const ContentRow(bookUrl: 'b', chapterUrl: '/0', title: '第0章', content: '正文'));
+      await fileDb.useSearchKeyword('三体', DateTime(2026));
+      await fileDb.customStatement('DROP TABLE content_images');
+      await fileDb.customStatement('PRAGMA user_version = 3');
+      await fileDb.close();
+
+      fileDb = AppDatabase(NativeDatabase(file));
+      addTearDown(fileDb.close);
+      expect((await fileDb.getContent('b', '/0'))?.content, '正文');
+      expect(await fileDb.watchSearchKeywords('').first, ['三体']);
+      expect(await fileDb.getContentImage('b', 'src'), isNull);
+      await fileDb.putContentImage('b', 'src', png);
+      expect(await fileDb.getContentImage('b', 'src'), png);
+    });
+  });
 }

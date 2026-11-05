@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanmao_reader/reader/image_viewer_page.dart';
 import 'package:lanmao_reader/reader/layout/page_painter.dart';
 import 'package:lanmao_reader/reader/menu/appearance_panel.dart';
 import 'package:lanmao_reader/reader/menu/layout_panel.dart';
@@ -19,6 +20,7 @@ import 'package:lanmao_reader/ui/tokens.dart';
 import 'package:rule_engine/rule_engine.dart';
 
 import '../support/test_app.dart';
+import 'content_images_test.dart' show png;
 
 void main() {
   late TestServices services;
@@ -296,6 +298,87 @@ void main() {
       await back(tester);
       expect(services.brightness.calls, isEmpty);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+  });
+
+  group('正文图片', () {
+    late Uint8List picture;
+    setUp(() async => picture = await png(600, 400));
+
+    /// 第 0 章是「第0章第0段、插图、第0章第1段」；[image] 是取图片的结果，缺省是一张 600×400 的图。
+    void useImage({Future<Uint8List> Function(String src)? image}) {
+      final original = services.engine.onContent!;
+      services.engine
+        ..onContent = ((source, book, chapter, next) async => chapter.title == '第0章'
+            ? ChapterContent('第0章第0段\n<img src="https://a.com/1.png">\n第0章第1段', title: chapter.title)
+            : original(source, book, chapter, next))
+        ..onImage = ((source, book, src) => image?.call(src) ?? Future.value(picture));
+    }
+
+    /// 打开第 0 章，等图片取到、量完尺寸（真实的异步）再排版。
+    Future<void> openWithImages(WidgetTester tester) async {
+      await open(tester, startAt: 0);
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    int imageRequests() => services.engine.calls.where((call) => call.startsWith('image')).length;
+
+    testWidgets('插图单独成段，读作「[图片]」；取到的图片写进缓存，再打开时不再请求', (tester) async {
+      useImage();
+      await openWithImages(tester);
+      // 600×400 的图不比正文宽，按原始大小放在第一段后面；第二段放不下，在下一页
+      expect(pageText(tester), endsWith('第0章第0段\n[图片]'));
+      expect(imageRequests(), 1);
+      expect(await tester.runAsync(() => services.db.getContentImage(SimpleBook.bookUrl, 'https://a.com/1.png')), picture);
+      await back(tester);
+      await openWithImages(tester);
+      expect(imageRequests(), 1);
+    });
+
+    testWidgets('取图片失败时照常显示这一章，下次打开这一章时重新请求', (tester) async {
+      var fail = true;
+      useImage(image: (src) async => fail ? throw Exception('404') : picture);
+      await openWithImages(tester);
+      expect(pageText(tester), contains('[图片]'));
+      expect(imageRequests(), 1);
+      fail = false;
+      await back(tester);
+      await openWithImages(tester);
+      expect(imageRequests(), 2);
+    });
+
+    testWidgets('长按插图打开大图，点一下关闭；点击插图照常打开菜单', (tester) async {
+      useImage();
+      await openWithImages(tester);
+      // 插图铺满正文宽、高约 500，屏幕中间落在它上面
+      final center = tester.getCenter(find.byType(ReaderPage));
+      await tester.longPressAt(center);
+      // 大图解码完之前转圈，pumpAndSettle 等不到安静
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(ImageViewerPage), findsOneWidget);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      expect(find.byType(RawImage), findsOneWidget);
+      await tester.tap(find.byType(ImageViewerPage));
+      await tester.pumpAndSettle();
+      expect(find.byType(ImageViewerPage), findsNothing);
+      await tester.tapAt(center);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('目录'), findsOneWidget);
+    });
+
+    testWidgets('滚动模式里长按插图也打开大图', (tester) async {
+      useImage();
+      await openWithImages(tester);
+      await useScroll(tester);
+      await tester.longPressAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(ImageViewerPage), findsOneWidget);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    });
   });
 
   group('分页：章节之间连续翻页', () {

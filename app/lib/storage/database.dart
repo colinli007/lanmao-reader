@@ -122,6 +122,20 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// 正文图片的缓存，按书和图片地址（含 `,{选项}`），跟着正文一起删除（add-content-images 设计 D7）。
+@DataClassName('ContentImageRow')
+class CachedImages extends Table {
+  @override
+  String get tableName => 'content_images';
+
+  TextColumn get bookUrl => text()();
+  TextColumn get src => text()();
+  BlobColumn get bytes => blob()();
+
+  @override
+  Set<Column> get primaryKey => {bookUrl, src};
+}
+
 /// 搜索历史：关键词、使用次数、最后使用时间，和 Legado 的 `search_keywords` 相同（add-search-history 设计 D1）。
 @DataClassName('SearchKeywordRow')
 class SearchKeywords extends Table {
@@ -139,7 +153,7 @@ typedef ShelfEntry = ({ShelfBook book, int unread});
 /// 已缓存正文的章节数和正文的 UTF-8 字节数。
 typedef ContentCacheStats = ({int chapters, int bytes});
 
-@DriftDatabase(tables: [Sources, ReplaceRules, Books, Chapters, Contents, SourceKv, Cookies, Settings, SearchKeywords])
+@DriftDatabase(tables: [Sources, ReplaceRules, Books, Chapters, Contents, SourceKv, Cookies, Settings, SearchKeywords, CachedImages])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
@@ -149,14 +163,15 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
-  /// 2：新增 replace_rules（add-replace-rules）；3：新增 search_keywords（add-search-history）。
+  /// 2：新增 replace_rules（add-replace-rules）；3：新增 search_keywords（add-search-history）；4：新增 content_images（add-content-images）。
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.createTable(replaceRules);
       if (from < 3) await m.createTable(searchKeywords);
+      if (from < 4) await m.createTable(cachedImages);
     },
   );
 
@@ -286,9 +301,10 @@ class AppDatabase extends _$AppDatabase {
     BooksCompanion(inShelf: const Value(true), addedAt: Value(now)),
   );
 
-  /// 移出书架：删除书籍、目录、正文缓存和进度。
+  /// 移出书架：删除书籍、目录、正文缓存（含正文图片）和进度。
   Future<void> removeBook(String bookUrl) => transaction(() async {
     await (delete(contents)..where((c) => c.bookUrl.equals(bookUrl))).go();
+    await (delete(cachedImages)..where((i) => i.bookUrl.equals(bookUrl))).go();
     await (delete(chapters)..where((c) => c.bookUrl.equals(bookUrl))).go();
     await (delete(books)..where((b) => b.bookUrl.equals(bookUrl))).go();
   });
@@ -307,6 +323,7 @@ class AppDatabase extends _$AppDatabase {
       ..addColumns([books.bookUrl])
       ..where(books.inShelf.equals(false));
     await (delete(contents)..where((c) => c.bookUrl.isInQuery(browsing))).go();
+    await (delete(cachedImages)..where((i) => i.bookUrl.isInQuery(browsing))).go();
     await (delete(chapters)..where((c) => c.bookUrl.isInQuery(browsing))).go();
     await (delete(books)..where((b) => b.inShelf.equals(false))).go();
   });
@@ -344,18 +361,30 @@ class AppDatabase extends _$AppDatabase {
     return query.watch().map((rows) => {for (final row in rows) row.read(contents.chapterUrl)!});
   }
 
-  /// 正文缓存的大小：清除时会删掉的那些正文（add-settings 设计 D1）。
+  Future<Uint8List?> getContentImage(String bookUrl, String src) async =>
+      (await (select(cachedImages)..where((i) => i.bookUrl.equals(bookUrl) & i.src.equals(src))).getSingleOrNull())?.bytes;
+
+  Future<void> putContentImage(String bookUrl, String src, Uint8List bytes) =>
+      into(cachedImages).insertOnConflictUpdate(ContentImageRow(bookUrl: bookUrl, src: src, bytes: bytes));
+
+  /// 正文缓存的大小：清除时会删掉的那些正文和正文图片（add-settings 设计 D1，add-content-images 设计 D7）。
   Future<ContentCacheStats> contentCacheStats() async {
     final chapters = countAll();
     final bytes = const CustomExpression<int>('COALESCE(SUM(octet_length(content)), 0)');
     final row = await (selectOnly(contents)..addColumns([chapters, bytes])).getSingle();
-    return (chapters: row.read(chapters)!, bytes: row.read(bytes)!);
+    final imageBytes = const CustomExpression<int>('COALESCE(SUM(length(bytes)), 0)');
+    final images = await (selectOnly(cachedImages)..addColumns([imageBytes])).getSingle();
+    final int textBytes = row.read(bytes)!, pictureBytes = images.read(imageBytes)!;
+    return (chapters: row.read(chapters)!, bytes: textBytes + pictureBytes);
   }
 
   /// 清除所有书的正文缓存，再 VACUUM 回收磁盘空间（设计 D2）。VACUUM 不能在事务里执行；
   /// 它失败（比如磁盘空间不足）时删除已经生效，只是文件没有变小，所以只记日志。
   Future<void> clearContents() async {
-    await delete(contents).go();
+    await transaction(() async {
+      await delete(contents).go();
+      await delete(cachedImages).go();
+    });
     try {
       await customStatement('VACUUM');
     } catch (e) {

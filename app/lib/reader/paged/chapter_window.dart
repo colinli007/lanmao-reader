@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../library/content_source.dart';
 import '../../storage/database.dart';
 import '../chapter_format.dart';
+import '../content_images.dart';
 import '../layout/chapter_layout.dart';
 
 /// 取第 index 章排版前的正文（读缓存或执行正文链路）。失败时抛出 [ContentLoadException]。
@@ -102,10 +103,14 @@ final class _Slot {
 /// 窗口自己加载正文（[load]）并排版；当前章同步排到当前页再多一页，其余部分和相邻章分帧排完（设计 D6）。
 /// 翻进相邻章时窗口整体移一格，离开窗口的章释放排版结果（设计 D7）。
 class ChapterWindow extends ChangeNotifier {
-  ChapterWindow({required this.chapters, required this.load, required LayoutSpec spec, this.schedule = scheduleNextFrame}) : _spec = spec;
+  ChapterWindow({required this.chapters, required this.load, required LayoutSpec spec, this.images, this.schedule = scheduleNextFrame})
+    : _spec = spec;
 
   final List<TocChapter> chapters;
   final ChapterLoader load;
+
+  /// 这本书的正文图片：排版时画图，长按时看大图（add-content-images 设计 D4、D8）。
+  final ContentImages? images;
   final LayoutScheduler schedule;
 
   LayoutSpec _spec;
@@ -274,7 +279,7 @@ class ChapterWindow extends ChangeNotifier {
 
   /// 排一章：当前章同步排到要显示的页，其余部分分帧排；排出新的页时看看加载中的页能不能换成正文页。
   ChapterLayout _layout(int index, FormattedChapter content) {
-    final layout = ChapterLayout(content, _spec, isVolume: chapters[index].isVolume);
+    final layout = ChapterLayout(content, _spec, isVolume: chapters[index].isVolume, images: images);
     final current = _current;
     layout.layoutThrough(current is PendingPage && current.chapter == index ? current.offset ?? 0 : 0);
     layout.addListener(() {

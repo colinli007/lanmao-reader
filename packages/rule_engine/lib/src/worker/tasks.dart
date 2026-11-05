@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../chain/chains.dart';
 import '../chain/models.dart';
 import '../core/environment.dart';
@@ -33,6 +35,10 @@ TocResult Function() chapterListTask(BookSource source, Book book) => () {
 
 ChapterContent Function() contentTask(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl}) =>
     () => getContent(const WorkerRuleEnvironment(), source, book, chapter, nextChapterUrl: nextChapterUrl);
+
+/// 正文里的一张图片（add-content-images 设计 D9）。
+Uint8List Function() imageTask(BookSource source, Book book, String src) =>
+    () => getContentImage(const WorkerRuleEnvironment(), source, book, src);
 
 /// 替换净化规则（add-replace-rules 设计 D2、D3）：执行一条正则规则、载入规则 JSON、校验一条规则，都要用到 worker 里的正则引擎。
 String Function() replaceTask(String input, String pattern, String replacement) =>

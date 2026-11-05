@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../chapter_format.dart';
+import '../image_viewer_page.dart';
 import '../layout/chapter_layout.dart';
 import '../paged/chapter_window.dart';
 import '../reader_settings.dart';
@@ -196,15 +197,30 @@ class _ScrollReaderViewState extends State<ScrollReaderView> {
             );
           }
           final paragraph = index - 1;
-          return Semantics(
-            label: paragraphs[paragraph].text,
+          final painted = Semantics(
+            label: paragraphs[paragraph].text.replaceAll(imageMark, '[图片]'),
             child: CustomPaint(painter: _ParagraphPainter(layout, paragraph, color)),
+          );
+          final images = _window.images;
+          if (paragraphs[paragraph].images.isEmpty || images == null) return painted;
+          // 有图片的段落：长按图片看大图（reader「看大图」）
+          return GestureDetector(
+            onLongPressStart: (details) {
+              if (widget.menu.value) return;
+              final src = layout.painterFor(_wholeParagraph(layout, paragraph), color).imageAt(details.localPosition);
+              if (src != null) ImageViewerPage.open(context, src, images);
+            },
+            child: painted,
           );
         },
       ),
     );
   }
 }
+
+/// 第 [paragraph] 段整段的 Segment：滚动模式按段画（设计 D12）。
+Segment _wholeParagraph(ChapterLayout layout, int paragraph) =>
+    (paragraph: paragraph, from: 0, to: layout.linesOf(paragraph).lines.length, top: 0);
 
 class _TitlePainter extends CustomPainter {
   _TitlePainter(this.layout, this.color);
@@ -219,19 +235,16 @@ class _TitlePainter extends CustomPainter {
   bool shouldRepaint(_TitlePainter oldDelegate) => oldDelegate.layout != layout || oldDelegate.color != color;
 }
 
-/// 画整段（不裁剪），和分页模式用同一个 painter 缓存。
+/// 画整段（不裁剪），和分页模式用同一个 painter 缓存。图片解码完成时这一章通知重画（add-content-images 设计 D4）。
 class _ParagraphPainter extends CustomPainter {
-  _ParagraphPainter(this.layout, this.paragraph, this.color);
+  _ParagraphPainter(this.layout, this.paragraph, this.color) : super(repaint: layout);
 
   final ChapterLayout layout;
   final int paragraph;
   final Color color;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final lines = layout.linesOf(paragraph).lines.length;
-    layout.painterFor((paragraph: paragraph, from: 0, to: lines, top: 0), color).paint(canvas, Offset.zero);
-  }
+  void paint(Canvas canvas, Size size) => layout.painterFor(_wholeParagraph(layout, paragraph), color).paint(canvas, Offset.zero);
 
   @override
   bool shouldRepaint(_ParagraphPainter oldDelegate) =>

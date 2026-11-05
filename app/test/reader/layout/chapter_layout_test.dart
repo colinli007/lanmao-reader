@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanmao_reader/reader/chapter_format.dart';
@@ -23,7 +26,7 @@ void main() {
         for (final index in [0, 1])
           () {
             final lines = layout.linesOf(index).lines;
-            final painter = layout.painterFor((paragraph: index, from: 0, to: lines.length, top: 0), const Color(0xFF000000));
+            final painter = (layout.painterFor((paragraph: index, from: 0, to: lines.length, top: 0), const Color(0xFF000000)) as TextSegmentPainter);
             return painter.indent + _boxes(painter.first!, 0, 1).first.left;
           }(),
       ];
@@ -36,7 +39,7 @@ void main() {
     test('首行缩进为 0 时，首字从左边缘开始', () {
       const spec = LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(335, 600), indentChars: 0);
       final layout = ChapterLayout(formatChapter('t', '他点了点头。'), spec);
-      final painter = layout.painterFor((paragraph: 0, from: 0, to: 1, top: 0), const Color(0xFF000000));
+      final painter = (layout.painterFor((paragraph: 0, from: 0, to: 1, top: 0), const Color(0xFF000000)) as TextSegmentPainter);
       expect(painter.indent + _boxes(painter.first!, 0, 1).first.left, 0);
       layout.dispose();
     });
@@ -59,7 +62,7 @@ void main() {
       final text = '${_filler * 2}。';
       final layout = ChapterLayout(formatChapter('t', text), _spec);
       final lines = layout.linesOf(0).lines;
-      final painter = layout.painterFor((paragraph: 0, from: 0, to: lines.length, top: 0), const Color(0xFF000000));
+      final painter = (layout.painterFor((paragraph: 0, from: 0, to: lines.length, top: 0), const Color(0xFF000000)) as TextSegmentPainter);
       final first = painter.first!, rest = painter.rest!;
       final firstEnd = layout.linesOf(0).firstEnd;
       // 首行：画的时候平移一个缩进，右边缘 = 缩进 + 首行 painter 里最后一个字的右边缘
@@ -285,7 +288,7 @@ void main() {
       final segment = layout.pages[page].segments.first;
       layout.painterFor(segment, color);
       layout.retainAround(page + 10);
-      final painter = layout.painterFor(segment, color);
+      final painter = (layout.painterFor(segment, color) as TextSegmentPainter);
       final lines = layout.linesOf(segment.paragraph);
       // 页内 painter 不含首行，只排了其余行；逐行比较区间
       final rest = painter.rest!;
@@ -308,4 +311,102 @@ void main() {
       layout.dispose();
     });
   });
+
+  group('正文图片（add-content-images）', () {
+    const spec = LayoutSpec(fontSize: 18, lineHeight: 1.8, size: Size(360, 640));
+    const lineHeight = 18 * 1.8;
+
+    /// 一章：[content] 里的图片按 [sizes] 量好尺寸。
+    FormattedChapter chapter(String content, Map<String, Size> sizes, {String? style}) =>
+        arrangeImages(formatChapter('t', content), sizes, style: style);
+
+    Size sizeOf(String content, Size natural, {String? style}) {
+      final c = chapter(content, {'a.png': natural, 'a.png,{"width":"50%"}': natural}, style: style);
+      return imageDisplaySize(blockImageOf(c.paragraphs.single) ?? c.paragraphs.single.images.single, spec);
+    }
+
+    test('显示尺寸：默认缩到正文宽、一页高；FULL 铺满宽度；width 选项；加载失败是三行高的方框；行内宽一个字', () {
+      expect(sizeOf('<img src="a.png">', const Size(600, 400)), const Size(360, 240));
+      expect(sizeOf('<img src="a.png">', const Size(100, 100)), const Size(100, 100));
+      expect(sizeOf('<img src="a.png">', const Size(300, 3000)), const Size(64, 640));
+      expect(sizeOf('<img src="a.png">', const Size(100, 50), style: 'FULL'), const Size(360, 180));
+      expect(sizeOf('<img src="a.png,{"width":"50%"}">', const Size(600, 400)), const Size(180, 120));
+      expect(
+        imageDisplaySize(blockImageOf(chapter('<img src="b.png">', const {}).paragraphs.single)!, spec),
+        const Size(360, lineHeight * 3),
+      );
+      expect(sizeOf('<img src="a.png">', const Size(20, 40)), const Size(18, lineHeight));
+      expect(sizeOf('<img src="a.png">', const Size(40, 20)), const Size(18, 9));
+    });
+
+    test('单独成段的图片只有一行，放不下当前页剩下的空间时放到下一页，偏移按一个字算', () {
+      // 章节名约 60，10 段各 32.4 加段距 10.8，排完约 492，剩下的放不下 240 高的图片
+      final text = List.filled(10, '山风从谷底卷上来').join('\n');
+      final layout = ChapterLayout(chapter('$text\n<img src="a.png">\n尾声', {'a.png': const Size(600, 400)}), spec);
+      layout.layoutThrough(1 << 30);
+      final image = layout.chapter.paragraphs.indexWhere((p) => blockImageOf(p) != null);
+      expect(layout.linesOf(image).lines.single, (start: 0, end: 1, top: 0.0, height: 240.0));
+      final page = layout.pages.indexWhere((p) => p.segments.any((s) => s.paragraph == image));
+      expect(layout.pages[page].segments.first.paragraph, image, reason: '图片在新的一页顶部');
+      expect(layout.pages[page].segments.first.top, 0);
+      expect(layout.chapter.paragraphs[image + 1].offset, layout.chapter.paragraphs[image].offset + 2);
+      expect(layout.pageText(page), startsWith('[图片]'));
+      layout.dispose();
+    });
+
+    test('SINGLE：前面的内容结束后换页，图片独占一页、垂直居中，后面的文字从下一页开始', () {
+      final layout = ChapterLayout(chapter('第一段\n<img src="a.png">\n第二段', {'a.png': const Size(600, 400)}, style: 'SINGLE'), spec);
+      layout.layoutThrough(1 << 30);
+      expect(layout.pages, hasLength(3));
+      expect([for (final s in layout.pages[1].segments) (s.paragraph, s.top)], [(1, (640 - 240) / 2)]);
+      expect(layout.pages[2].segments.single.paragraph, 2);
+      expect(layout.pages[2].hasTitle, isFalse);
+      layout.dispose();
+    });
+
+    test('行内图留在文字行里；长按的位置找得到它，加载失败的块状图找不到', () {
+      final layout = ChapterLayout(
+        chapter('他<img src="z.png">了一眼\n<img src="bad.png">', {'z.png': const Size(20, 20)}),
+        spec,
+      );
+      layout.layoutThrough(1 << 30);
+      expect(layout.linesOf(0).lines, hasLength(1));
+      final painter = layout.painterFor(layout.pages[0].segments[0], const Color(0xFF000000)) as TextSegmentPainter;
+      final box = painter.first!.inlinePlaceholderBoxes!.single.toRect().shift(Offset(painter.indent, 0));
+      expect(box.width, 18);
+      expect(layout.imageAt(0, box.center + Offset(0, layout.pages[0].segments[0].top), const Color(0xFF000000)), 'z.png');
+      expect(layout.imageAt(0, Offset(spec.size.width / 2, layout.pages[0].segments[1].top + 10), const Color(0xFF000000)), isNull);
+      expect(layout.pageText(0), contains('他[图片]了一眼'));
+      layout.dispose();
+    });
+
+    test('画的时候按显示尺寸向位图来源要图；解码完成的通知让这一章重画', () {
+      final bitmaps = _FakeBitmaps();
+      final layout = ChapterLayout(chapter('<img src="a.png">', {'a.png': const Size(600, 400)}), spec, images: bitmaps);
+      layout.layoutThrough(0);
+      var notified = 0;
+      layout.addListener(() => notified++);
+      layout.retainAround(0);
+      expect(bitmaps.requests, [('a.png', const Size(360, 240))]);
+      final recorder = PictureRecorder();
+      layout.painterFor(layout.pages[0].segments.single, const Color(0xFF000000)).paint(Canvas(recorder), Offset.zero);
+      recorder.endRecording().dispose();
+      expect(bitmaps.requests, hasLength(2));
+      bitmaps.notifyListeners();
+      expect(notified, 1);
+      layout.dispose();
+      bitmaps.notifyListeners();
+      expect(notified, 1, reason: '释放后不再转发');
+    });
+  });
+}
+
+final class _FakeBitmaps extends ChangeNotifier implements ImageBitmaps {
+  final List<(String, Size)> requests = [];
+
+  @override
+  Image? bitmap(String src, Size size) {
+    requests.add((src, size));
+    return null;
+  }
 }

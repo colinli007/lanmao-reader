@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
@@ -39,6 +40,20 @@ final class OnlineContentSource implements BookContentSource {
       throw ContentLoadException(describeError(e));
     }
   }
+
+  @override
+  Future<Uint8List> loadImage(ShelfBook book, String src) async {
+    final entry = _sources[book.origin];
+    if (entry == null) throw const ContentLoadException.sourceMissing();
+    try {
+      return await _engine.image(entry.source, engineBookOf(book), src);
+    } catch (e) {
+      throw ContentLoadException(describeError(e));
+    }
+  }
+
+  @override
+  String? imageStyle(ShelfBook book) => _sources[book.origin]?.source.ruleContent['imageStyle'];
 
   /// 依次执行对这本书生效的规则（replace-rules「规则的作用范围」「执行替换」「超时停用」）：
   /// 普通文本在这里替换，正则交给 worker（设计 D2）；超时的规则跳过并停用（设计 D5）。

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:rule_engine/rule_engine.dart';
@@ -16,6 +17,9 @@ abstract interface class SourceEngine {
   Future<TocResult> chapterList(BookSource source, Book book, {Batch? batch});
 
   Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl, Batch? batch});
+
+  /// 正文里的一张图片的字节（book-chains「正文图片」）。交互任务，直接提交。
+  Future<Uint8List> image(BookSource source, Book book, String src);
 
   /// 执行一条正则替换规则，超过规则的超时时间时抛出 [TaskTimeoutException]（add-replace-rules 设计 D2、D5）。
   Future<String> replace(String input, ReplaceRule rule);
@@ -98,6 +102,9 @@ final class PoolSourceEngine implements SourceEngine {
   @override
   Future<ChapterContent> content(BookSource source, Book book, BookChapter chapter, {String? nextChapterUrl, Batch? batch}) =>
       _submit(contentTask(source, book, chapter, nextChapterUrl: nextChapterUrl), batch);
+
+  @override
+  Future<Uint8List> image(BookSource source, Book book, String src) => _pool.run(imageTask(source, book, src));
 
   /// 交互任务直接提交；批量任务经限流器，随批次取消。
   Future<R> _submit<R>(R Function() task, Batch? batch) =>

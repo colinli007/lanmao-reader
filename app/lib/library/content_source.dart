@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../storage/database.dart';
 
 /// 书架和阅读器取目录和正文的接口（设计 D1），由书源模块实现；书架、阅读器只认 `storage/` 的模型。
@@ -7,6 +9,13 @@ abstract interface class BookContentSource {
 
   /// 执行正文链路。[next] 是下一章，多页正文遇到它时停止。失败（包括书源不存在）时抛出 [ContentLoadException]。
   Future<ChapterText> loadContent(ShelfBook book, TocChapter chapter, {TocChapter? next});
+
+  /// 正文里的一张图片的字节（reader「正文图片」）：[src] 是正文里 `<img>` 的地址，可能带 `,{选项}`。
+  /// 失败（包括书源不存在）时抛出 [ContentLoadException]。
+  Future<Uint8List> loadImage(ShelfBook book, String src);
+
+  /// 这本书的书源规定的正文图片样式（`ruleContent.imageStyle`），没有时为 null。
+  String? imageStyle(ShelfBook book);
 
   /// 按替换净化规则处理一章的章节名和正文（reader「替换净化」，add-replace-rules 设计 D6）。不抛出错误。
   Future<Purified> purify(ShelfBook book, ChapterText text);

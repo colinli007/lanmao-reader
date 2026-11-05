@@ -3423,6 +3423,268 @@ class SearchKeywordsCompanion extends UpdateCompanion<SearchKeywordRow> {
   }
 }
 
+class $CachedImagesTable extends CachedImages
+    with TableInfo<$CachedImagesTable, ContentImageRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CachedImagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _bookUrlMeta = const VerificationMeta(
+    'bookUrl',
+  );
+  @override
+  late final GeneratedColumn<String> bookUrl = GeneratedColumn<String>(
+    'book_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _srcMeta = const VerificationMeta('src');
+  @override
+  late final GeneratedColumn<String> src = GeneratedColumn<String>(
+    'src',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bytesMeta = const VerificationMeta('bytes');
+  @override
+  late final GeneratedColumn<Uint8List> bytes = GeneratedColumn<Uint8List>(
+    'bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [bookUrl, src, bytes];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'content_images';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContentImageRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('book_url')) {
+      context.handle(
+        _bookUrlMeta,
+        bookUrl.isAcceptableOrUnknown(data['book_url']!, _bookUrlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookUrlMeta);
+    }
+    if (data.containsKey('src')) {
+      context.handle(
+        _srcMeta,
+        src.isAcceptableOrUnknown(data['src']!, _srcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_srcMeta);
+    }
+    if (data.containsKey('bytes')) {
+      context.handle(
+        _bytesMeta,
+        bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bytesMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {bookUrl, src};
+  @override
+  ContentImageRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContentImageRow(
+      bookUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_url'],
+      )!,
+      src: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}src'],
+      )!,
+      bytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}bytes'],
+      )!,
+    );
+  }
+
+  @override
+  $CachedImagesTable createAlias(String alias) {
+    return $CachedImagesTable(attachedDatabase, alias);
+  }
+}
+
+class ContentImageRow extends DataClass implements Insertable<ContentImageRow> {
+  final String bookUrl;
+  final String src;
+  final Uint8List bytes;
+  const ContentImageRow({
+    required this.bookUrl,
+    required this.src,
+    required this.bytes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['book_url'] = Variable<String>(bookUrl);
+    map['src'] = Variable<String>(src);
+    map['bytes'] = Variable<Uint8List>(bytes);
+    return map;
+  }
+
+  CachedImagesCompanion toCompanion(bool nullToAbsent) {
+    return CachedImagesCompanion(
+      bookUrl: Value(bookUrl),
+      src: Value(src),
+      bytes: Value(bytes),
+    );
+  }
+
+  factory ContentImageRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContentImageRow(
+      bookUrl: serializer.fromJson<String>(json['bookUrl']),
+      src: serializer.fromJson<String>(json['src']),
+      bytes: serializer.fromJson<Uint8List>(json['bytes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'bookUrl': serializer.toJson<String>(bookUrl),
+      'src': serializer.toJson<String>(src),
+      'bytes': serializer.toJson<Uint8List>(bytes),
+    };
+  }
+
+  ContentImageRow copyWith({String? bookUrl, String? src, Uint8List? bytes}) =>
+      ContentImageRow(
+        bookUrl: bookUrl ?? this.bookUrl,
+        src: src ?? this.src,
+        bytes: bytes ?? this.bytes,
+      );
+  ContentImageRow copyWithCompanion(CachedImagesCompanion data) {
+    return ContentImageRow(
+      bookUrl: data.bookUrl.present ? data.bookUrl.value : this.bookUrl,
+      src: data.src.present ? data.src.value : this.src,
+      bytes: data.bytes.present ? data.bytes.value : this.bytes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentImageRow(')
+          ..write('bookUrl: $bookUrl, ')
+          ..write('src: $src, ')
+          ..write('bytes: $bytes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(bookUrl, src, $driftBlobEquality.hash(bytes));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContentImageRow &&
+          other.bookUrl == this.bookUrl &&
+          other.src == this.src &&
+          $driftBlobEquality.equals(other.bytes, this.bytes));
+}
+
+class CachedImagesCompanion extends UpdateCompanion<ContentImageRow> {
+  final Value<String> bookUrl;
+  final Value<String> src;
+  final Value<Uint8List> bytes;
+  final Value<int> rowid;
+  const CachedImagesCompanion({
+    this.bookUrl = const Value.absent(),
+    this.src = const Value.absent(),
+    this.bytes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedImagesCompanion.insert({
+    required String bookUrl,
+    required String src,
+    required Uint8List bytes,
+    this.rowid = const Value.absent(),
+  }) : bookUrl = Value(bookUrl),
+       src = Value(src),
+       bytes = Value(bytes);
+  static Insertable<ContentImageRow> custom({
+    Expression<String>? bookUrl,
+    Expression<String>? src,
+    Expression<Uint8List>? bytes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (bookUrl != null) 'book_url': bookUrl,
+      if (src != null) 'src': src,
+      if (bytes != null) 'bytes': bytes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedImagesCompanion copyWith({
+    Value<String>? bookUrl,
+    Value<String>? src,
+    Value<Uint8List>? bytes,
+    Value<int>? rowid,
+  }) {
+    return CachedImagesCompanion(
+      bookUrl: bookUrl ?? this.bookUrl,
+      src: src ?? this.src,
+      bytes: bytes ?? this.bytes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (bookUrl.present) {
+      map['book_url'] = Variable<String>(bookUrl.value);
+    }
+    if (src.present) {
+      map['src'] = Variable<String>(src.value);
+    }
+    if (bytes.present) {
+      map['bytes'] = Variable<Uint8List>(bytes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedImagesCompanion(')
+          ..write('bookUrl: $bookUrl, ')
+          ..write('src: $src, ')
+          ..write('bytes: $bytes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3435,6 +3697,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CookiesTable cookies = $CookiesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $SearchKeywordsTable searchKeywords = $SearchKeywordsTable(this);
+  late final $CachedImagesTable cachedImages = $CachedImagesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3449,6 +3712,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cookies,
     settings,
     searchKeywords,
+    cachedImages,
   ];
 }
 
@@ -5290,6 +5554,168 @@ typedef $$SearchKeywordsTableProcessedTableManager =
       SearchKeywordRow,
       PrefetchHooks Function()
     >;
+typedef $$CachedImagesTableCreateCompanionBuilder =
+    CachedImagesCompanion Function({
+      required String bookUrl,
+      required String src,
+      required Uint8List bytes,
+      Value<int> rowid,
+    });
+typedef $$CachedImagesTableUpdateCompanionBuilder =
+    CachedImagesCompanion Function({
+      Value<String> bookUrl,
+      Value<String> src,
+      Value<Uint8List> bytes,
+      Value<int> rowid,
+    });
+
+class $$CachedImagesTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedImagesTable> {
+  $$CachedImagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get bookUrl => $composableBuilder(
+    column: $table.bookUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get src => $composableBuilder(
+    column: $table.src,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CachedImagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedImagesTable> {
+  $$CachedImagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get bookUrl => $composableBuilder(
+    column: $table.bookUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get src => $composableBuilder(
+    column: $table.src,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get bytes => $composableBuilder(
+    column: $table.bytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CachedImagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedImagesTable> {
+  $$CachedImagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get bookUrl =>
+      $composableBuilder(column: $table.bookUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get src =>
+      $composableBuilder(column: $table.src, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get bytes =>
+      $composableBuilder(column: $table.bytes, builder: (column) => column);
+}
+
+class $$CachedImagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CachedImagesTable,
+          ContentImageRow,
+          $$CachedImagesTableFilterComposer,
+          $$CachedImagesTableOrderingComposer,
+          $$CachedImagesTableAnnotationComposer,
+          $$CachedImagesTableCreateCompanionBuilder,
+          $$CachedImagesTableUpdateCompanionBuilder,
+          (
+            ContentImageRow,
+            BaseReferences<_$AppDatabase, $CachedImagesTable, ContentImageRow>,
+          ),
+          ContentImageRow,
+          PrefetchHooks Function()
+        > {
+  $$CachedImagesTableTableManager(_$AppDatabase db, $CachedImagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CachedImagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CachedImagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CachedImagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> bookUrl = const Value.absent(),
+                Value<String> src = const Value.absent(),
+                Value<Uint8List> bytes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedImagesCompanion(
+                bookUrl: bookUrl,
+                src: src,
+                bytes: bytes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String bookUrl,
+                required String src,
+                required Uint8List bytes,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedImagesCompanion.insert(
+                bookUrl: bookUrl,
+                src: src,
+                bytes: bytes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CachedImagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CachedImagesTable,
+      ContentImageRow,
+      $$CachedImagesTableFilterComposer,
+      $$CachedImagesTableOrderingComposer,
+      $$CachedImagesTableAnnotationComposer,
+      $$CachedImagesTableCreateCompanionBuilder,
+      $$CachedImagesTableUpdateCompanionBuilder,
+      (
+        ContentImageRow,
+        BaseReferences<_$AppDatabase, $CachedImagesTable, ContentImageRow>,
+      ),
+      ContentImageRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5312,4 +5738,6 @@ class $AppDatabaseManager {
       $$SettingsTableTableManager(_db, _db.settings);
   $$SearchKeywordsTableTableManager get searchKeywords =>
       $$SearchKeywordsTableTableManager(_db, _db.searchKeywords);
+  $$CachedImagesTableTableManager get cachedImages =>
+      $$CachedImagesTableTableManager(_db, _db.cachedImages);
 }

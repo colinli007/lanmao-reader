@@ -8,6 +8,7 @@ import '../library/content_source.dart';
 import '../library/providers.dart';
 import '../storage/database.dart';
 import 'chapter_format.dart';
+import 'content_images.dart';
 import 'layout/chapter_layout.dart';
 import 'layout/page_painter.dart';
 import 'menu/reader_menu.dart';
@@ -44,6 +45,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   /// 第一次拿到正文区域的尺寸时创建（排版要用）。
   ChapterWindow? _window;
+
+  /// 这本书的正文图片，和窗口一起创建、一起释放。
+  ContentImages? _images;
 
   /// 上次保存进度时的章节：窗口换了章就立即保存，同一章里的移动 2 秒防抖保存（设计 D13）。
   int? _savedChapter;
@@ -88,6 +92,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     _saveProgress();
     _lifecycle.dispose();
     _window?.dispose();
+    _images?.dispose();
     _menu.dispose();
     super.dispose();
   }
@@ -105,7 +110,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   /// 第一次布局时创建窗口，打开要读的章节。在 LayoutBuilder 里调用，所以先打开再挂监听，不在构建期间 setState。
   ChapterWindow _createWindow(LayoutSpec spec) {
     final book = _book!;
-    final window = ChapterWindow(chapters: _chapters, load: _formatted, spec: spec);
+    final images = _images = ContentImages(
+      db: _db,
+      source: _source,
+      book: book,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
+    final window = ChapterWindow(chapters: _chapters, load: _formatted, spec: spec, images: images);
     final startAt = widget.startAt;
     if (startAt != null) {
       window.open(startAt.clamp(0, _chapters.length - 1));
@@ -129,7 +140,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('替换规则「$name」超时，已停用')));
       }
     }
-    return formatChapter(purified.text.title, purified.text.content);
+    final chapter = formatChapter(purified.text.title, purified.text.content);
+    // 排版前先取到这一章的图片、量出尺寸（add-content-images 设计 D1）
+    final sources = imageSourcesOf(chapter);
+    if (sources.isEmpty) return chapter;
+    final sizes = await _images!.prepare(sources);
+    return arrangeImages(chapter, sizes, style: _source.imageStyle(_book!));
   }
 
   /// 正文：先读缓存，没有时执行正文链路并写入缓存。

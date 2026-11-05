@@ -39,7 +39,7 @@ const _bookUrl = 'local://soak';
 const _chapters = 20;
 
 /// 每次读堆时报存活实例数的类：排版结果、段落画笔和它们持有的原生段落。
-const _tracked = ['ChapterLayout', 'SegmentPainter', 'TextPainter', '_NativeParagraph'];
+const _tracked = ['ChapterLayout', 'TextSegmentPainter', 'ImageSegmentPainter', 'TextPainter', '_NativeParagraph'];
 
 /// 合成的正文：句子长短不一，带逗号、句号、问号、对话引号和省略号。
 String _chapterText(int index) {

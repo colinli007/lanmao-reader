@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show DatabaseConnection, driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -29,6 +30,7 @@ final class FakeEngine implements SourceEngine {
   Future<Book> Function(BookSource source, Book book)? onBookInfo;
   Future<TocResult> Function(BookSource source, Book book)? onChapterList;
   Future<ChapterContent> Function(BookSource source, Book book, BookChapter chapter, String? next)? onContent;
+  Future<Uint8List> Function(BookSource source, Book book, String src)? onImage;
 
   /// 不为空时代替正则替换规则的执行（注入超时等），否则在当前 isolate 里执行规则。
   Future<String> Function(String input, ReplaceRule rule)? onReplace;
@@ -64,6 +66,12 @@ final class FakeEngine implements SourceEngine {
     calls.add('content ${chapter.url}');
     if (batch != null) batches.add(batch);
     return onContent!(source, book, chapter, nextChapterUrl);
+  }
+
+  @override
+  Future<Uint8List> image(BookSource source, Book book, String src) {
+    calls.add('image $src');
+    return onImage!(source, book, src);
   }
 
   @override
@@ -132,6 +140,7 @@ final class TestServices {
   final FakeEngine engine;
   final FakeScreenAwake screen = FakeScreenAwake();
   final FakeScreenBrightness brightness = FakeScreenBrightness();
+  late final OnlineContentSource contentSource = OnlineContentSource(engine, repository, replaceRules);
 
   /// [file] 不为空时用文件数据库（关闭后重新 create 模拟重启），否则用内存数据库。
   static Future<TestServices> create({File? file}) async {
@@ -144,7 +153,7 @@ final class TestServices {
 
   List<Override> get overrides => [
     databaseProvider.overrideWithValue(db),
-    contentSourceProvider.overrideWithValue(OnlineContentSource(engine, repository, replaceRules)),
+    contentSourceProvider.overrideWithValue(contentSource),
     sourceEngineProvider.overrideWithValue(engine),
     sourceRepositoryProvider.overrideWith((ref) => repository),
     replaceRuleRepositoryProvider.overrideWith((ref) => replaceRules),

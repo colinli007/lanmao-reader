@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:quickjs_ng_ffi/quickjs_ng_ffi.dart';
 
@@ -96,6 +97,22 @@ final class SourceJs {
       'baseUrl': task.sourceKey,
       'cookie': _hostObject('cookie'),
       'cache': _hostObject('cache'),
+    });
+  }
+
+  /// 正文图片的 `ruleContent.imageDecode`（MD3 `ImageUtils.decode` → `BaseSource.evalJS`）：书源级上下文，
+  /// 另外注入 `book`、`result`（图片字节）、`src`（图片地址）。
+  Object? evalImageDecode(SourceTask task, String code, {required Book book, required Uint8List bytes, required String src}) {
+    final source = _sourceTag(task);
+    return _run(SourceFrame(task), code, {
+      'java': source,
+      'source': source,
+      'baseUrl': task.sourceKey,
+      'cookie': _hostObject('cookie'),
+      'cache': _hostObject('cache'),
+      'book': book,
+      'result': bytes,
+      'src': src,
     });
   }
 

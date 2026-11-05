@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../image_viewer_page.dart';
 import '../layout/page_painter.dart';
 import '../reader_settings.dart';
 import 'chapter_window.dart';
@@ -115,6 +116,17 @@ class _PagedViewState extends State<PagedView> with SingleTickerProviderStateMix
     }
   }
 
+  /// 长按页面上的图片看大图（reader「看大图」）；菜单显示时、不在图片上时没有反应。
+  void _onLongPressStart(LongPressStartDetails details) {
+    final images = _window.images;
+    if (widget.menu.value || _turn != null || images == null) return;
+    if (_window.current case TextPage(:final chapter, page: final index)) {
+      final position = details.localPosition - widget.insets.topLeft;
+      final src = _window.layoutOf(chapter)!.imageAt(index, position, widget.theme.foreground);
+      if (src != null) ImageViewerPage.open(context, src, images);
+    }
+  }
+
   void _onDragStart(DragStartDetails details) {
     if (_turn != null) _finish();
     _dragFollows = null;
@@ -153,6 +165,7 @@ class _PagedViewState extends State<PagedView> with SingleTickerProviderStateMix
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapUp: _onTapUp,
+      onLongPressStart: _onLongPressStart,
       onHorizontalDragStart: _onDragStart,
       onHorizontalDragUpdate: _onDragUpdate,
       onHorizontalDragEnd: _onDragEnd,
