@@ -109,7 +109,13 @@ JS 抛出异常时，求值 SHALL 以 JS 错误结束，错误里带有 JS 的�
 ### Requirement: Rhino 专有写法
 书源 JS 执行之前，`=>` 前面紧挨着的数组字面量（`[a,b]=>`，Rhino 当成解构参数）SHALL 被加上括号（`([a,b])=>`）再执行；字符串、模板字符串、注释和正则字面量里的内容 MUST NOT 被改动，下标访问（`a[0]`）MUST NOT 被当成解构参数。
 
-全局的 `org` 和 `Packages` SHALL 是 Java 包对象：`org.jsoup.Jsoup`、`org.jsoup.parser`（以及 `Packages.org.jsoup…`）按 source-js-api「Jsoup」提供；调用或 `new` 其它任何类时 MUST 以「不支持的宿主 API：类名」结束，JS 的 try/catch 拦不住。`org`、`Packages` 在 jsLib 的代码里（顶层和函数里）和变量层的 `this` 上 SHALL 同样可用。其余依赖 Rhino Java 互操作的写法（`JavaImporter`、`importPackage`、`java.lang.*`、Java 字符串方法如 `.length()`、`.equals()`）不在支持范围，MUST 以错误结束，MUST NOT 被静默改写成别的语义。宿主 API 返回的字符串 SHALL 是 JS 原生字符串（MD3 里是 Java 字符串对象），`===` 比较和 `replaceAll` 按 JS 语义。
+全局的 `java`、`org` 和 `Packages` SHALL 是 Java 包对象：`org.jsoup.Jsoup`、`org.jsoup.parser.Parser`（以及 `Packages.org.jsoup…`）按 source-js-api「Jsoup」提供；`Packages.io.legado.app.help.http.StrResponse` 按「StrResponse 构造」提供；`java.lang.String`、`java.security.MessageDigest`（以及 `Packages.java…`）按「Java 字符串与摘要」提供；`java.io.ByteArrayOutputStream`、`java.util.ArrayList`（以及 `Packages.java…`）按「Java 内存字节流与列表」提供。调用或 `new` 其它类时 MUST 以「不支持的宿主 API：类名」结束，JS 的 try/catch 拦不住。包对象在 jsLib 的顶层和函数词法作用域里 SHALL 可用；规则、URL、书源变量层注入的 `java` SHALL 遮蔽全局包，仍是各自的宿主对象，jsLib 函数的 `this.java` SHALL 取调用方的宿主对象。目录 `formatJs` 不注入宿主 `java`，仍可访问全局 Java 包。
+
+其余依赖 Rhino Java 互操作的写法（`JavaImporter`、`importPackage`、Java 字符串方法如 `.length()`、`.equals()`）不在支持范围，MUST 以错误结束，MUST NOT 被静默改写成别的语义。宿主 API 返回的字符串 SHALL 是 JS 原生字符串（MD3 里是 Java 字符串对象），`===` 比较和 `replaceAll` 按 JS 语义；Java 字符串包装只用于显式调用或构造 `java.lang.String` 的值。
+
+#### Scenario: jsLib 的 java 与规则宿主分离
+- **WHEN** jsLib 函数用 `java.security.MessageDigest` 和 `new java.lang.String(s).getBytes("UTF-8")` 算签名，并调用 `this.java.md5Encode(s)`
+- **THEN** 两者得到相同的 MD5；规则里的 `java` 仍保留原有宿主方法，不新增 `lang` 或 `security` 属性
 
 #### Scenario: 解构箭头函数
 - **WHEN** 规则是 `@js:[["男频","1"],["女频","2"]].map([t,id]=>t+id).join(",")`

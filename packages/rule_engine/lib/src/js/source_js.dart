@@ -118,7 +118,7 @@ final class SourceJs {
   }
 
   /// 目录的 `formatJs`：所有章节共用一个变量层，`gInt` 和未声明的变量在章节之间累积；不注入 `java`、`source`、`book`，
-  /// 也不挂 jsLib。返回值不为 null 时作为章节名。某一章出错时只记日志，章节名不变。
+  /// 也不挂 jsLib；未被遮蔽的全局 java 包仍可用。返回值不为 null 时作为章节名。某一章出错时只记日志，章节名不变。
   void formatChapterTitles(SourceTask task, String code, List<BookChapter> chapters) {
     final layer = JsLayer(engine);
     try {

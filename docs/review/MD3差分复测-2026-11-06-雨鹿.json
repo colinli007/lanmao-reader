@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-06T14:45:16.669170",
+  "md3Version": "3.26.23",
+  "note": "仅保留阶段结果、字段和正文去空白 SHA-256；双端分类沿用 md3_diff 工具口径。完整正文不纳入报告。",
+  "sources": [
+    {
+      "name": "📂雨鹿小说",
+      "url": "https://novel.yulu.local",
+      "key": "我的",
+      "category": "一致",
+      "ours": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "count": "100",
+            "name": "整座大山都是我的猎场",
+            "author": "百李山中仙",
+            "kind": "都市, 都市生活",
+            "wordCount": "920.9万字",
+            "lastChapter": "",
+            "intro": "假如重生回到四十年前，你有什么打算呢？\n　　买房？炒股？屯古董？捣腾国债卷？\n　　……\n　　不！\n　　赵军觉得只要自己不去瞎折腾，就是对全家最大的帮助。\n　　所以，他要做一个老实的村溜子。\n　　就这样，他默默地走向了村外的大山，过起了摸鱼捕鸟，牵狗打猎的生活。\n　　本故事纯属事实，如有雷同，那是真的！！！[百李山中仙]",
+            "coverUrl": "https://res.yutinglu.com/slmh/474/22/b1/2743.jpg",
+            "bookUrl": "https://d.yutinglu.com/book/details/v4/832/832188.html"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "整座大山都是我的猎场",
+            "author": "百李山中仙",
+            "kind": "都市, 都市生活",
+            "wordCount": "920.9万字",
+            "lastChapter": "第九百零二章 .赵有财:王美兰又成我嫂子了？(补10月更新2/3)",
+            "intro": "假如重生回到四十年前，你有什么打算呢？\n　　买房？炒股？屯古董？捣腾国债卷？\n　　……\n　　不！\n　　赵军觉得只要自己不去瞎折腾，就是对全家最大的帮助。\n　　所以，他要做一个老实的村溜子。\n　　就这样，他默默地走向了村外的大山，过起了摸鱼捕鸟，牵狗打猎的生活。\n　　本故事纯属事实，如有雷同，那是真的！！！[百李山中仙]",
+            "coverUrl": "https://res.yutinglu.com/slmh/474/22/b1/2743.jpg",
+            "tocUrl": "https://catalog.yutinglu.com/bqgeee/200/d6/45/40.html?yulu_site_id=bqgeee"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "2153"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第一章.重生1986 围猎野猪",
+            "textLength": 3205,
+            "textWithoutWhitespaceSha256": "1cc122c50ec2fbebeeea0e92ffe25955f5aef463a59144efdf28368efed49102"
+          }
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "name": "整座大山都是我的猎场",
+            "author": "百李山中仙",
+            "kind": "都市, 都市生活",
+            "wordCount": "920.9万字",
+            "lastChapter": "",
+            "intro": "假如重生回到四十年前，你有什么打算呢？\n　　买房？炒股？屯古董？捣腾国债卷？\n　　……\n　　不！\n　　赵军觉得只要自己不去瞎折腾，就是对全家最大的帮助。\n　　所以，他要做一个老实的村溜子。\n　　就这样，他默默地走向了村外的大山，过起了摸鱼捕鸟，牵狗打猎的生活。\n　　本故事纯属事实，如有雷同，那是真的！！！[百李山中仙]",
+            "coverUrl": "https://res.yutinglu.com/slmh/474/22/b1/2743.jpg",
+            "bookUrl": "https://d.yutinglu.com/book/details/v4/832/832188.html",
+            "count": "100"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "整座大山都是我的猎场",
+            "author": "百李山中仙",
+            "kind": "都市, 都市生活",
+            "wordCount": "920.9万字",
+            "lastChapter": "第九百零二章 .赵有财:王美兰又成我嫂子了？(补10月更新2/3)",
+            "intro": "假如重生回到四十年前，你有什么打算呢？\n　　买房？炒股？屯古董？捣腾国债卷？\n　　……\n　　不！\n　　赵军觉得只要自己不去瞎折腾，就是对全家最大的帮助。\n　　所以，他要做一个老实的村溜子。\n　　就这样，他默默地走向了村外的大山，过起了摸鱼捕鸟，牵狗打猎的生活。\n　　本故事纯属事实，如有雷同，那是真的！！！[百李山中仙]",
+            "coverUrl": "https://res.yutinglu.com/slmh/474/22/b1/2743.jpg",
+            "tocUrl": "https://catalog.yutinglu.com/bqgeee/200/d6/45/40.html?yulu_site_id=bqgeee"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "2153"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第一章.重生1986 围猎野猪",
+            "textLength": 3206,
+            "textWithoutWhitespaceSha256": "1cc122c50ec2fbebeeea0e92ffe25955f5aef463a59144efdf28368efed49102"
+          }
+        }
+      }
+    }
+  ]
+}

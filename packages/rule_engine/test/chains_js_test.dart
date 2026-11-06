@@ -65,10 +65,11 @@ void main() {
       expect(getChapterList(env, s, book(s)).map((c) => c.title), ['1aa', '2bab', '3cabc']);
     });
 
-    test('返回 null 时章节名不变，单章出错只记日志，没有 java 和 book', () {
+    test('返回 null 时章节名不变，单章出错只记日志，java 是全局包且没有 book', () {
       env.respond('https://a.com/toc', '<a href="1">a</a><a href="2">b</a><a href="3">c</a>');
-      final s = toc("if (index == 2) throw new Error('坏了'); index == 3 ? null : typeof java + typeof book");
-      expect(getChapterList(env, s, book(s)).map((c) => c.title), ['undefinedundefined', 'b', 'c']);
+      // MD3 BookChapterList 只注入 gInt/index/chapter/title；Rhino 顶层的 java 包仍然可见。
+      final s = toc("if (index == 2) throw new Error('坏了'); index == 3 ? null : new java.lang.String(title) + typeof book");
+      expect(getChapterList(env, s, book(s)).map((c) => c.title), ['aundefined', 'b', 'c']);
       expect(env.logs.single.message, contains('坏了'));
       expect(env.logs.single.field, 'ruleToc.formatJs');
     });

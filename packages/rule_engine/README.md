@@ -66,7 +66,13 @@ final content = await pool.run(contentTask(source, toc.book, chapters[0],
 | `java.log` 只在调试会话里输出 | 总是交给日志接收方 | 由调用方决定是否显示 |
 | Rhino 不支持 `class`、`async`、`?.` 等 | quickjs 支持 | 超集，不影响已有书源 |
 | `timeFormatUTC` 的月份名、星期、上午下午按设备 Locale | 固定简体中文 | 中文设备的默认值 |
-| `Packages`、`JavaImporter`、`org.jsoup` 等 Java 互操作 | 以 JS 错误结束 | 不模拟 Java 互操作 |
+| Java 类与包互操作 | 支持 `org.jsoup.Jsoup`、`Parser.unescapeEntities`、Java String 字节转换、MessageDigest、StrResponse 构造、ByteArrayOutputStream 和 ArrayList 常用方法；其它类明确报错 | 按真实书源需求提供有限兼容；`JavaImporter` 暂不支持 |
+
+jsLib 顶层和函数词法作用域里的 `java` 是 Java 包；规则、URL、书源的 `java` 仍是宿主对象，jsLib 函数可经 `this.java` 调用它。规则中访问 Java 类使用 `Packages.java…`。目录 `formatJs` 没有宿主 `java`，可直接访问全局 Java 包。`test/java_classes_test.dart` 使用酷狗原始 jsLib 验证搜索签名，并覆盖字节转换、摘要重置、作用域与跨任务状态。
+
+`StrResponse(url, body)` 用于登录检查脚本解密后重建响应，支持点众和聚合的原始脚本；新响应不继承旧响应头。地址使用 Dart URI 规范化，和 OkHttp 在 Unicode 域名的 IDNA 转换、百分号转义的大小写及非法 `%` 转义上仍有差异，未实现完整 OkHttp URL 解析器。`Parser.unescapeEntities` 只解 HTML5 实体，不移除标签；期望值用 jsoup 1.16.2 的 JAR 生成，另外以格格党原始规则覆盖离线四链路。
+
+`ByteArrayOutputStream` 支持无参/容量构造、单字节和数组范围写入、`toByteArray`、`size`、`reset`、`close`；`ArrayList` 支持无参/容量构造、`add(value)`、`get`、`size`、`isEmpty`、`toArray`、`clear`，未实现 Java 集合全套接口。字节流和列表在 JS 内保存状态，返回数组为独立容器快照；列表交回规则引擎时保留元素字段。`test/yulu_java_test.dart` 使用雨鹿原始脚本与合成加密响应，覆盖完整四链路。
 
 规则引擎的其它部分只在 MD3 自己会出错的地方偏离：
 

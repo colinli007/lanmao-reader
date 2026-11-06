@@ -11,6 +11,7 @@ import '../core/source_task.dart';
 import '../host/cookie_store.dart' show cookieToMap, mapToCookie;
 import '../html/css_selector.dart';
 import '../html/jsoup_text.dart';
+import '../html/jsoup_entities.dart';
 import '../request/analyze_url.dart';
 import '../request/str_response.dart';
 import '../rule/analyze_rule.dart';
@@ -122,6 +123,7 @@ final Map<String, _Api> _apis = {
   ..._cacheApis,
   ..._sourceApis,
   ..._bookApis,
+  'javaClass.digest': (c) => digest(c.str(0), c.bytes(1)),
   'unsupported': (c) => throw UnsupportedHostApiException(c.str(0)),
 };
 
@@ -303,6 +305,7 @@ String _jsoupBody(HttpResult result) {
 // ---------------------------------------------------------------- 响应对象
 
 final Map<String, _Api> _responseApis = {
+  'res.create': (c) => StrResponse.fromUrl(c.str(0), c.optStr(1)),
   'res.body': (c) => c.response().body,
   'res.code': (c) => c.response().statusCode,
   'res.statusCode': (c) => c.response().statusCode,
@@ -418,6 +421,7 @@ final Map<String, _Api> _elementApis = {
 
 /// `org.jsoup.Jsoup`（source-js-api「Jsoup」）：解析成文档，用现有的 jsoup 兼容实现（add-rhino-compat 设计 D1）。
 final Map<String, _Api> _jsoupApis = {
+  'jsoup.unescapeEntities': (c) => unescapeJsoupEntities(c.str(0), c[1] == true),
   'jsoup.parse': (c) => parseJsoupDocument(c.str(0), baseUri: c.optStr(1)),
   'jsoup.parseBodyFragment': (c) => parseJsoupDocument(c.str(0)),
 };

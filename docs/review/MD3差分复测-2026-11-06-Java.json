@@ -1,0 +1,209 @@
+{
+  "date": "2026-11-06T13:30:22.016216",
+  "md3Version": "3.26.23",
+  "note": "仅保留阶段结果、字段和正文去空白 SHA-256；双端分类沿用 md3_diff 工具口径。完整正文不纳入报告。",
+  "sources": [
+    {
+      "name": "⚡📂点众阅读",
+      "url": "https://asgportal.kkyd.cn",
+      "key": "天王殿",
+      "category": "一致",
+      "ours": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "count": "5",
+            "name": "天王殿",
+            "author": "左妻右妾",
+            "kind": "完本,都市,女总裁,保镖",
+            "wordCount": "",
+            "lastChapter": "",
+            "intro": "彪悍兵王周天回归都市，美女纷纷暗送秋波！能力越大，责任越大，他不羁的外表之下，心底热血未冷，当昔日兄弟有难，组织召唤，他再次出征，一双铁拳，再战天下！",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010122118/11010122118.jpg?t=202101010000",
+            "bookUrl": "https://asgportal.kkyd.cn/asg-portal/portal/client/1111,{\"method\": \"post\", body: \"c404884e9987512077c04001843138b0051e6855179d2ed03c7019b4afee36013f9acec32ab64c03cc7e68054a3b395b\"}"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "天王殿",
+            "author": "左妻右妾",
+            "kind": "完本,8.3分,都市,女总裁,保镖,兵王",
+            "wordCount": "569.8万",
+            "lastChapter": "共5016章",
+            "intro": "👤 主角：周天,唐紫尘\n　　👁️ 在线：5148人\n　　👈🏻 点击：3692次\n　　‎\n　　📜 简介：彪悍兵王周天回归都市，美女纷纷暗送秋波！能力越大，责任越大，他不羁的外表之下，心底热血未冷，当昔日兄弟有难，组织召唤，他再次出征，一双铁拳，再战天下！\n　　‎\n　　评分信息：\n　　总评分：8.3\n　　★★★★★：23\n　　★★★★☆：5\n　　★★★☆☆：1\n　　★★☆☆☆：1\n　　★☆☆☆☆：1",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010122118/11010122118.jpg?t=202101010000",
+            "tocUrl": "https://asgportal.kkyd.cn/asg-portal/portal/client/1304,{\"method\": \"post\", body: \"c404884e9987512077c04001843138b0051e6855179d2ed03c7019b4afee3601bc7ad9b2f8f493bd71e2e07c2cfa63c7523520b1dbedae4d52ba51737928c72b\"}"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "5016"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章",
+            "textLength": 1731,
+            "textWithoutWhitespaceSha256": "010a501b4ae8f7b7c9dd68f7289061e0d75f3f3b1d5cc8e153ba3cc6486223a1"
+          }
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "name": "天王殿",
+            "author": "左妻右妾",
+            "kind": "完本,都市,女总裁,保镖",
+            "wordCount": "",
+            "lastChapter": "",
+            "intro": "彪悍兵王周天回归都市，美女纷纷暗送秋波！能力越大，责任越大，他不羁的外表之下，心底热血未冷，当昔日兄弟有难，组织召唤，他再次出征，一双铁拳，再战天下！",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010122118/11010122118.jpg?t=202101010000",
+            "bookUrl": "https://asgportal.kkyd.cn/asg-portal/portal/client/1111,{\"method\": \"post\", body: \"c404884e9987512077c04001843138b0051e6855179d2ed03c7019b4afee36013f9acec32ab64c03cc7e68054a3b395b\"}",
+            "count": "5"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "天王殿",
+            "author": "左妻右妾",
+            "kind": "完本,8.3分,都市,女总裁,保镖,兵王",
+            "wordCount": "569.8万",
+            "lastChapter": "共5016章",
+            "intro": "👤 主角：周天,唐紫尘\n　　👁️ 在线：5148人\n　　👈🏻 点击：3692次\n　　‎\n　　📜 简介：彪悍兵王周天回归都市，美女纷纷暗送秋波！能力越大，责任越大，他不羁的外表之下，心底热血未冷，当昔日兄弟有难，组织召唤，他再次出征，一双铁拳，再战天下！\n　　‎\n　　评分信息：\n　　总评分：8.3\n　　★★★★★：23\n　　★★★★☆：5\n　　★★★☆☆：1\n　　★★☆☆☆：1\n　　★☆☆☆☆：1",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010122118/11010122118.jpg?t=202101010000",
+            "tocUrl": "https://asgportal.kkyd.cn/asg-portal/portal/client/1304,{\"method\": \"post\", body: \"c404884e9987512077c04001843138b0051e6855179d2ed03c7019b4afee3601bc7ad9b2f8f493bd71e2e07c2cfa63c7523520b1dbedae4d52ba51737928c72b\"}"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "5016"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章",
+            "textLength": 1732,
+            "textWithoutWhitespaceSha256": "010a501b4ae8f7b7c9dd68f7289061e0d75f3f3b1d5cc8e153ba3cc6486223a1"
+          }
+        }
+      }
+    },
+    {
+      "name": "📚聚合书库",
+      "url": "https://book4.cc",
+      "key": "我的",
+      "category": "一致",
+      "ours": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "count": "20",
+            "name": "我的",
+            "author": "儿林",
+            "kind": "点击量：1573293,网站：book3 未分类",
+            "wordCount": "",
+            "lastChapter": "第97章",
+            "intro": "　　情有独钟甜文校园主角：陈曦，顾霄┃配角：钧毅，Ben┃其它：可以的话给我评论哦！下次你再亲我，我一定咬你。立意：陈曦与顾霄都有着自己的音乐梦想，他们因为音乐彼此相爱，互相救赎，互补彼此生命中的缺陷，为了对方成为更好的自己。HEX冷冰山大神学霸顾霄X平凡没...",
+            "coverUrl": "https://book4.cc/img_io_read/null.jpg.css",
+            "bookUrl": "https://book4.cc/book3/未分类/1803904/"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "我的",
+            "author": "儿林",
+            "kind": "未分类,2025年06月19日 01:37",
+            "wordCount": "",
+            "lastChapter": "第97章•2025年06月19日 01:37",
+            "intro": "　　当前源：【1】状态：可用\n　　最新章节：第97章\n　　更新时间：2025年06月19日 01:37\n　　源列表（多个源可设置书籍变量更改接口）\n　　源接口：〔1〕状态：可用\n　　最新章节：第97章\n　　更新时间：2025年06月19日 01:37\n　　本书《我的》简介：\n　　情有独钟甜文校园主角：陈曦，顾霄┃配角：钧毅，Ben┃其它：可以的话给我评论哦！下次你再亲我，我一定咬你。立意：陈曦与顾霄都有着自己的音乐梦想，他们因为音乐彼此相爱，互相救赎，互补彼此生命中的缺陷，为了对方成为更好的自己。HEX冷冰山大神学霸顾霄X平凡没...",
+            "coverUrl": "https://book4.cc/img_io_read/null.jpg.css",
+            "tocUrl": "https://book4.cc/show_jsload_book_info/book3/1803904/book.json"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "97"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章",
+            "textLength": 1774,
+            "textWithoutWhitespaceSha256": "8113e60c0b4322c6298c1e30ee1ccc9888aacec44982521a9c02b567ee572e9a"
+          }
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "name": "我的",
+            "author": "儿林",
+            "kind": "点击量：1573293,网站：book3 未分类",
+            "wordCount": "",
+            "lastChapter": "第97章",
+            "intro": "　　情有独钟甜文校园主角：陈曦，顾霄┃配角：钧毅，Ben┃其它：可以的话给我评论哦！下次你再亲我，我一定咬你。立意：陈曦与顾霄都有着自己的音乐梦想，他们因为音乐彼此相爱，互相救赎，互补彼此生命中的缺陷，为了对方成为更好的自己。HEX冷冰山大神学霸顾霄X平凡没...",
+            "coverUrl": "https://book4.cc/img_io_read/null.jpg.css",
+            "bookUrl": "https://book4.cc/book3/未分类/1803904/",
+            "count": "20"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "我的",
+            "author": "儿林",
+            "kind": "未分类,2025年06月19日 01:37",
+            "wordCount": "",
+            "lastChapter": "第97章•2025年06月19日 01:37",
+            "intro": "　　当前源：【1】状态：可用\n　　最新章节：第97章\n　　更新时间：2025年06月19日 01:37\n　　源列表（多个源可设置书籍变量更改接口）\n　　源接口：〔1〕状态：可用\n　　最新章节：第97章\n　　更新时间：2025年06月19日 01:37\n　　本书《我的》简介：\n　　情有独钟甜文校园主角：陈曦，顾霄┃配角：钧毅，Ben┃其它：可以的话给我评论哦！下次你再亲我，我一定咬你。立意：陈曦与顾霄都有着自己的音乐梦想，他们因为音乐彼此相爱，互相救赎，互补彼此生命中的缺陷，为了对方成为更好的自己。HEX冷冰山大神学霸顾霄X平凡没...",
+            "coverUrl": "/img_io_read/null.jpg.css",
+            "tocUrl": "https://book4.cc/show_jsload_book_info/book3/1803904/book.json"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "97"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章",
+            "textLength": 1775,
+            "textWithoutWhitespaceSha256": "8113e60c0b4322c6298c1e30ee1ccc9888aacec44982521a9c02b567ee572e9a"
+          }
+        }
+      }
+    },
+    {
+      "name": "📂格格党网",
+      "url": "https://www.ggd66.com",
+      "key": "江山",
+      "category": "都失败",
+      "ours": {
+        "search": {
+          "ok": false,
+          "error": "网络：HandshakeException: Connection terminated during handshake"
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": false,
+          "error": "javax.net.ssl.SSLHandshakeException: connection closed"
+        }
+      }
+    }
+  ]
+}

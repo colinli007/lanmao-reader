@@ -1,0 +1,135 @@
+{
+  "generator": "jsoup 1.16.2 EntitiesOracle.java",
+  "cases": [
+    {
+      "input": "<b>&amp; &lt;i&gt; &quot; &apos;</b>\r\n\t\u0000",
+      "inAttribute": false,
+      "expected": "<b>& <i> \" '</b>\r\n\t\u0000"
+    },
+    {
+      "input": "<b>&amp; &lt;i&gt; &quot; &apos;</b>\r\n\t\u0000",
+      "inAttribute": true,
+      "expected": "<b>& <i> \" '</b>\r\n\t\u0000"
+    },
+    {
+      "input": "&nbsp; &copy; &lang; &rang; &NotEqualTilde; &fjlig; &Afr;",
+      "inAttribute": false,
+      "expected": "  © ⟨ ⟩ ≂̸ fj 𝔄"
+    },
+    {
+      "input": "&nbsp; &copy; &lang; &rang; &NotEqualTilde; &fjlig; &Afr;",
+      "inAttribute": true,
+      "expected": "  © ⟨ ⟩ ≂̸ fj 𝔄"
+    },
+    {
+      "input": "&AMP; &Amp; &unknown; &; &&amp; &amp;amp;",
+      "inAttribute": false,
+      "expected": "& &Amp; &unknown; &; && &amp;"
+    },
+    {
+      "input": "&AMP; &Amp; &unknown; &; &&amp; &amp;amp;",
+      "inAttribute": true,
+      "expected": "& &Amp; &unknown; &; && &amp;"
+    },
+    {
+      "input": "&copy &not &notin &notin; &apos &apos;",
+      "inAttribute": false,
+      "expected": "© ¬ &notin ∉ &apos '"
+    },
+    {
+      "input": "&copy &not &notin &notin; &apos &apos;",
+      "inAttribute": true,
+      "expected": "© ¬ &notin ∉ &apos '"
+    },
+    {
+      "input": "&notit; &ampx &amp1; &frac12x &frac12三 &amp三 &amp𝒜",
+      "inAttribute": false,
+      "expected": "&notit; &ampx &amp1; ½x ½三 &amp三 &𝒜"
+    },
+    {
+      "input": "&notit; &ampx &amp1; &frac12x &frac12三 &amp三 &amp𝒜",
+      "inAttribute": true,
+      "expected": "&notit; &ampx &amp1; &frac12x &frac12三 &amp三 &𝒜"
+    },
+    {
+      "input": "&amp=1 &amp-1 &amp_1 &amp! &amp;=1 &amp;-1 &amp;_1",
+      "inAttribute": false,
+      "expected": "&=1 &-1 &_1 &! &=1 &-1 &_1"
+    },
+    {
+      "input": "&amp=1 &amp-1 &amp_1 &amp! &amp;=1 &amp;-1 &amp;_1",
+      "inAttribute": true,
+      "expected": "&amp=1 &amp-1 &amp_1 &! &=1 &-1 &_1"
+    },
+    {
+      "input": "&#65; &#65 &#x41; &#X41 &#x1F600; &#0; &#xD800; &#x110000;",
+      "inAttribute": false,
+      "expected": "A A A A 😀 \u0000 � �"
+    },
+    {
+      "input": "&#65; &#65 &#x41; &#X41 &#x1F600; &#0; &#xD800; &#x110000;",
+      "inAttribute": true,
+      "expected": "A A A A 😀 \u0000 � �"
+    },
+    {
+      "input": "&#; &#x; &#-1; &#x-1; &#999999999999999999999; &#00000000000000000000065;",
+      "inAttribute": false,
+      "expected": "&#; &#x; &#-1; &#x-1; � A"
+    },
+    {
+      "input": "&#; &#x; &#-1; &#x-1; &#999999999999999999999; &#00000000000000000000065;",
+      "inAttribute": true,
+      "expected": "&#; &#x; &#-1; &#x-1; � A"
+    },
+    {
+      "input": "&#xFFFFFFFFFFFFFFFF; &#x8000000000000000; &#x00000000000000000041;",
+      "inAttribute": false,
+      "expected": "� � A"
+    },
+    {
+      "input": "&#xFFFFFFFFFFFFFFFF; &#x8000000000000000; &#x00000000000000000041;",
+      "inAttribute": true,
+      "expected": "� � A"
+    },
+    {
+      "input": "&#１２; &#١٢; &#12３; &frac12３ &amp１２;",
+      "inAttribute": false,
+      "expected": "&#１２; &#١٢; \f３; ½３ &１２;"
+    },
+    {
+      "input": "&#１２; &#١٢; &#12３; &frac12３ &amp１２;",
+      "inAttribute": true,
+      "expected": "&#１２; &#١٢; \f３; ½３ &１２;"
+    },
+    {
+      "input": "&#128;&#129;&#130;&#131;&#132;&#133;&#134;&#135;&#136;&#137;&#138;&#139;&#140;&#141;&#142;&#143;&#144;&#145;&#146;&#147;&#148;&#149;&#150;&#151;&#152;&#153;&#154;&#155;&#156;&#157;&#158;&#159;",
+      "inAttribute": false,
+      "expected": "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ"
+    },
+    {
+      "input": "&#128;&#129;&#130;&#131;&#132;&#133;&#134;&#135;&#136;&#137;&#138;&#139;&#140;&#141;&#142;&#143;&#144;&#145;&#146;&#147;&#148;&#149;&#150;&#151;&#152;&#153;&#154;&#155;&#156;&#157;&#158;&#159;",
+      "inAttribute": true,
+      "expected": "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ"
+    },
+    {
+      "input": "&#13;\r\n&#xFFFF; &#x10FFFF; &#xFFFE; &#1; &#11; &#127;",
+      "inAttribute": false,
+      "expected": "\r\r\n￿ 􏿿 ￾ \u0001 \u000b "
+    },
+    {
+      "input": "&#13;\r\n&#xFFFF; &#x10FFFF; &#xFFFE; &#1; &#11; &#127;",
+      "inAttribute": true,
+      "expected": "\r\r\n￿ 􏿿 ￾ \u0001 \u000b "
+    },
+    {
+      "input": "甲乙\r\n原文 <script>x < 2 && a > 1;</script>",
+      "inAttribute": false,
+      "expected": "甲乙\r\n原文 <script>x < 2 && a > 1;</script>"
+    },
+    {
+      "input": "甲乙\r\n原文 <script>x < 2 && a > 1;</script>",
+      "inAttribute": true,
+      "expected": "甲乙\r\n原文 <script>x < 2 && a > 1;</script>"
+    }
+  ]
+}

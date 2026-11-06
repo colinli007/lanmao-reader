@@ -167,16 +167,172 @@ const String sourceJsPrelude = r'''
     });
   }
 
+  // 只包装显式构造的 Java String，不修改原生 String 或宿主 API 返回的字符串。
+  function JavaString(value, charset) {
+    if (!(this instanceof JavaString)) return new JavaString(...arguments);
+    var text;
+    if (arguments.length === 0) text = '';
+    else if (Array.isArray(value)) {
+      if (arguments.length > 2 || (arguments.length === 2 && charset == null)) throw new TypeError('不支持的 String 构造参数');
+      text = call('bytesToStr', [value, arguments.length < 2 ? 'UTF-8' : charset]);
+    } else {
+      if (value == null || arguments.length !== 1) throw new TypeError('不支持的 String 构造参数');
+      text = String(value);
+    }
+    hidden(this, 'toString', function () { return text; });
+    hidden(this, 'toJSON', function () { return text; });
+    hidden(this, 'getBytes', function (charset) {
+      if (arguments.length > 1 || (arguments.length === 1 && charset == null)) throw new TypeError('不支持的 getBytes 参数');
+      return call('strToBytes', [text, arguments.length === 0 ? 'UTF-8' : charset]);
+    });
+  }
+
+  function messageDigest(algorithm) {
+    if (arguments.length !== 1) throw new TypeError('不支持的 MessageDigest.getInstance 参数');
+    // 创建时即验证算法；摘要状态留在 JS 实例里，jsLib 缓存跨任务使用时不会持有失效的任务句柄。
+    var size = call('javaClass.digest', [algorithm, []]).length;
+    var bytes = [];
+    return {
+      update: function (input, offset, length) {
+        if (arguments.length === 1 && typeof input === 'number') bytes.push((input << 24) >> 24);
+        else {
+          if (!Array.isArray(input) || (arguments.length !== 1 && arguments.length !== 3)) {
+            throw new TypeError('不支持的 MessageDigest.update 参数');
+          }
+          var start = arguments.length === 1 ? 0 : Math.trunc(Number(offset));
+          var count = arguments.length === 1 ? input.length : Math.trunc(Number(length));
+          if (!Number.isFinite(start) || !Number.isFinite(count) || start < 0 || count < 0 || start + count > input.length) {
+            throw new RangeError('MessageDigest.update 字节范围越界');
+          }
+          for (var i = start; i < start + count; i++) bytes.push((input[i] << 24) >> 24);
+        }
+      },
+      digest: function (input) {
+        if (arguments.length > 1 || (arguments.length === 1 && !Array.isArray(input))) {
+          throw new TypeError('不支持的 MessageDigest.digest 参数');
+        }
+        if (arguments.length === 1) this.update(input);
+        var result = call('javaClass.digest', [algorithm, bytes]);
+        bytes = [];
+        return result;
+      },
+      reset: function () { bytes = []; },
+      getDigestLength: function () { return size; }
+    };
+  }
+
+  // 有限的内存流/列表兼容：状态在 JS 对象内，jsLib 缓存对象时不依赖任务句柄。
+  function javaInt(value) {
+    var number = Math.trunc(Number(value));
+    if (!Number.isFinite(number) || number < -2147483648 || number > 2147483647) {
+      throw new RangeError('超出 Java int 范围');
+    }
+    return number;
+  }
+
+  function checkCapacity(args) {
+    if (args.length > 1 || (args.length === 1 && typeof args[0] !== 'number')) {
+      throw new TypeError('只支持无参数或初始容量构造');
+    }
+    if (args.length === 1 && javaInt(args[0]) < 0) throw new RangeError('初始容量不能为负');
+  }
+
+  function ByteArrayOutputStream(capacity) {
+    if (!(this instanceof ByteArrayOutputStream)) return new ByteArrayOutputStream(...arguments);
+    checkCapacity(arguments);
+    var bytes = [];
+    hidden(this, 'write', function (input, offset, length) {
+      if (arguments.length === 1 && typeof input === 'number') {
+        bytes.push((javaInt(input) << 24) >> 24);
+        return;
+      }
+      if (!Array.isArray(input) || (arguments.length !== 1 && arguments.length !== 3)) {
+        throw new TypeError('不支持的 ByteArrayOutputStream.write 参数');
+      }
+      var start = arguments.length === 1 ? 0 : javaInt(offset);
+      var count = arguments.length === 1 ? input.length : javaInt(length);
+      if (start < 0 || count < 0 || start + count > input.length) throw new RangeError('写入字节范围越界');
+      // 先复制和转换全部输入，参数错误不会留下半次写入。
+      var copied = input.slice(start, start + count).map(function (b) { return (javaInt(b) << 24) >> 24; });
+      for (var i = 0; i < copied.length; i++) bytes.push(copied[i]);
+    });
+    hidden(this, 'toByteArray', function () { return listify(bytes.slice()); });
+    hidden(this, 'size', function () { return bytes.length; });
+    hidden(this, 'reset', function () { bytes = []; });
+    // JDK 的 ByteArrayOutputStream.close 无副作用，之后仍可以写入。
+    hidden(this, 'close', function () {});
+  }
+
+  function ArrayList(capacity) {
+    if (!(this instanceof ArrayList)) return new ArrayList(...arguments);
+    checkCapacity(arguments);
+    var values = [];
+    hidden(this, 'add', function (value) {
+      if (arguments.length !== 1) throw new TypeError('只支持 ArrayList.add(值)');
+      values.push(value);
+      return true;
+    });
+    hidden(this, 'get', function (index) {
+      if (arguments.length !== 1) throw new TypeError('只支持 ArrayList.get(下标)');
+      var at = javaInt(index);
+      if (at < 0 || at >= values.length) throw new RangeError('列表下标越界');
+      return values[at];
+    });
+    hidden(this, 'size', function () { return values.length; });
+    hidden(this, 'isEmpty', function () { return values.length === 0; });
+    hidden(this, 'clear', function () { values = []; });
+    hidden(this, 'toArray', function () {
+      if (arguments.length !== 0) throw new TypeError('只支持 ArrayList.toArray()');
+      return listify(values.slice());
+    });
+    // 保留元素对象；跨宿主边界复用数组/JsObject 转换，搜索与目录仍能按对象字段取值。
+    hidden(this, 'toJSON', function () { return values.slice(); });
+  }
+
+  function javaRoot(path) {
+    return javaPackage(path, {
+      lang: javaPackage(path + '.lang', { String: JavaString }),
+      security: javaPackage(path + '.security', {
+        MessageDigest: javaPackage(path + '.security.MessageDigest', { getInstance: messageDigest })
+      }),
+      io: javaPackage(path + '.io', { ByteArrayOutputStream: ByteArrayOutputStream }),
+      util: javaPackage(path + '.util', { ArrayList: ArrayList })
+    });
+  }
+
   var org = javaPackage('org', {
     jsoup: javaPackage('org.jsoup', {
       Jsoup: javaPackage('org.jsoup.Jsoup', {
         parse: method('jsoup.parse'),
         parseBodyFragment: method('jsoup.parseBodyFragment')
+      }),
+      parser: javaPackage('org.jsoup.parser', {
+        Parser: javaPackage('org.jsoup.parser.Parser', {
+          unescapeEntities: function (text, inAttribute) {
+            if (arguments.length !== 2) throw new TypeError('不支持的 Parser.unescapeEntities 参数');
+            return call('jsoup.unescapeEntities', [text, !!inAttribute]);
+          }
+        })
+      })
+    })
+  });
+  function strResponse(url, body) {
+    if (arguments.length !== 2) throw new TypeError('不支持的 StrResponse 构造参数');
+    return call('res.create', [url, body]);
+  }
+  var io = javaPackage('Packages.io', {
+    legado: javaPackage('Packages.io.legado', {
+      app: javaPackage('Packages.io.legado.app', {
+        help: javaPackage('Packages.io.legado.app.help', {
+          http: javaPackage('Packages.io.legado.app.help.http', { StrResponse: strResponse })
+        })
       })
     })
   });
   // 宿主全局：jsLib 的代码和变量层的 this 上也能用（Rhino 的顶层作用域就有它们）
-  __qjs.setGlobals({ org: org, Packages: javaPackage('Packages', { org: org }) });
+  // jsLib 的词法作用域里 java 是包；规则/URL/书源变量层注入的 java 仍然是各自的宿主对象。
+  __qjs.setGlobals({ java: javaRoot('java'), org: org,
+    Packages: javaPackage('Packages', { org: org, java: javaRoot('Packages.java'), io: io }) });
 
   function javaObject(own, owner) {
     var target = {};

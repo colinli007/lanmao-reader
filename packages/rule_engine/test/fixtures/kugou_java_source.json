@@ -1,0 +1,18 @@
+{
+  "bookSourceName": "📂酷狗小说",
+  "bookSourceUrl": "https://gateway.kugou.com",
+  "jsLib": "function getsign(params) {\n    var timestamp = Math.floor(new Date().getTime() / 1000);\n    var base = \"mid=1&userid=0&dfid=0&appid=1005&clientver=0&clienttime=\" + timestamp + \"&\" + params;\n    var str = c + a(base) + c;\n    return \"signature=\" + b(str) + \"&\" + base;\n}\n\nvar c = \"OIlwieks28dk2k092lksi2UIkp\";\n\nfunction a(qs) {\n    var params = qs.split('&');\n    var obj = {};\n    params.forEach(function(p) {\n        var kv = p.split('=');\n        obj[kv[0]] = kv[1] || '';\n    });\n    var keys = Object.keys(obj).sort();\n    var result = keys.map(function(k) {\n        return k + '=' + obj[k];\n    });\n    return result.join('');\n}\n\nfunction b(str) {\n    try {\n        var md = java.security.MessageDigest.getInstance(\"MD5\");\n        var bytes = new java.lang.String(str).getBytes(\"UTF-8\");\n        md.update(bytes);\n        var digest = md.digest();\n        var hex = \"\";\n        for (var i = 0; i < digest.length; i++) {\n            var x = digest[i] & 0xFF;\n            if (x < 16) hex += \"0\";\n            hex += x.toString(16);\n        }\n        return hex;\n    } catch(e) {\n        return \"\";\n    }\n}",
+  "searchUrl": "@js:\nvar op = { headers: { \"x-router\": \"complexsearch.kugou.com\" } };\n\"https://gateway.kugou.com/v1/search/novel?\" + getsign(\"pagesize=100&page=\" + page + \"&keyword=\" + key) + \",\" + JSON.stringify(op)",
+  "ruleSearch": {
+    "author": "$.author_name##<em>|</em>",
+    "bookList": "$.data.lists",
+    "bookUrl": "@js:\nvar bookId = result.book_id || '';\nvar opts = { headers: { \"x-router\": \"longaudio.kugou.com\" } };\n\"https://gateway.kugou.com/v1/book/book_detail?\" + getsign(\"book_id=\" + bookId) + \",\" + JSON.stringify(opts)",
+    "checkKeyWord": "三界红包群",
+    "coverUrl": "$.cover_url",
+    "intro": "$.intro##<em>|</em>",
+    "kind": "$.category_name##<em>|</em>",
+    "lastChapter": "等级:{{$.level}}",
+    "name": "$.title##<em>|</em>",
+    "wordCount": "$.all_words"
+  }
+}

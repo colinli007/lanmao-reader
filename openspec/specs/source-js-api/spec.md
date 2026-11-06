@@ -159,6 +159,12 @@ SHALL 提供：`md5Encode`（32 位小写）、`md5Encode16`（32 位结果的�
 
 给了基准地址时，这个文档里元素的 `attr('abs:属性')` SHALL 按基准地址把相对地址转成绝对地址，转不了时为空串；没有基准地址时只有本来就是绝对地址的能取到。
 
+`org.jsoup.parser.Parser.unescapeEntities(文本, 是否属性)`（以及 `Packages.org.jsoup.parser.Parser`）SHALL 按 jsoup 1.16.2 解码 HTML5 命名实体和十进制/十六进制数字实体，只解码一次，不解析或移除标签，不规范化换行。缺分号时只接受基础实体；属性模式下，实体之后是字母、数字、`=`、`-`、`_` 时保留原文。未知实体保持原文，非法数字码点转成 U+FFFD，数字 0 保留为 NUL。
+
+#### Scenario: 属性模式的缺分号实体
+- **WHEN** 分别以 false 和 true 调用 `Parser.unescapeEntities("&copy=1 &NotEqualTilde;", 是否属性)`
+- **THEN** 结果分别为 `©=1 ≂̸` 和 `&copy=1 ≂̸`
+
 #### Scenario: 解析后选择
 - **WHEN** 规则是 `@js:var doc = org.jsoup.Jsoup.parse(result); doc.select('a').first().text()`，`result` 是含 `<a>甲</a>` 的页面
 - **THEN** 结果是 `甲`
@@ -166,6 +172,37 @@ SHALL 提供：`md5Encode`（32 位小写）、`md5Encode16`（32 位结果的�
 #### Scenario: 基准地址
 - **WHEN** 执行 `org.jsoup.Jsoup.parse('<a href="/b/1">x</a>', 'https://a.com/s').select('a').attr('abs:href')`
 - **THEN** 结果是 `https://a.com/b/1`
+
+### Requirement: StrResponse 构造
+`Packages.io.legado.app.help.http.StrResponse(地址, 正文)` SHALL 支持直接调用和 `new`，返回现有响应包装对象，可作为 `loginCheckJs` 的结果替换原响应。正文 MAY 为 null；新响应 SHALL 为 200/OK、空响应头、空 Cookie、非重定向状态，不继承原响应的元数据。没有有效 HTTP(S) 请求地址时 SHALL 回退到 `http://localhost/`，非空地址参数不可为 null。地址规范化复用 Dart URI（常见 HTTP(S)、ws/wss、默认端口、空路径和点路径），不承诺完整 OkHttp URL 规范化；IDNA、转义大小写和裸百分号差异见引擎 README。
+
+#### Scenario: 解密后的正文交回链路
+- **WHEN** `loginCheckJs` 返回 `Packages.io.legado.app.help.http.StrResponse(result.url(), decrypt(result.body()))`
+- **THEN** 后续字段规则解析解密正文，并以新响应地址解析相对链接
+
+### Requirement: Java 字符串与摘要
+`java.lang.String`（以及 `Packages.java.lang.String`）SHALL 支持调用和 `new`：无参数为空串，文本参数创建包装对象，字节数组可带字符集名（默认 UTF-8）。包装对象 SHALL 提供 `getBytes([字符集])`、`toString()`，跨宿主边界和作为规则结果时按文本转换。字节数组 SHALL 使用 -128 到 127 的有符号值；编解码复用「编码」支持的字符集。不支持的构造形式、显式 null 字符集和未知字符集 MUST 以 JS 错误结束。
+
+`java.security.MessageDigest.getInstance(算法)`（以及 `Packages.java…`）SHALL 支持与「摘要与加解密」相同的摘要算法，在创建时验证算法。实例 SHALL 提供 `update(字节)`、`update(字节数组[, 偏移, 长度])`、`digest([字节数组])`、`reset()`、`getDigestLength()`。更新 SHALL 复制输入，越界 MUST 报错且不改变已有状态；`digest(字节数组)` SHALL 追加输入并返回摘要，成功后清空累计数据；`reset()` SHALL 丢弃已有数据。实例之间互不影响，jsLib 缓存的实例跨任务仍可使用。未支持的重载 MUST 以 JS 错误结束。
+
+#### Scenario: 多次更新与重置
+- **WHEN** MD5 实例先更新字节 `[97]`，再调用 `digest([98,99])`，随后调用 `digest()`
+- **THEN** 两次摘要的十六进制分别为 `900150983cd24fb0d6963f7d28e17f72` 和 `d41d8cd98f00b204e9800998ecf8427e`
+
+### Requirement: Java 内存字节流与列表
+`java.io.ByteArrayOutputStream` 和 `java.util.ArrayList`（以及 `Packages.java…`）SHALL 支持无参数或非负初始容量构造，可直接调用或 `new`。实例状态 SHALL 独立，jsLib 缓存的实例跨任务仍可用，不依赖任务级宿主句柄。
+
+字节流 SHALL 提供 `write(int)`、`write(字节数组[, 偏移, 长度])`、`toByteArray()`、`size()`、`reset()`、`close()`。写入 SHALL 取低八位，返回的字节 SHALL 为 -128 到 127；数组写入 SHALL 复制输入，`toByteArray()` SHALL 返回独立快照。越界或无效输入 MUST 报错且不留下部分写入。`reset()` SHALL 清空数据，`close()` SHALL 无副作用，关闭后仍可读写。
+
+列表 SHALL 提供 `add(值)`、`get(下标)`、`size()`、`isEmpty()`、`toArray()`、`clear()`。`add` SHALL 按顺序追加、允许 null 和重复项并返回 true；`get` 越界 MUST 报错；`toArray` SHALL 返回容器的浅复制。列表作为规则结果交回引擎时 SHALL 转成列表并保留元素对象字段，可用于搜索与目录；MUST NOT 把元素提前转成字符串。本能力不实现 Java 集合全套接口、集合构造或 `add(index, value)` 等其它重载。
+
+#### Scenario: 字节写入与快照
+- **WHEN** 字节流写入 `255`，取出一次字节数组后调用 `reset()`
+- **THEN** 取出的数组仍为 `[-1]`，流的 `size()` 为 0
+
+#### Scenario: 雨鹿列表跨边界
+- **WHEN** 书源 JS 将含 `name`、`detail_url` 的对象加入 ArrayList，并将列表作为搜索结果返回
+- **THEN** 搜索字段规则可按对象键读取书名和详情地址，元素顺序及字段保持完整
 
 ### Requirement: WebView 的 User-Agent
 `java.getWebViewUA()` 和 `source.getWebViewUA()` SHALL 返回一个固定的 Android WebView User-Agent（含 `; wv)`）。

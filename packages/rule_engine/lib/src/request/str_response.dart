@@ -13,6 +13,33 @@ final class StrResponse implements JsHandle {
     String? message,
   }) : message = message ?? _reasonPhrase(statusCode);
 
+  /// MD3 `StrResponse(url, body)`：新建 200/OK、空响应头；无效请求地址回退 localhost。
+  factory StrResponse.fromUrl(String url, String? body) =>
+      StrResponse(url: _requestUrl(url), body: body);
+
+  static String _requestUrl(String value) {
+    // Request.Builder.url 同时接受 ws/wss，先转换为 HTTP(S)。
+    var text = value.trim();
+    if (text.toLowerCase().startsWith('ws:')) {
+      text = 'http:${text.substring(3)}';
+    }
+    if (text.toLowerCase().startsWith('wss:')) {
+      text = 'https:${text.substring(4)}';
+    }
+    try {
+      final uri = Uri.parse(text).normalizePath();
+      if ((uri.scheme != 'http' && uri.scheme != 'https') ||
+          uri.host.isEmpty ||
+          uri.port < 1 ||
+          uri.port > 65535) {
+        return 'http://localhost/';
+      }
+      return (uri.path.isEmpty ? uri.replace(path: '/') : uri).toString();
+    } on FormatException {
+      return 'http://localhost/';
+    }
+  }
+
   /// 请求出错时伪造的响应（MD3 `connect` 的行为）：状态码 200，正文是错误描述。
   StrResponse.error(this.url, String description)
     : body = description,
