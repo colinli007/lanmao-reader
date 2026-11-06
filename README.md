@@ -56,7 +56,7 @@ xattr -dr com.apple.quarantine "/Applications/懒猫阅读.app"
 |---|---|
 | `app/` | 阅读器 app（社区版，Android、iOS、macOS）：书源管理（从文件、网址、粘贴文本导入，支持 Legado 的 `sourceUrls` 网址列表和 `#requestWithoutUA`；和 Legado 一样的书源校验，失效的书源标上分组）、搜索（搜索历史）、发现（按书源的分类和排行浏览，分类排版和 Legado 一样）、详情与目录、书架（封面宫格，长按换书源、缓存全本，进度按章节名对齐）、目录页（已缓存标记、正倒序）、阅读（分页排版：标点避头尾、两端对齐、章节之间连续翻页；正文图片：插图单独成段、字图片嵌在文字里，长按看大图；翻页方式有覆盖、滑动、无动画、滚动四种；菜单分目录、进度、外观、排版四个面板，外观里可以调阅读页亮度（Android、iOS），字号、首行缩进、左右边距用加减，行距、段距三个预设）、设置（书源，替换净化规则，兼容 Legado 的格式；阅读设置：跟随系统深色、屏幕常亮；查看和清除正文缓存；关于页）；数据存在本机 SQLite 里。书源相关的代码都在 `app/lib/online/`，书架、阅读器、存储层不依赖规则引擎 |
 | `packages/quickjs_ng_ffi` | 执行书源 JS 的引擎：quickjs-ng 源码（固定在 v0.17.0）+ C 胶水层 + ffigen 生成的绑定 + Dart 封装。支持 JS 同步调用宿主函数、嵌套求值、超时和内存上限 |
-| `packages/rule_engine` | 书源规则引擎：载入 Legado 书源，解析规则，执行搜索、发现、详情、目录、正文链路，书源 JS 在 quickjs-ng 上执行，注入常用宿主 API，兼容 `org.jsoup.Jsoup`、Java String 字节转换、MessageDigest、StrResponse、HTML5 实体解码、内存字节流/列表和 Rhino 的解构箭头函数写法；行为对齐 legado-with-MD3 |
+| `packages/rule_engine` | 书源规则引擎：载入 Legado 书源，解析规则，执行搜索、发现、详情、目录、正文链路，书源 JS 在 quickjs-ng 上执行，注入常用宿主 API，兼容 `org.jsoup.Jsoup`、Java String 字节转换、MessageDigest、StrResponse、HTML5 实体解码、内存字节流/列表、JavaImporter、AES Cipher、RSA 签名和 Rhino 的解构箭头函数写法；行为对齐 legado-with-MD3 |
 | `packages/blocking_bridge` | 阻塞桥：worker isolate 池，任务可以同步等待主 isolate 的异步结果，支持截止时间、取消、故障恢复 |
 | `packages/native_synchronization` | 从 dart-lang/labs 拷贝进来自己维护的阻塞原语（Mailbox） |
 | `spike/` | 纯 Flutter 路线的前置验证 app 和集成测试 |

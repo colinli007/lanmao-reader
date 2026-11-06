@@ -80,7 +80,7 @@ HTML 元素交给 JS 时 SHALL 是包装对象，提供 jsoup 的常用方法：
 - **THEN** 结果是 `p` 在全部元素里的位置，不是 -1
 
 ### Requirement: 编码
-SHALL 提供：`base64Decode(文本[, 字符集])`（宽松：忽略空白、容忍缺少 `=` 和 URL 安全字符，空值返回空串）、`base64Decode(文本, flags)` 和 `base64DecodeToByteArray(文本[, flags])`（严格，按 Android Base64 的 flags；非法输入以 JS 错误结束；`base64DecodeToByteArray` 对空白输入返回 null）、`base64Encode(文本[, flags])`（默认 NO_WRAP）、`hexDecodeToString`、`hexDecodeToByteArray`、`hexEncodeToString`（小写）、`strToBytes(文本[, 字符集])`、`bytesToStr(字节[, 字符集])`、`encodeURI(文本[, 字符集])`（表单编码，空格为 `+`）。字节数组在 JS 里 SHALL 是取值 -128 到 127 的数字数组（与 Java `byte[]` 一致），作为参数时也接受这种数组。字符集支持 UTF-8、GBK、GB2312、GB18030 和 ISO-8859-1。
+SHALL 提供：`base64Decode(文本[, 字符集])`（宽松：忽略空白、容忍缺少 `=` 和 URL 安全字符，空值返回空串）、`base64Decode(文本, flags)` 和 `base64DecodeToByteArray(文本[, flags])`（严格，按 Android Base64 的 flags；非法输入以 JS 错误结束；`base64DecodeToByteArray` 对空白输入返回 null）、`base64Encode(文本[, flags])`（默认 NO_WRAP）、`hexDecodeToString`、`hexDecodeToByteArray`、`hexEncodeToString`（小写）、`strToBytes(文本[, 字符集])`、`bytesToStr(字节[, 字符集])`、`encodeURI(文本[, 字符集])`（表单编码，空格为 `+`）。字节数组在 JS 里 SHALL 是取值 -128 到 127 的数字数组（与 Java `byte[]` 一致），作为参数时也接受这种数组。字符集支持 UTF-8（含 Android 的 `UTF_8` 别名）、GBK、GB2312、GB18030 和 ISO-8859-1。
 
 #### Scenario: 宽松 Base64
 - **WHEN** 执行 `java.base64Decode('5LiJ5L2T\n')`
@@ -210,3 +210,35 @@ SHALL 提供：`md5Encode`（32 位小写）、`md5Encode16`（32 位结果的�
 #### Scenario: 取 UA
 - **WHEN** 规则是 `@js:java.getWebViewUA()`
 - **THEN** 结果包含 `; wv)` 和 `Mobile Safari`
+
+### Requirement: Java Base64、数组与 AES
+`java.util.Base64.getDecoder().decode(文本或字节数组)` SHALL 使用 Java basic Base64 规则：允许省略末尾 padding，拒绝空白、URL 安全字母和不合法的 padding，空输入返回空数组。`java.util.Arrays.copyOfRange(字节数组, from, to)` SHALL 返回独立副本，to 超过输入长度时补零，from 越界或 to 小于 from 时以 JS 错误结束。
+
+`javax.crypto.spec.SecretKeySpec(字节数组, 算法)`、`IvParameterSpec(字节数组)` SHALL 支持调用和 new，复制输入；`getEncoded()`、`getIV()` 返回副本，密钥另提供 `getAlgorithm()`、`getFormat()`。仅支持上述构造重载。
+
+`javax.crypto.Cipher.getInstance(变换)` SHALL 支持 AES 的 CBC/ECB、PKCS5Padding/PKCS7Padding/NoPadding，省略模式和填充的 AES 等价于 AES/ECB/PKCS5Padding。实例 SHALL 提供 `init(mode, key[, iv])`、`doFinal([字节数组])`、`getIV()`、`getAlgorithm()`、`getBlockSize()`；mode 为 ENCRYPT_MODE（1）或 DECRYPT_MODE（2）。init SHALL 验证 AES 密钥为 16/24/32 字节，CBC IV 为 16 字节；CBC 加密未传 IV 时生成安全随机 IV，解密缺 IV、ECB 传 IV 均报错。init 失败后 MUST 清除已初始化状态，未初始化不得 doFinal。doFinal 每次从初始化状态开始，密钥、IV、实例状态互不污染，jsLib 缓存实例跨任务仍可用。不支持其它算法、provider、增量 update 或其它重载。
+
+这些类 SHALL 同时可经 `Packages` 全名或 `JavaImporter` 导入后使用。错误 MUST 结束当前求值或由 JS catch 处理，不得静默返回密文或伪造正文。
+
+#### Scenario: 星空原始规则解密正文
+- **WHEN** 原规则用 JavaImporter 导入 lang、util、crypto、crypto.spec，以 Base64 解码并将前 16 字节作为 IV，余下字节按 AES/CBC/PKCS5Padding 解密
+- **THEN** UTF-8 中文和补充平面字符保持完整，错误填充和非整块密文报错
+
+#### Scenario: 导入类保留原作用域
+- **WHEN** with 导入 java.lang.String，内部函数用 String(bytes) 返回文本，同时读取外层 result 和规则宿主 java
+- **THEN** String 使用 Java 字节构造，result 与 java 仍解析到原变量，with 外的原生 String 不变
+
+### Requirement: Java RSA 私钥与签名
+`java.security.spec.PKCS8EncodedKeySpec(字节数组)` SHALL 支持调用和 new，复制输入，提供返回副本的 `getEncoded()` 和返回 `PKCS#8` 的 `getFormat()`。`java.security.KeyFactory.getInstance("RSA")` SHALL 提供 `getAlgorithm()`、`generatePrivate(spec)`，生成时解析 PKCS#8 v0 的双素数 RSA DER 私钥（不含扩展属性），非法编码或其它算法 MUST 以 JS 错误结束。生成的私钥 SHALL 提供 `getEncoded()` 副本、`getAlgorithm()`（RSA）和 `getFormat()`（PKCS#8）。
+
+`java.security.Signature.getInstance("SHA256WithRSA")` SHALL 提供 `getAlgorithm()`、`initSign(私钥)`、`update(字节)`、`update(字节数组[, 偏移, 长度])`、`sign()`，使用 SHA-256 和 RSA PKCS#1 v1.5 签名。update SHALL 复制输入，范围错误不改变已累积的数据；成功 sign 后清空数据并保留签名密钥，重新 initSign 清空旧数据。未初始化时 update/sign MUST 报错。密钥和签名实例 SHALL 可在 jsLib 中缓存并跨任务使用，不依赖任务级宿主句柄。算法名不区分大小写，仅支持上述算法与重载；公钥、验签、RSA 加解密和其它 provider 不在本能力范围。
+
+上述类 SHALL 可经 Packages 全名或 JavaImporter 导入后使用。
+
+#### Scenario: 西瓜原始正文请求签名
+- **WHEN** 原始正文规则将内嵌 PKCS#8 字节交给 KeyFactory，使用 Signature 对 UTF-8 请求文本签名，并将签名写入请求头
+- **THEN** 签名字节与 JDK SHA256WithRSA 一致，原始规则可以继续解析接口返回的 CDN 地址并读取正文
+
+#### Scenario: 连续签名与跨任务复用
+- **WHEN** 同一签名实例多次 update 后 sign，再次 sign 或在另一任务 update 后 sign
+- **THEN** 第一次签名使用全部累积数据，后续签名不包含上一次成功签名的数据，实例之间互不影响

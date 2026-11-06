@@ -13,6 +13,15 @@ const int base64NoWrap = 2;
 const int base64Crlf = 4;
 const int base64UrlSafe = 8;
 
+/// Java `Base64.getDecoder()`：标准字母表、不接受空白；末尾 padding 可以省略。
+/// Android 解码状态机的分组和 padding 规则相同，先拒绝它会忽略的字符。
+Uint8List base64DecodeJava(String text) {
+  if (text.codeUnits.any((byte) => _androidValue(byte, false) == _skip)) {
+    throw const FormatException('Illegal base64 character');
+  }
+  return base64DecodeAndroid(text, 0);
+}
+
 /// Hutool `Base64.decode`（MD3 先去掉空白再调用它）：标准和 URL 安全两套字符都认，`=` 和其它字符一律跳过，
 /// 输入结束时补齐。码表只到 `z`，`{|}~` 和 DEL 会让 Hutool 数组越界，这里同样以错误结束。
 Uint8List base64DecodeLenient(String text) {

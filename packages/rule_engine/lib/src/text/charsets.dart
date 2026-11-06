@@ -5,7 +5,8 @@ import 'gbk.dart';
 /// 按 Java 的字符集名找编码器，支持 UTF-8、GBK 一族（GBK 兼容 GB2312）、GB18030 和 ISO-8859-1。
 /// 不支持的名字返回 null。
 Encoding? charsetByName(String name) => switch (name.trim().toLowerCase()) {
-  'utf-8' || 'utf8' => utf8,
+  // Android/ICU 也接受西瓜原始规则使用的 UTF_8 别名。
+  'utf-8' || 'utf8' || 'utf_8' => utf8,
   'gbk' || 'gb2312' || 'x-gbk' || 'cp936' || 'windows-936' || 'euc-cn' => gbk,
   'gb18030' => gb18030,
   'iso-8859-1' || 'iso8859-1' || 'latin1' || 'us-ascii' || 'ascii' => latin1,

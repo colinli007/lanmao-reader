@@ -20,6 +20,7 @@ import '../text/charsets.dart';
 import '../text/lenient_json.dart';
 import 'codec.dart';
 import 'crypto.dart';
+import 'java_rsa.dart';
 import 'js_values.dart';
 import 'source_js.dart';
 import 'time_text.dart';
@@ -124,6 +125,17 @@ final Map<String, _Api> _apis = {
   ..._sourceApis,
   ..._bookApis,
   'javaClass.digest': (c) => digest(c.str(0), c.bytes(1)),
+  'javaClass.base64Decode': (c) => base64DecodeJava(c.str(0)),
+  'javaClass.randomIv': (c) => javaCipherRandomIv(),
+  'javaClass.rsaPrivateKey': (c) => javaRsaPrivateKey(c.bytes(0)),
+  'javaClass.rsaSign': (c) => javaRsaSign(c.bytes(0), c.bytes(1)),
+  'javaClass.cipher': (c) => javaAesCipher(
+    c.str(0),
+    c.bytes(1),
+    c[2] == null ? null : c.bytes(2),
+    c.integer(3),
+    c.bytes(4),
+  ),
   'unsupported': (c) => throw UnsupportedHostApiException(c.str(0)),
 };
 

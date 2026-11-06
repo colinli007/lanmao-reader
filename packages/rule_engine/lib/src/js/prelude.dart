@@ -155,8 +155,9 @@ const String sourceJsPrelude = r'''
   // ---------------------------------------------------------------- Java 包（add-rhino-compat 设计 D1、D3）
 
   // Rhino 的 Java 包：已知的路径返回实现，其余任何属性都是下一层包，调用或 new 时以「不支持的宿主 API：类名」结束
-  function javaPackage(path, known) {
-    return new Proxy(function () {}, {
+  var javaPackages = new WeakMap();
+  function javaPackage(path, known, isClass) {
+    var proxy = new Proxy(function () {}, {
       get: function (target, name) {
         if (typeof name !== 'string') return undefined;
         if (known && Object.prototype.hasOwnProperty.call(known, name)) return known[name];
@@ -164,6 +165,48 @@ const String sourceJsPrelude = r'''
       },
       apply: function () { hostCall('unsupported', [path]); },
       construct: function () { hostCall('unsupported', [path]); }
+    });
+    javaPackages.set(proxy, { path: path, known: known, isClass: !!isClass });
+    return proxy;
+  }
+
+  // with 只解析已导入的类；普通变量和原生全局仍沿原作用域查找。
+  function JavaImporter() {
+    var packages = [];
+    var target = Object.create(null);
+    hidden(target, 'importPackage', function () {
+      for (var i = 0; i < arguments.length; i++) {
+        var info = javaPackages.get(arguments[i]);
+        if (!info || info.isClass) throw new TypeError('importPackage 需要 Java 包');
+        if (!info.known) hostCall('unsupported', [info.path]);
+        if (packages.indexOf(info) < 0) packages.push(info);
+      }
+    });
+    function lookup(name) {
+      if (typeof name !== 'string') return undefined;
+      var found;
+      packages.forEach(function (pkg) {
+        if (!Object.prototype.hasOwnProperty.call(pkg.known, name)) return;
+        var value = pkg.known[name];
+        var info = javaPackages.get(value);
+        if (info && !info.isClass) return;
+        if (found !== undefined && found !== value) {
+          var previous = javaPackages.get(found);
+          if (!previous || !info || previous.path.replace(/^Packages\./, '') !== info.path.replace(/^Packages\./, '')) {
+            throw new TypeError('Java 导入类名冲突：' + name);
+          }
+        }
+        found = value;
+      });
+      return found;
+    }
+    target.importPackage.apply(target, arguments);
+    return new Proxy(target, {
+      has: function (target, name) { return Object.prototype.hasOwnProperty.call(target, name) || lookup(name) !== undefined; },
+      get: function (target, name) {
+        if (name === Symbol.unscopables) return undefined;
+        return Object.prototype.hasOwnProperty.call(target, name) ? target[name] : lookup(name);
+      }
     });
   }
 
@@ -289,14 +332,176 @@ const String sourceJsPrelude = r'''
     hidden(this, 'toJSON', function () { return values.slice(); });
   }
 
+  function copyBytes(input) {
+    if (!Array.isArray(input)) throw new TypeError('需要字节数组');
+    return input.map(function (b) { return (javaInt(b) << 24) >> 24; });
+  }
+
+  function copyOfRange(input, from, to) {
+    if (arguments.length !== 3) throw new TypeError('只支持 Arrays.copyOfRange(bytes, from, to)');
+    var bytes = copyBytes(input), start = javaInt(from), end = javaInt(to);
+    if (start < 0 || start > bytes.length || end < start) throw new RangeError('字节范围越界');
+    var result = new Array(end - start).fill(0);
+    for (var i = start; i < Math.min(end, bytes.length); i++) result[i - start] = bytes[i];
+    return listify(result);
+  }
+
+  var secretKeys = new WeakMap(), ivSpecs = new WeakMap();
+  function SecretKeySpec(bytes, algorithm) {
+    if (!(this instanceof SecretKeySpec)) return new SecretKeySpec(...arguments);
+    if (arguments.length !== 2 || algorithm == null) throw new TypeError('不支持的 SecretKeySpec 构造参数');
+    var key = copyBytes(bytes), name = String(algorithm);
+    if (!key.length) throw new TypeError('Empty key');
+    secretKeys.set(this, { bytes: key, algorithm: name });
+    hidden(this, 'getEncoded', function () { return listify(key.slice()); });
+    hidden(this, 'getAlgorithm', function () { return name; });
+    hidden(this, 'getFormat', function () { return 'RAW'; });
+  }
+  function IvParameterSpec(bytes) {
+    if (!(this instanceof IvParameterSpec)) return new IvParameterSpec(...arguments);
+    if (arguments.length !== 1) throw new TypeError('不支持的 IvParameterSpec 构造参数');
+    var iv = copyBytes(bytes);
+    ivSpecs.set(this, iv);
+    hidden(this, 'getIV', function () { return listify(iv.slice()); });
+  }
+  function aesCipher(transformation) {
+    if (arguments.length !== 1 || transformation == null) throw new TypeError('不支持的 Cipher.getInstance 参数');
+    var name = String(transformation), normalized = name.toUpperCase();
+    if (normalized === 'AES') normalized = 'AES/ECB/PKCS5PADDING';
+    if (!/^AES\/(CBC|ECB)\/(PKCS5PADDING|PKCS7PADDING|NOPADDING)$/.test(normalized)) {
+      throw new TypeError('不支持的 Cipher 变换：' + name);
+    }
+    var cbc = normalized.split('/')[1] === 'CBC', state = null;
+    return {
+      init: function (mode, keySpec, ivSpec) {
+        state = null;
+        if (arguments.length !== 2 && arguments.length !== 3) throw new TypeError('不支持的 Cipher.init 参数');
+        mode = javaInt(mode);
+        if (mode !== 1 && mode !== 2) throw new TypeError('只支持 Cipher 加密或解密');
+        var key = secretKeys.get(keySpec), iv = ivSpec == null ? null : ivSpecs.get(ivSpec);
+        if (!key || key.algorithm.toUpperCase() !== 'AES' || [16, 24, 32].indexOf(key.bytes.length) < 0) {
+          throw new TypeError('Invalid AES key');
+        }
+        if (ivSpec != null && !iv) throw new TypeError('需要 IvParameterSpec');
+        if (!cbc && iv !== null) throw new TypeError('ECB mode cannot use IV');
+        if (cbc && iv === null) {
+          if (mode === 2) throw new TypeError('Parameters missing');
+          iv = call('javaClass.randomIv', []);
+        }
+        if (cbc && iv.length !== 16) throw new TypeError('Wrong IV length: must be 16 bytes long');
+        state = { mode: mode, key: key.bytes.slice(), iv: iv === null ? null : iv.slice() };
+      },
+      doFinal: function (input) {
+        if (!state) throw new TypeError('Cipher not initialized');
+        if (arguments.length > 1) throw new TypeError('只支持 Cipher.doFinal(bytes)');
+        var bytes = arguments.length === 0 ? [] : copyBytes(input);
+        return call('javaClass.cipher', [normalized, state.key, state.iv, state.mode, bytes]);
+      },
+      getIV: function () { return state && state.iv !== null ? listify(state.iv.slice()) : null; },
+      getAlgorithm: function () { return name; },
+      getBlockSize: function () { return 16; }
+    };
+  }
+  var Base64 = javaPackage('java.util.Base64', {
+    getDecoder: function () {
+      if (arguments.length) throw new TypeError('不支持的 Base64.getDecoder 参数');
+      return { decode: function (input) {
+        if (arguments.length !== 1 || input == null) throw new TypeError('不支持的 Base64.decode 参数');
+        var text = Array.isArray(input) ? call('bytesToStr', [copyBytes(input), 'ISO-8859-1']) : String(input);
+        return call('javaClass.base64Decode', [text]);
+      } };
+    }
+  }, true);
+  var Arrays = javaPackage('java.util.Arrays', { copyOfRange: copyOfRange }, true);
+  var Cipher = javaPackage('javax.crypto.Cipher', {
+    getInstance: aesCipher, ENCRYPT_MODE: 1, DECRYPT_MODE: 2
+  }, true);
+  var javax = javaPackage('javax', {
+    crypto: javaPackage('javax.crypto', {
+      Cipher: Cipher,
+      spec: javaPackage('javax.crypto.spec', { SecretKeySpec: SecretKeySpec, IvParameterSpec: IvParameterSpec })
+    })
+  });
+
+  var pkcs8Specs = new WeakMap(), rsaPrivateKeys = new WeakMap();
+  function PKCS8EncodedKeySpec(encoded) {
+    if (!(this instanceof PKCS8EncodedKeySpec)) return new PKCS8EncodedKeySpec(...arguments);
+    if (arguments.length !== 1) throw new TypeError('不支持的 PKCS8EncodedKeySpec 构造参数');
+    var bytes = copyBytes(encoded);
+    pkcs8Specs.set(this, bytes);
+    hidden(this, 'getEncoded', function () { return listify(bytes.slice()); });
+    hidden(this, 'getFormat', function () { return 'PKCS#8'; });
+  }
+  function rsaKeyFactory(algorithm) {
+    if (arguments.length !== 1 || String(algorithm).toUpperCase() !== 'RSA') {
+      throw new TypeError('只支持 KeyFactory.getInstance("RSA")');
+    }
+    var name = String(algorithm);
+    return {
+      getAlgorithm: function () { return name; },
+      generatePrivate: function (spec) {
+        if (arguments.length !== 1 || !pkcs8Specs.has(spec)) throw new TypeError('需要 PKCS8EncodedKeySpec');
+        // 在生成密钥时解析验证，返回的字节保存在 JS 内，跨任务不依赖宿主句柄。
+        var encoded = call('javaClass.rsaPrivateKey', [pkcs8Specs.get(spec)]);
+        var key = {};
+        rsaPrivateKeys.set(key, encoded);
+        hidden(key, 'getEncoded', function () { return listify(encoded.slice()); });
+        hidden(key, 'getAlgorithm', function () { return 'RSA'; });
+        hidden(key, 'getFormat', function () { return 'PKCS#8'; });
+        return key;
+      }
+    };
+  }
+  function rsaSignature(algorithm) {
+    if (arguments.length !== 1 || String(algorithm).toUpperCase() !== 'SHA256WITHRSA') {
+      throw new TypeError('只支持 Signature.getInstance("SHA256WithRSA")');
+    }
+    var name = String(algorithm), key = null, bytes = [];
+    return {
+      getAlgorithm: function () { return name; },
+      initSign: function (privateKey) {
+        key = null;
+        bytes = [];
+        if (arguments.length !== 1 || !rsaPrivateKeys.has(privateKey)) throw new TypeError('需要 RSA 私钥');
+        key = rsaPrivateKeys.get(privateKey);
+      },
+      update: function (input, offset, length) {
+        if (key === null) throw new TypeError('Signature not initialized');
+        var copied;
+        if (arguments.length === 1 && typeof input === 'number') copied = [(javaInt(input) << 24) >> 24];
+        else {
+          if (!Array.isArray(input) || (arguments.length !== 1 && arguments.length !== 3)) {
+            throw new TypeError('不支持的 Signature.update 参数');
+          }
+          var start = arguments.length === 1 ? 0 : javaInt(offset);
+          var count = arguments.length === 1 ? input.length : javaInt(length);
+          if (start < 0 || count < 0 || start + count > input.length) throw new RangeError('Signature.update 字节范围越界');
+          copied = copyBytes(input.slice(start, start + count));
+        }
+        for (var i = 0; i < copied.length; i++) bytes.push(copied[i]);
+      },
+      sign: function () {
+        if (key === null) throw new TypeError('Signature not initialized');
+        if (arguments.length !== 0) throw new TypeError('只支持 Signature.sign()');
+        var result = call('javaClass.rsaSign', [key, bytes]);
+        bytes = [];
+        return result;
+      }
+    };
+  }
+  var KeyFactory = javaPackage('java.security.KeyFactory', { getInstance: rsaKeyFactory }, true);
+  var Signature = javaPackage('java.security.Signature', { getInstance: rsaSignature }, true);
+
   function javaRoot(path) {
     return javaPackage(path, {
       lang: javaPackage(path + '.lang', { String: JavaString }),
       security: javaPackage(path + '.security', {
-        MessageDigest: javaPackage(path + '.security.MessageDigest', { getInstance: messageDigest })
+        MessageDigest: javaPackage(path + '.security.MessageDigest', { getInstance: messageDigest }, true),
+        KeyFactory: KeyFactory, Signature: Signature,
+        spec: javaPackage(path + '.security.spec', { PKCS8EncodedKeySpec: PKCS8EncodedKeySpec })
       }),
       io: javaPackage(path + '.io', { ByteArrayOutputStream: ByteArrayOutputStream }),
-      util: javaPackage(path + '.util', { ArrayList: ArrayList })
+      util: javaPackage(path + '.util', { ArrayList: ArrayList, Base64: Base64, Arrays: Arrays })
     });
   }
 
@@ -305,14 +510,14 @@ const String sourceJsPrelude = r'''
       Jsoup: javaPackage('org.jsoup.Jsoup', {
         parse: method('jsoup.parse'),
         parseBodyFragment: method('jsoup.parseBodyFragment')
-      }),
+      }, true),
       parser: javaPackage('org.jsoup.parser', {
         Parser: javaPackage('org.jsoup.parser.Parser', {
           unescapeEntities: function (text, inAttribute) {
             if (arguments.length !== 2) throw new TypeError('不支持的 Parser.unescapeEntities 参数');
             return call('jsoup.unescapeEntities', [text, !!inAttribute]);
           }
-        })
+        }, true)
       })
     })
   });
@@ -331,8 +536,8 @@ const String sourceJsPrelude = r'''
   });
   // 宿主全局：jsLib 的代码和变量层的 this 上也能用（Rhino 的顶层作用域就有它们）
   // jsLib 的词法作用域里 java 是包；规则/URL/书源变量层注入的 java 仍然是各自的宿主对象。
-  __qjs.setGlobals({ java: javaRoot('java'), org: org,
-    Packages: javaPackage('Packages', { org: org, java: javaRoot('Packages.java'), io: io }) });
+  __qjs.setGlobals({ java: javaRoot('java'), javax: javax, JavaImporter: JavaImporter, org: org,
+    Packages: javaPackage('Packages', { org: org, java: javaRoot('Packages.java'), javax: javax, io: io }) });
 
   function javaObject(own, owner) {
     var target = {};

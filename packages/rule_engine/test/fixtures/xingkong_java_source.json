@@ -1,0 +1,8 @@
+{
+  "bookSourceName": "⚡📂星空小说",
+  "bookSourceUrl": "https://api-bc.zonghengxiaoshuo.com",
+  "bookSourceType": 0,
+  "ruleContent": {
+    "content": "$.data.content\n@js:\nvar javaImport = new JavaImporter();\njavaImport.importPackage(\n    Packages.java.lang,\n    Packages.javax.crypto.spec,\n    Packages.javax.crypto,\n    Packages.java.util\n);\nwith(javaImport) {\n    function decode(result) {\n        var ivEncData = Base64.getDecoder().decode(String(result));\n        var key = SecretKeySpec(String(\"242ccb8230d709e1\").getBytes(), \"AES\");\n        var iv = IvParameterSpec(Arrays.copyOfRange(ivEncData, 0, 16));\n        var chipher = Cipher.getInstance(\"AES/CBC/PKCS5Padding\");\n        chipher.init(2, key, iv);\n        return String(chipher.doFinal(Arrays.copyOfRange(ivEncData, 16, ivEncData.length)));\n    }\n}\ndecode(result)"
+  }
+}

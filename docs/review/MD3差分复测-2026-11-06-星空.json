@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-06T15:18:32.875053",
+  "md3Version": "3.26.23",
+  "note": "仅保留阶段结果、字段和正文去空白 SHA-256；双端分类沿用 md3_diff 工具口径。完整正文不纳入报告。",
+  "sources": [
+    {
+      "name": "⚡📂星空小说",
+      "url": "https://api-bc.zonghengxiaoshuo.com",
+      "key": "我的",
+      "category": "一致",
+      "ours": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "count": "10",
+            "name": "我的昆明小姐",
+            "author": "续写春秋",
+            "kind": "9.5分,智商在线,日常,完结",
+            "wordCount": "46.3万字",
+            "lastChapter": "",
+            "intro": "...后还是把她弄丢了……我的昆明小姐，这么多年过去了，你还好么？",
+            "coverUrl": "https://cdn.wtzw.com/bookimg/public/images/cover/0336/288ef0f644b4b8d0c9f4df3318cedee2_216x288.jpg?f=webp&q=60",
+            "bookUrl": "https://api-bc.zonghengxiaoshuo.com/api/v5/book/detail?book_privacy=1&id=1713334&imei_ip=&read_preference=0&sign=80f41a7b7d0efbed0148f9ed5670df3d&teeny_mode=0"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "我的昆明小姐",
+            "author": "续写春秋",
+            "kind": "9.5分,智商在线,日常,完结",
+            "wordCount": "46.3万字",
+            "lastChapter": "第186章 后续4",
+            "intro": "　　🔔 更新时间：2023/06/13 17:21\n　　🏅 评分：9.5分\n　　🏷 标签：智商在线，日常，草根崛起，都市\n　　♠️ 来源：本作品由“万读文学网”授权星空，版权由“万读文学网”负责。\n　　📂 简介：认识她是一个雨夜，分别是一个下午，我们携雨走了那么多路，最后还是把她弄丢了……我的昆明小姐，这么多年过去了，你还好么？",
+            "coverUrl": "https://cdn.wtzw.com/bookimg/public/images/cover/0336/288ef0f644b4b8d0c9f4df3318cedee2_600x800.jpg?f=webp&q=60",
+            "tocUrl": "https://api-ks.zonghengxiaoshuo.com/api/v1/chapter/chapter-list?id=1713334&sign=65fd30609f450337a93b96b07b7a5c8f"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "186"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章 老圭山被困",
+            "textLength": 3202,
+            "textWithoutWhitespaceSha256": "c3cdbc15acebe9cc509267e23410202d0d4b94c391abf6e4219b0e245c120623"
+          }
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "name": "我的昆明小姐",
+            "author": "续写春秋",
+            "kind": "9.5分,智商在线,日常,完结",
+            "wordCount": "46.3万字",
+            "lastChapter": "",
+            "intro": "...后还是把她弄丢了……我的昆明小姐，这么多年过去了，你还好么？",
+            "coverUrl": "https://cdn.wtzw.com/bookimg/public/images/cover/0336/288ef0f644b4b8d0c9f4df3318cedee2_216x288.jpg?f=webp&q=60",
+            "bookUrl": "https://api-bc.zonghengxiaoshuo.com/api/v5/book/detail?book_privacy=1&id=1713334&imei_ip=&read_preference=0&sign=80f41a7b7d0efbed0148f9ed5670df3d&teeny_mode=0",
+            "count": "10"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "我的昆明小姐",
+            "author": "续写春秋",
+            "kind": "9.5分,智商在线,日常,完结",
+            "wordCount": "46.3万字",
+            "lastChapter": "第186章 后续4",
+            "intro": "　　🔔 更新时间：2023/06/13 17:21\n　　🏅 评分：9.5分\n　　🏷 标签：智商在线，日常，草根崛起，都市\n　　♠️ 来源：本作品由“万读文学网”授权星空，版权由“万读文学网”负责。\n　　📂 简介：认识她是一个雨夜，分别是一个下午，我们携雨走了那么多路，最后还是把她弄丢了……我的昆明小姐，这么多年过去了，你还好么？",
+            "coverUrl": "https://cdn.wtzw.com/bookimg/public/images/cover/0336/288ef0f644b4b8d0c9f4df3318cedee2_600x800.jpg?f=webp&q=60",
+            "tocUrl": "https://api-ks.zonghengxiaoshuo.com/api/v1/chapter/chapter-list?id=1713334&sign=65fd30609f450337a93b96b07b7a5c8f"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "186"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第1章 老圭山被困",
+            "textLength": 3203,
+            "textWithoutWhitespaceSha256": "c3cdbc15acebe9cc509267e23410202d0d4b94c391abf6e4219b0e245c120623"
+          }
+        }
+      }
+    }
+  ]
+}

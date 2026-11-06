@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-06T15:49:10.856151",
+  "md3Version": "3.26.23",
+  "note": "仅保留阶段结果、字段和正文去空白 SHA-256；双端分类沿用 md3_diff 工具口径。完整正文不纳入报告。",
+  "sources": [
+    {
+      "name": "⚡📂西瓜小说",
+      "url": "https://xgmf.zuanqianyi.com",
+      "key": "我的",
+      "category": "一致",
+      "ours": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "count": "15",
+            "name": "妈妈疼我入骨，我当众断她八年逃生梦",
+            "author": "迟白",
+            "kind": "",
+            "wordCount": "",
+            "lastChapter": "[书籍状态] 完结",
+            "intro": "我们赵家村，是远近出了名的拐卖村。\n　　隔壁婶子夜里偷着逃跑，被男人锁进不见天日的地窖。\n　　只要敢反抗，迎来的就是一顿往死里打的拳脚。\n　　村东头买来的女人，被磋磨得性情疯魔。\n　　天天对着自己生的孩子破口大骂，张口就是孽种。\n　　可唯独我妈，跟别的女人完全不一样。\n　　全村人都说，我妈是心甘情愿留下来过日子的。\n　　她会给我梳细细的麻花辫，在我的发间别上刚摘的栀子花。\n　　她会把我搂在怀里，一遍又一遍地说我是她的宝贝，她这辈子最幸运的事情，就是被卖给我爸。",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010554105/11010554105.jpg?t=1788778539342",
+            "bookUrl": "https://xgmf.zuanqianyi.com/glory/free/1110,{\"body\":\"{\\\"bookId\\\":11010554105}\",\"headers\":{\"sign\":\"ztZkR8US1O0nVGQpC+ToJES85fmNJxR1w88B584DO/8=\"},\"method\":\"POST\"}"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "妈妈疼我入骨，我当众断她八年逃生梦",
+            "author": "迟白",
+            "kind": "9.5分,短篇小说,完结,2026-09-20",
+            "wordCount": "2.31万字",
+            "lastChapter": "第二十一章 • 2026-09-20",
+            "intro": "我们赵家村，是远近出了名的拐卖村。隔壁婶子夜里偷着逃跑，被男人锁进不见天日的地窖。只要敢反抗，迎来的就是一顿往死里打的拳脚。村东头买来的女人，被磋磨得性情疯魔。天天对着自己生的孩子破口大骂，张口就是孽种。可唯独我妈，跟别的女人完全不一样。全村人都说，我妈是心甘情愿留下来过日子的。她会给我梳细细的麻花辫，在我的发间别上刚摘的栀子花。她会把我搂在怀里，一遍又一遍地说我是她的宝贝，她这辈子最幸运的事情，就是被卖给我爸。\n　　📍版权来自灯下闲读短篇",
+            "coverUrl": "https://xgmfresali.kkyd.cn/cppartner/1x1/11x0/110x1/11010554105/11010554105.jpg?t=1788778539342",
+            "tocUrl": "https://xgmf.zuanqianyi.com/glory/free/111,{\"body\":\"{\\\"bookId\\\":11010554105}\",\"headers\":{\"sign\":\"ztZkR8US1O0nVGQpC+ToJES85fmNJxR1w88B584DO/8=\"},\"method\":\"POST\"}"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "21"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第一章",
+            "textLength": 2283,
+            "textWithoutWhitespaceSha256": "e9ac4309ada38eac6bef558f62fc6c728a90bc5a6acc8becc6dcaae1eb0e7a4d"
+          }
+        }
+      },
+      "md3": {
+        "search": {
+          "ok": true,
+          "fields": {
+            "name": "妈妈疼我入骨，我当众断她八年逃生梦",
+            "author": "迟白",
+            "kind": "",
+            "wordCount": "",
+            "lastChapter": "[书籍状态] 完结",
+            "intro": "我们赵家村，是远近出了名的拐卖村。\n　　隔壁婶子夜里偷着逃跑，被男人锁进不见天日的地窖。\n　　只要敢反抗，迎来的就是一顿往死里打的拳脚。\n　　村东头买来的女人，被磋磨得性情疯魔。\n　　天天对着自己生的孩子破口大骂，张口就是孽种。\n　　可唯独我妈，跟别的女人完全不一样。\n　　全村人都说，我妈是心甘情愿留下来过日子的。\n　　她会给我梳细细的麻花辫，在我的发间别上刚摘的栀子花。\n　　她会把我搂在怀里，一遍又一遍地说我是她的宝贝，她这辈子最幸运的事情，就是被卖给我爸。",
+            "coverUrl": "https://resali.ssread.cn/cppartner/1x1/11x0/110x1/11010554105/11010554105.jpg?t=1788778539342",
+            "bookUrl": "https://xgmf.zuanqianyi.com/glory/free/1110,{\"body\":\"{\\\"bookId\\\":11010554105}\",\"headers\":{\"sign\":\"ztZkR8US1O0nVGQpC+ToJES85fmNJxR1w88B584DO/8=\"},\"method\":\"POST\"}",
+            "count": "15"
+          }
+        },
+        "info": {
+          "ok": true,
+          "fields": {
+            "name": "妈妈疼我入骨，我当众断她八年逃生梦",
+            "author": "迟白",
+            "kind": "9.5分,短篇小说,完结,2026-09-20",
+            "wordCount": "2.31万字",
+            "lastChapter": "第二十一章 • 2026-09-20",
+            "intro": "我们赵家村，是远近出了名的拐卖村。隔壁婶子夜里偷着逃跑，被男人锁进不见天日的地窖。只要敢反抗，迎来的就是一顿往死里打的拳脚。村东头买来的女人，被磋磨得性情疯魔。天天对着自己生的孩子破口大骂，张口就是孽种。可唯独我妈，跟别的女人完全不一样。全村人都说，我妈是心甘情愿留下来过日子的。她会给我梳细细的麻花辫，在我的发间别上刚摘的栀子花。她会把我搂在怀里，一遍又一遍地说我是她的宝贝，她这辈子最幸运的事情，就是被卖给我爸。\n　　📍版权来自灯下闲读短篇",
+            "coverUrl": "https://xgmfresali.kkyd.cn/cppartner/1x1/11x0/110x1/11010554105/11010554105.jpg?t=1788778539342",
+            "tocUrl": "https://xgmf.zuanqianyi.com/glory/free/111,{\"body\":\"{\\\"bookId\\\":11010554105}\",\"headers\":{\"sign\":\"ztZkR8US1O0nVGQpC+ToJES85fmNJxR1w88B584DO/8=\"},\"method\":\"POST\"}"
+          }
+        },
+        "toc": {
+          "ok": true,
+          "fields": {
+            "count": "21"
+          }
+        },
+        "content": {
+          "ok": true,
+          "fields": {
+            "title": "第一章",
+            "textLength": 2284,
+            "textWithoutWhitespaceSha256": "e9ac4309ada38eac6bef558f62fc6c728a90bc5a6acc8becc6dcaae1eb0e7a4d"
+          }
+        }
+      }
+    }
+  ]
+}

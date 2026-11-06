@@ -1,0 +1,14 @@
+{
+  "empty": {
+    "message": "",
+    "signature": "dtK5rgAZsviSPArk/WTnzBdNBtmwnjEOl0eAcIYy9vV+HOg7Ms6rfmLoikqeErdNIEBwtQBGaghLrJ1JGELQPrOfUkRWOtoC34FCBeHjNtMLdfROp5C/Kjyiww567vNoGHBs0AcXcoVsdQwQklw45VKeHoQic2mY1VHdBeAmHxHfyj4Tyg1PDfpLWPo08nrd4nZnlkHTciPcUnbjkmI2tPaNDq8/JgdtF/zyj5vcAmGLf4kbxLw9so9xZToVwkUryltrtJjPhU12ZSAcF9FZbWw0aa9OMA/UDukG9hZCnb13gxhWM6gDnHvTLrBPyPxErmbaOaP3Jpe3tsfvfXnVEw=="
+  },
+  "unicode": {
+    "message": "中文🚀",
+    "signature": "CjuoYc07aELtd7D9ncKxZ1NqxYD6jCuDlH9BrZ2KedDMES2/lqE4OZt89D7ijHE/2jUN+fsxR3qAKybDx5htlQxnfwNeXo7OHxFr6pFuS8FOcFiM1UqoEJLt4KZjgXSugTv+zI35wLeoaA39qfXLVZkwLIBDx5s0KQ8tBZrhpw+O9MovDxCZUQD+NdvDORb2pKZBgxUNJ1U2lhe7dYW8MMidaO7LT6MsvyHtKogQyXkWO+izhDwxPurMpVr53QvHyJuKchMF1Ot+7sP7V5/vgv7zDJ2j7cBxCII6cdnnzkKuFxS+aUGrT1/PPKeC0sisIgOn5JuK334BTRIHLU8flg=="
+  },
+  "request": {
+    "message": "a{\"chapterId\":5678,\"bookId\":1234}8cfaaedef7a7e24a716732ff5428958f",
+    "signature": "MQZWK2ewW7Y7wzfymI8lPBmkpkLKV9m5ABHk4eE0YgXGPT5nRF+kY9uHHQUNUvr+84Z4Y8ExQCZrtYbl+f9SvlZ3PG6uoU5+EPaQW5iknkq23uy4vxq0ID8ubdZ9TYULm0JzYMQYachRsI1igbC7FiSRpheS24AObbBOIMhXUmsi+N6gjAhV1f1om7qDClcTOahbFDAgmYouA1S7YRAIRofbRTySjRFMnHUUoPr2Y70kO5H+YyLKrc1kyzq3czJFTdGdhio6bxqBi8O2Uwq4qCV4KMGtV0gvgIXWME2FwHhOo1/3CensKiOabQ08FgeuMepgd//3Y/PcpDvGy+XwnA=="
+  }
+}

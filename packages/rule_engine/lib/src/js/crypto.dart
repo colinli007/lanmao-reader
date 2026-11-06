@@ -33,6 +33,33 @@ Uint8List digest(String algorithm, List<int> data) {
   return digest.process(Uint8List.fromList(data));
 }
 
+/// 已由 JS Cipher.init 保存好参数的单次 JCA AES 操作，不持有 task 句柄。
+/// 每次调用从相同 key/IV 开始，对应 doFinal 后回到 init 状态的语义。
+Uint8List javaAesCipher(String transformation, List<int> key, List<int>? iv, int mode, List<int> data) {
+  final normalized = transformation.toUpperCase();
+  final parts = (normalized == 'AES' ? 'AES/ECB/PKCS5PADDING' : normalized).split('/');
+  if (parts.length != 3 ||
+      parts[0] != 'AES' ||
+      !const ['CBC', 'ECB'].contains(parts[1]) ||
+      !const ['PKCS5PADDING', 'PKCS7PADDING', 'NOPADDING'].contains(parts[2])) {
+    throw CryptoException('不支持的 AES 变换：$transformation');
+  }
+  if (mode != 1 && mode != 2) throw CryptoException('不支持的 Cipher 模式：$mode');
+  if (key.length != 16 && key.length != 24 && key.length != 32) {
+    throw CryptoException('Invalid AES key length: ${key.length} bytes');
+  }
+  if (parts[1] == 'CBC' && (iv == null || iv.length != 16)) {
+    throw CryptoException('CBC requires a 16-byte IV');
+  }
+  if (parts[1] == 'ECB' && iv != null) throw CryptoException('ECB mode cannot use IV');
+  final crypto = SymmetricCrypto(transformation, key);
+  if (iv != null) crypto.setIv(iv);
+  return mode == 1 ? crypto.encrypt(data) : crypto.decrypt(data);
+}
+
+/// CBC 加密省略 IV 时由 Cipher.init 生成并保存；getIV 返回其副本。
+Uint8List javaCipherRandomIv() => _randomBytes(16);
+
 /// HMAC，算法名按 JCA（`HmacMD5`、`HmacSHA256`…，不区分大小写）。密钥为空时出错（Java 的 `SecretKeySpec` 拒绝空密钥）。
 Uint8List hmac(String algorithm, List<int> key, List<int> data) {
   final upper = algorithm.toUpperCase();

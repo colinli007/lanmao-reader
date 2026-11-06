@@ -66,7 +66,7 @@ final content = await pool.run(contentTask(source, toc.book, chapters[0],
 | `java.log` 只在调试会话里输出 | 总是交给日志接收方 | 由调用方决定是否显示 |
 | Rhino 不支持 `class`、`async`、`?.` 等 | quickjs 支持 | 超集，不影响已有书源 |
 | `timeFormatUTC` 的月份名、星期、上午下午按设备 Locale | 固定简体中文 | 中文设备的默认值 |
-| Java 类与包互操作 | 支持 `org.jsoup.Jsoup`、`Parser.unescapeEntities`、Java String 字节转换、MessageDigest、StrResponse 构造、ByteArrayOutputStream 和 ArrayList 常用方法；其它类明确报错 | 按真实书源需求提供有限兼容；`JavaImporter` 暂不支持 |
+| Java 类与包互操作 | 支持 `org.jsoup.Jsoup`、`Parser.unescapeEntities`、Java String 字节转换、MessageDigest、StrResponse 构造、ByteArrayOutputStream、ArrayList、Base64/Arrays、AES Cipher 和 RSA PKCS#8/SHA256WithRSA 签名常用方法；其它类明确报错 | 按真实书源需求提供有限兼容；`JavaImporter` 可导入已实现包中的类，不提供任意 JVM 类 |
 
 jsLib 顶层和函数词法作用域里的 `java` 是 Java 包；规则、URL、书源的 `java` 仍是宿主对象，jsLib 函数可经 `this.java` 调用它。规则中访问 Java 类使用 `Packages.java…`。目录 `formatJs` 没有宿主 `java`，可直接访问全局 Java 包。`test/java_classes_test.dart` 使用酷狗原始 jsLib 验证搜索签名，并覆盖字节转换、摘要重置、作用域与跨任务状态。
 
