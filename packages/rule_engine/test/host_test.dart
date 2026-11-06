@@ -111,6 +111,37 @@ void main() {
       expect(decodeResponseBody(result), '<a href="2.html">x</a>');
     });
 
+    /// 响应头里是原始 UTF-8 字节的服务器（dart:io 的 HttpServer 不让写这样的响应头，所以直接写套接字）。
+    Future<String> rawServer() async {
+      final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(socket.close);
+      socket.listen((client) async {
+        final head = latin1.decode(await client.first);
+        final path = head.split(' ')[1];
+        final response = path == '/redirect'
+            ? 'HTTP/1.1 301 Moved\r\nLocation: /categories/回答/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+            : 'HTTP/1.1 200 OK\r\nX-Name: 中文名\r\nSet-Cookie: nick=懒猫; Path=/\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok';
+        client.add(utf8.encode(response));
+        await client.close();
+      });
+      return 'http://127.0.0.1:${socket.port}';
+    }
+
+    test('Location 里是 UTF-8 的中文：按 UTF-8 解码，只编码一次', () async {
+      final raw = await rawServer();
+      final result = await RuleHost().execute(HttpRequest(url: '$raw/redirect', sourceUrl: raw));
+      expect(result.url, '$raw/categories/%E5%9B%9E%E7%AD%94/');
+    });
+
+    test('响应头和 Set-Cookie 按 UTF-8 解码；不是合法 UTF-8 时保留原样', () async {
+      final raw = await rawServer();
+      final result = await RuleHost().execute(HttpRequest(url: '$raw/headers', sourceUrl: raw));
+      expect(result.headers['x-name'], '中文名');
+      expect(result.setCookies, ['nick=懒猫; Path=/']);
+      expect(utf8Header('caf\u00e9'), 'caf\u00e9');
+      expect(utf8Header('plain'), 'plain');
+    });
+
     test('POST 遇到 302 改成不带请求体的 GET', () async {
       final result = await RuleHost().execute(
         HttpRequest(url: '$base/post-redirect', method: 'POST', body: 'q=1', sourceUrl: base, headers: const {'Content-Type': 'application/x-www-form-urlencoded'}),

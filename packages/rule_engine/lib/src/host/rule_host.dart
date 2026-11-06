@@ -26,6 +26,18 @@ import 'source_store.dart';
 /// 要落盘时传入自己的 [SourceStore] 和带初始值、变更回调的 [CookieStore]。
 ///
 /// 书源 JS 的调试日志在写入时交给 [onLog]，没有设置时丢弃。
+/// 响应头按 UTF-8 解码（source-request「响应处理」，fix-md3-diff-findings 设计 D1）：`dart:io` 把响应头的字节按 Latin-1
+/// 解成字符，OkHttp 按 UTF-8。值里有 0x80 到 0xFF 的字符、且全部不超过 0xFF 时，按 Latin-1 还原成字节再按 UTF-8 解码；
+/// 不是合法 UTF-8 时保留原样。
+String utf8Header(String value) {
+  if (!value.codeUnits.any((unit) => unit >= 0x80) || value.codeUnits.any((unit) => unit > 0xFF)) return value;
+  try {
+    return utf8.decode(latin1.encode(value));
+  } on FormatException {
+    return value;
+  }
+}
+
 final class RuleHost {
   RuleHost({
     this.connectionTimeout = const Duration(seconds: 15),
@@ -126,10 +138,13 @@ final class RuleHost {
       }
       final response = await httpRequest.close();
       if (request.enabledCookieJar && !request.direct) {
-        cookieStore.saveResponse(url, response.headers['set-cookie'] ?? const []);
+        cookieStore.saveResponse(url, _setCookies(response));
       }
 
-      final location = response.headers.value(HttpHeaders.locationHeader);
+      final location = switch (response.headers.value(HttpHeaders.locationHeader)) {
+        final value? => utf8Header(value),
+        null => null,
+      };
       if (_isRedirect(response.statusCode) && location != null && !request.direct) {
         await response.drain<void>();
         if (followUps >= _maxFollowUps) throw HttpException('重定向次数超过 $_maxFollowUps', uri: url);
@@ -156,14 +171,16 @@ final class RuleHost {
 
   static HttpResult _result(HttpClientResponse response, Uri url, Uint8List body, bool redirected) {
     final headers = <String, String>{};
-    response.headers.forEach((name, values) => headers[name.toLowerCase()] = values.join(', '));
+    response.headers.forEach((name, values) => headers[name.toLowerCase()] = values.map(utf8Header).join(', '));
     return HttpResult(
       statusCode: response.statusCode,
       url: url.toString(),
       headers: headers,
       body: body,
       redirected: redirected,
-      setCookies: response.headers['set-cookie'] ?? const [],
+      setCookies: _setCookies(response),
     );
   }
+
+  static List<String> _setCookies(HttpClientResponse response) => [...?response.headers['set-cookie']?.map(utf8Header)];
 }

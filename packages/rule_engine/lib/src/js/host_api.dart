@@ -308,7 +308,12 @@ final Map<String, _Api> _responseApis = {
   'res.statusCode': (c) => c.response().statusCode,
   'res.message': (c) => c.response().message,
   'res.url': (c) => c.response().url,
-  'res.headers': (c) => c.response().headers,
+  // headers(名) 是 OkHttp 的 Response.headers(name)：这个响应头的全部值（fix-md3-diff-findings 设计 D2）
+  'res.headers': (c) => switch (c.optStr(1)) {
+    null => c.response().headers,
+    final name when name.toLowerCase() == 'set-cookie' => c.response().setCookies,
+    final name => [?c.response().header(name)],
+  },
   'res.header': (c) => c.response().header(c.str(1)),
   'res.cookies': (c) => c.response().cookies,
   'res.isSuccessful': (c) => c.response().isSuccessful,
@@ -368,6 +373,8 @@ final Map<String, _Api> _elementApis = {
     _ => null,
   },
   'el.parentNode': (c) => c.element().parentNode,
+  // jsoup 的 getAllElements：自己和全部后代元素，先序（fix-md3-diff-findings 设计 D4）
+  'el.getAllElements': (c) => ElementList(_selfAndDescendants(c.element())),
   'el.remove': (c) {
     c.element().remove();
     return null;
@@ -414,6 +421,17 @@ final Map<String, _Api> _jsoupApis = {
   'jsoup.parse': (c) => parseJsoupDocument(c.str(0), baseUri: c.optStr(1)),
   'jsoup.parseBodyFragment': (c) => parseJsoupDocument(c.str(0)),
 };
+
+List<Node> _selfAndDescendants(Node root) {
+  final out = <Node>[];
+  void visit(Node node) {
+    out.add(node);
+    node.nodes.whereType<Element>().forEach(visit);
+  }
+
+  visit(root);
+  return out;
+}
 
 /// jsoup 的 StringBuilder 拼接：已有内容时才加分隔符，所以开头的空串不留下分隔符。
 String _joinNonEmptyStart(Iterable<String> parts, String separator) {

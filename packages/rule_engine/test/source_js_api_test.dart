@@ -195,6 +195,22 @@ void main() {
           '-1');
     });
 
+    test('getAllElements 和按节点比较的 indexOf、lastIndexOf、includes、contains', () {
+      const doc = 'var doc = org.jsoup.Jsoup.parse("<div><p>1</p><ol><li>a</li></ol><p>2</p></div>");';
+      // 文档、html、head、body、div、p、ol、li、p：第一个 p 在第 5 位，ol 在第 6 位
+      expect(js('$doc var all = doc.getAllElements(); [all.size(), all.indexOf(doc.select("p").first()), all.indexOf(doc.select("ol").first())].join("")'),
+          '956');
+      expect(js('$doc var ps = doc.select("p"); [ps.lastIndexOf(doc.select("p").last()), ps.includes(doc.select("p").first()), ps.contains(doc.select("li").first())].join("")'),
+          '1truefalse');
+      // 参数不是元素时按数组原来的方法
+      expect(js('$doc doc.select("p").indexOf("x")'), '-1');
+      // 白鹿书院的简介规则：只取 ol 之前的 p
+      expect(js('''$doc var all = doc.getAllElements(); var olIdx = all.indexOf(doc.select("ol").first());
+        var ps = doc.select("p"); var out = [];
+        for (var j = 0; j < ps.size(); j++) { if (all.indexOf(ps.get(j)) < olIdx) out.push(ps.get(j).text()); }
+        out.join()'''), '1');
+    });
+
     test('元素列表的 remove(下标) 和 remove(元素) 是 Java 列表的写法', () {
       expect(js('var l = org.jsoup.Jsoup.parse("<p>1</p><p>2</p><p>3</p>").select("p"); var r = l.remove(0); r.text() + l.size() + l.text()'),
           '122 3');
@@ -418,6 +434,12 @@ void main() {
           case '/login':
             response.headers.add('set-cookie', 'sid=abc; Path=/');
             response.write('ok');
+          case '/two-cookies':
+            response.headers
+              ..add('set-cookie', 'a=1; Path=/')
+              ..add('set-cookie', 'b=2')
+              ..set('x-one', 'v');
+            response.write('ok');
           case '/slow':
             await Future<void>.delayed(const Duration(seconds: 10));
           case '/b64':
@@ -484,6 +506,11 @@ void main() {
       expect(await run("java.head('$base/login', {}).cookies().sid"), 'abc');
       expect(await run("var r = java.connect('$base/login'); [r.code(), r.isSuccessful(), r.headers()['set-cookie'] ? 1 : 0, r.raw().request().url() === r.url()].join('')"),
           '200true1true');
+    });
+
+    test('headers(名) 是这个响应头的全部值（OkHttp 的 Response.headers(name)）', () async {
+      expect(await run("var r = java.connect('$base/two-cookies').raw(); [r.headers('Set-Cookie')[0], r.headers('set-cookie').length, r.headers('X-One').join(), r.headers('X-None').length].join('|')"),
+          'a=1; Path=/|2|v|0');
     });
 
     test('js 选项改请求头', () async {

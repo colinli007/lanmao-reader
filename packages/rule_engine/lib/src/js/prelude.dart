@@ -45,7 +45,7 @@ const String sourceJsPrelude = r'''
 
   function JsElement(id) { hidden(this, H, id); }
   ['text', 'ownText', 'html', 'outerHtml', 'data', 'attr', 'hasAttr', 'hasClass', 'id', 'tagName', 'select',
-    'selectFirst', 'children', 'parent', 'parentNode', 'remove'].forEach(function (name) {
+    'selectFirst', 'children', 'parent', 'parentNode', 'getAllElements', 'remove'].forEach(function (name) {
     hidden(JsElement.prototype, name, function () {
       return call('el.' + name, [this[H]].concat(slice.call(arguments)));
     });
@@ -77,6 +77,22 @@ const String sourceJsPrelude = r'''
       this.splice(at, 1);
       return true;
     });
+    // Rhino 里调的是 Java 列表的方法，按 jsoup 的 equals（同一个节点）比较；同一个节点每次交给 JS 是新的包装对象，
+    // 所以按句柄编号比（fix-md3-diff-findings 设计 D3）。参数不是元素时按数组原来的方法
+    function position(target, from, step) {
+      for (var i = from; i >= 0 && i < this.length; i += step) {
+        if (this[i] instanceof JsElement && this[i][H] === target[H]) return i;
+      }
+      return -1;
+    }
+    hidden(list, 'indexOf', function (item) {
+      return item instanceof JsElement ? position.call(this, item, 0, 1) : Array.prototype.indexOf.apply(this, arguments);
+    });
+    hidden(list, 'lastIndexOf', function (item) {
+      return item instanceof JsElement ? position.call(this, item, this.length - 1, -1) : Array.prototype.lastIndexOf.apply(this, arguments);
+    });
+    hidden(list, 'includes', function (item) { return this.indexOf(item) >= 0; });
+    hidden(list, 'contains', function (item) { return this.indexOf(item) >= 0; });
     hidden(list, 'toString', function () { return this.outerHtml(); });
     hidden(list, 'toJSON', function () { var tag = {}; tag[E] = ids(this); return tag; });
     return list;

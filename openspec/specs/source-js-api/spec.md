@@ -47,11 +47,15 @@
 - **THEN** 结果为 `/book/1`
 
 ### Requirement: 响应对象
-网络 API 返回的响应对象 SHALL 提供：`body()`（正文文本）、`code()` 和 `statusCode()`（状态码）、`message()`、`url()`（重定向后的最终地址）、`headers()`（响应头对象）、`header(名)`（单个响应头，不区分大小写）、`cookies()`（响应 Set-Cookie 的名值对象）、`isSuccessful()`，以及 `raw().request().url()`（最终地址）。
+网络 API 返回的响应对象 SHALL 提供：`body()`（正文文本）、`code()` 和 `statusCode()`（状态码）、`message()`、`url()`（重定向后的最终地址）、`headers()`（响应头对象）、`headers(名)`（这个响应头的全部值的列表，不区分大小写，`Set-Cookie` 每条一项，没有时是空列表，和 OkHttp 的 `Response.headers(name)` 一样）、`header(名)`（单个响应头，不区分大小写）、`cookies()`（响应 Set-Cookie 的名值对象）、`isSuccessful()`，以及 `raw().request().url()`（最终地址）。
 
 #### Scenario: 读响应头
 - **WHEN** 响应头有 `Set-Cookie: sid=abc; Path=/`，执行 `java.head(url, {}).cookies().sid`
 - **THEN** 结果为 `abc`
+
+#### Scenario: 按名取全部值
+- **WHEN** 响应有两条 `Set-Cookie`：`a=1; Path=/` 和 `b=2`，执行 `res.raw().headers("Set-Cookie")`
+- **THEN** 结果是两项的列表，第一项是 `a=1; Path=/`
 
 ### Requirement: 回调规则
 规则上下文的 `java.getString(规则[, 内容[, 是否地址]])` SHALL 用完整的规则语法（含 JS）求值；不传内容时使用当前内容（当前结果项或页面），而不是 `result`。`getStringList` 规则为空或取不到时返回 null。`getElements` SHALL 返回元素包装对象列表，取不到时为空列表；`getElement` 在 JSoup、CSS、XPath 规则下同样返回列表（与 MD3 一致）。`java.setContent(内容[, 基准地址])` SHALL 替换当前上下文的内容，后续字段规则在新内容上取值；内容为 null 时 MUST 以 JS 错误结束。
@@ -61,7 +65,7 @@
 - **THEN** 作者为 `三体/刘慈欣`
 
 ### Requirement: 元素包装对象
-HTML 元素交给 JS 时 SHALL 是包装对象，提供 jsoup 的常用方法：`text()`、`ownText()`、`html()`、`outerHtml()`、`data()`、`attr(名)`、`hasAttr(名)`、`hasClass(名)`、`id()`、`tagName()`、`select(CSS)`、`selectFirst(CSS)`、`children()`、`parent()`、`parentNode()`、`remove()`（从文档里删掉这个元素）。元素列表 SHALL 提供 `text()`、`html()`、`attr(名)`、`select(CSS)`、`eq(i)`、`first()`、`last()`、`get(i)`、`size()`、`isEmpty()`、`toArray()`、`remove()`（不带参数时从文档里删掉这些元素并返回列表本身；带下标时和 Java 列表一样从列表里删掉这一项并返回它），并且可以按下标和 `length` 访问。这些方法的结果 SHALL 与规则引擎里对应的 jsoup 语义一致。
+HTML 元素交给 JS 时 SHALL 是包装对象，提供 jsoup 的常用方法：`text()`、`ownText()`、`html()`、`outerHtml()`、`data()`、`attr(名)`、`hasAttr(名)`、`hasClass(名)`、`id()`、`tagName()`、`select(CSS)`、`selectFirst(CSS)`、`children()`、`parent()`、`parentNode()`、`getAllElements()`（自己和全部后代元素，按文档顺序）、`remove()`（从文档里删掉这个元素）。元素列表 SHALL 提供 `text()`、`html()`、`attr(名)`、`select(CSS)`、`eq(i)`、`first()`、`last()`、`get(i)`、`size()`、`isEmpty()`、`toArray()`、`remove()`（不带参数时从文档里删掉这些元素并返回列表本身；带下标时和 Java 列表一样从列表里删掉这一项并返回它），并且可以按下标和 `length` 访问。元素列表的 `indexOf`、`lastIndexOf`、`includes`、`contains` SHALL 按是不是同一个节点比较（Rhino 里调的是 Java 列表的方法），同一个节点分几次交给 JS 也算相同。这些方法的结果 SHALL 与规则引擎里对应的 jsoup 语义一致。
 
 #### Scenario: 列表转数组后取属性
 - **WHEN** 页面有两个 `.d a`，执行 `java.getElements('.d a').toArray().map(a => a.text() + a.attr('href')).join(',')`
@@ -70,6 +74,10 @@ HTML 元素交给 JS 时 SHALL 是包装对象，提供 jsoup 的常用方法：
 #### Scenario: 删掉元素后取文本
 - **WHEN** 文档是 `<div><p>甲</p><script>x</script></div>`，执行 `doc.select('script').remove(); doc.select('div').text()`
 - **THEN** 结果是 `甲`
+
+#### Scenario: 按节点找位置
+- **WHEN** 执行 `var all = doc.getAllElements(); all.indexOf(doc.select('p').first())`，文档里第一个 `p` 是 `body` 的第一个子元素
+- **THEN** 结果是 `p` 在全部元素里的位置，不是 -1
 
 ### Requirement: 编码
 SHALL 提供：`base64Decode(文本[, 字符集])`（宽松：忽略空白、容忍缺少 `=` 和 URL 安全字符，空值返回空串）、`base64Decode(文本, flags)` 和 `base64DecodeToByteArray(文本[, flags])`（严格，按 Android Base64 的 flags；非法输入以 JS 错误结束；`base64DecodeToByteArray` 对空白输入返回 null）、`base64Encode(文本[, flags])`（默认 NO_WRAP）、`hexDecodeToString`、`hexDecodeToByteArray`、`hexEncodeToString`（小写）、`strToBytes(文本[, 字符集])`、`bytesToStr(字节[, 字符集])`、`encodeURI(文本[, 字符集])`（表单编码，空格为 `+`）。字节数组在 JS 里 SHALL 是取值 -128 到 127 的数字数组（与 Java `byte[]` 一致），作为参数时也接受这种数组。字符集支持 UTF-8、GBK、GB2312、GB18030 和 ISO-8859-1。
