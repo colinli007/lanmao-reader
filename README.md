@@ -112,6 +112,11 @@ QUICKJS_NG_FFI_LIB=$PWD/build/host/libquickjs_ng_ffi.dylib dart test
 cd packages/rule_engine
 QUICKJS_NG_FFI_LIB=$PWD/../quickjs_ng_ffi/build/host/libquickjs_ng_ffi.dylib dart test
 
+# 和 MD3 的差分测试（联网）：模拟器上装 MD3 官方包、打开「Web 服务」，同一批书源两边各跑一遍「书源调试」再逐项对比，
+# 报告写到 --out 目录（md3_diff.json 和 md3_diff.md）。用法和准备步骤见 tool/md3_diff.dart 开头的说明
+adb forward tcp:1122 tcp:1122 && adb forward tcp:1123 tcp:1123
+QUICKJS_NG_FFI_LIB=$PWD/../quickjs_ng_ffi/build/host/libquickjs_ng_ffi.dylib dart run tool/md3_diff.dart --sources <书源.json> --out <目录>
+
 # 阻塞桥单元测试（开发机）
 cd packages/blocking_bridge
 dart test
