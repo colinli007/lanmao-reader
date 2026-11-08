@@ -82,7 +82,12 @@ final class BookCacheController extends Notifier<Map<String, BookCacheProgress>>
   /// 写正文缓存（原文，和阅读时一样），再逐张下载正文里的图片；图片失败不算这一章失败（设计 D3）。
   Future<void> _save(ShelfBook book, TocChapter chapter, ChapterText text) async {
     final db = ref.read(databaseProvider);
-    await db.putContent(ContentRow(bookUrl: book.bookUrl, chapterUrl: chapter.url, title: text.title, content: text.content));
+    final saved = await db.transaction(() async {
+      if (await db.getBook(book.bookUrl) == null) return false;
+      await db.putContent(ContentRow(bookUrl: book.bookUrl, chapterUrl: chapter.url, title: text.title, content: text.content));
+      return true;
+    });
+    if (!saved) return;
     final source = ref.read(contentSourceProvider);
     for (final src in imageSourcesOf(formatChapter(text.title, text.content))) {
       try {

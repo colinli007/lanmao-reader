@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart' hide SearchController;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../bookshelf/book_cache.dart';
 import '../library/providers.dart';
 import '../library/relocate.dart';
 import '../storage/database.dart';
@@ -16,7 +17,7 @@ import 'search_page.dart';
 final changeSourceSearchProvider = NotifierProvider.autoDispose<SearchController, SearchState>(SearchController.new);
 
 /// 换书源（bookshelf「换书源」）：用书名搜索，同名同作者的结果是候选；选中后执行详情和目录链路，
-/// 成功时新书替换书架上的旧书，页面返回新书籍地址（设计 D1）。离开页面时搜索随控制器取消。
+/// 成功时新书替换旧书并保留是否在书架，页面返回新书籍地址。离开页面时搜索随控制器取消。
 class ChangeSourcePage extends ConsumerStatefulWidget {
   const ChangeSourcePage({super.key, required this.bookUrl});
 
@@ -36,6 +37,7 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
 
   /// 正在换过去的候选；不为空时列表不能点。
   SearchCandidate? _changing;
+  bool _saving = false;
 
   /// 换源失败的原因，按候选的书籍地址。
   final Map<String, String> _errors = {};
@@ -65,17 +67,20 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
     final candidates = book == null
         ? const <SearchCandidate>[]
         : state.books.where((m) => m.name == book.name.trim() && m.author == book.author.trim()).firstOrNull?.results ?? const [];
-    return Scaffold(
-      appBar: AppBar(title: Text(book == null ? '换书源' : '换书源：${book.name}')),
-      body: Column(
-        children: [
-          if (state.total > 0) SearchProgress(state: state, onStop: controller.stop, finished: '搜索结束，共 ${candidates.length} 个候选'),
-          Expanded(
-            child: state.noSources
-                ? const Center(child: Text('没有可以搜索的书源，先去导入或启用书源'))
-                : ListView.builder(itemCount: candidates.length, itemBuilder: (context, index) => _tile(candidates[index])),
-          ),
-        ],
+    return PopScope(
+      canPop: !_saving,
+      child: Scaffold(
+        appBar: AppBar(title: Text(book == null ? '换书源' : '换书源：${book.name}')),
+        body: Column(
+          children: [
+            if (state.total > 0) SearchProgress(state: state, onStop: controller.stop, finished: '搜索结束，共 ${candidates.length} 个候选'),
+            Expanded(
+              child: state.noSources
+                  ? const Center(child: Text('没有可以搜索的书源，先去导入或启用书源'))
+                  : ListView.builder(itemCount: candidates.length, itemBuilder: (context, index) => _tile(candidates[index])),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -106,6 +111,7 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
 
   /// 执行详情和目录链路，按章节名对齐进度后替换书架上的书（设计 D4、D5）。中途离开页面时不写入。
   Future<void> _change(SearchCandidate candidate) async {
+    final route = ModalRoute.of(context);
     setState(() {
       _changing = candidate;
       _errors.remove(candidate.book.bookUrl);
@@ -113,13 +119,14 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
     try {
       final engine = ref.read(sourceEngineProvider);
       final info = await engine.bookInfo(candidate.source.source, candidate.book.toBook());
+      if (!mounted || route?.isCurrent != true) return;
       final result = await engine.chapterList(candidate.source.source, info);
-      if (!mounted) return;
+      if (!mounted || route?.isCurrent != true) return;
       final update = tocUpdateOf(result);
       final old = _book!;
       var book = shelfBookOf(result.book).copyWith(
         latestChapterTitle: Value(update.latestChapterTitle),
-        inShelf: true,
+        inShelf: old.inShelf,
         addedAt: Value(old.addedAt),
         lastReadAt: Value(old.lastReadAt),
       );
@@ -134,13 +141,17 @@ class _ChangeSourcePageState extends ConsumerState<ChangeSourcePage> {
           durChapterPos: aligned.matched ? old.durChapterPos : 0,
         );
       }
+      // 网络加载期间仍可取消；提交事务期间不能返回，否则调用方会错过新地址。
+      setState(() => _saving = true);
       await _db.changeSource(old.bookUrl, book, update.chapters);
+      ref.read(bookCacheProvider.notifier).stop(old.bookUrl);
       if (mounted) Navigator.of(context).pop(book.bookUrl);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _errors[candidate.book.bookUrl] = describeError(e);
         _changing = null;
+        _saving = false;
       });
     }
   }

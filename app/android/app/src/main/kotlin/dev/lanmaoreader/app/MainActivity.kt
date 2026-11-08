@@ -28,10 +28,6 @@ class MainActivity : FlutterActivity() {
                 } else if (!debuggable) {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }
-                // 阅读页亮度（add-reader-brightness 设计 D2）：只改这个窗口，null 恢复成系统的亮度
-                "brightness" -> window.attributes = window.attributes.apply {
-                    screenBrightness = (call.arguments as Double?)?.toFloat() ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                }
                 else -> return@setMethodCallHandler result.notImplemented()
             }
             result.success(null)

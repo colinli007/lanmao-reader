@@ -25,6 +25,7 @@ void main() {
   setUp(() async {
     services = await TestServices.create();
     await services.addSources([{'bookSourceUrl': 'https://s.com', 'bookSourceName': '书源'}]);
+    await services.db.saveBrowsingBook(book('b'), const []);
   });
   tearDown(() => services.db.close());
 
@@ -51,6 +52,24 @@ void main() {
     expect(await services.db.getContentImage('b', 'new.png'), bytes);
     expect(await services.db.getContentImage('b', 'text.png'), isNull);
     expect(await services.db.getContentImage('b', 'missing.png'), isNull);
+    store.dispose();
+  });
+
+  test('换源删除旧书后图片才下载完成，不重新写回旧书缓存', () async {
+    final bytes = await png(30, 20);
+    final started = Completer<void>();
+    final pending = Completer<Uint8List>();
+    services.engine.onImage = (source, book, src) {
+      started.complete();
+      return pending.future;
+    };
+    final store = images();
+    final done = store.prepare(['late.png']);
+    await started.future;
+    await services.db.removeBook('b');
+    pending.complete(bytes);
+    await done;
+    expect(await services.db.getContentImage('b', 'late.png'), isNull);
     store.dispose();
   });
 

@@ -332,8 +332,18 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
     if (index != null && mounted) _read(book, startAt: index);
   }
 
-  void _read(ShelfBook book, {int? startAt}) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ReaderPage(bookUrl: book.bookUrl, startAt: startAt)));
+  void _read(ShelfBook book, {int? startAt}) => Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (_) => ReaderPage(
+      bookUrl: book.bookUrl,
+      startAt: startAt,
+      onChangeSource: (context, url) async {
+        final changed = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: url)));
+        // 阅读页仍在前台时同步底下的详情页，返回后不会查找已经删除的旧书。
+        if (changed != null && mounted) setState(() => _bookUrl = changed);
+        return changed;
+      },
+    ),
+  ));
 
   /// 换源成功后改为显示新书；旧书已从数据库删除。
   Future<void> _changeShelfSource() async {
@@ -354,14 +364,16 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
               ListTile(
                 title: Text(candidate.source.source.bookSourceName),
                 subtitle: candidate.book.latestChapterTitle == null ? null : Text(candidate.book.latestChapterTitle!),
-                trailing: i == _current ? Icon(LucideIcons.check, color: AppColors.of(context).accent) : null,
+                trailing: candidate.book.bookUrl == (_bookUrl ?? _candidate.book.bookUrl)
+                    ? Icon(LucideIcons.check, color: AppColors.of(context).accent)
+                    : null,
                 onTap: () => Navigator.pop(context, i),
               ),
           ],
         ),
       ),
     );
-    if (chosen != null && chosen != _current) await _open(chosen);
+    if (chosen != null && widget.candidates[chosen].book.bookUrl != (_bookUrl ?? _candidate.book.bookUrl)) await _open(chosen);
   }
 }
 

@@ -209,6 +209,8 @@ void main() {
     await tapReader(tester, 0.5);
     await tester.tap(find.byTooltip('排版'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('滚动'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('滚动'));
     await tester.pumpAndSettle();
     // 先收起面板：排版面板最高占屏幕的六成，macOS 默认窗口这样的矮屏上会盖住正中间
@@ -284,6 +286,17 @@ void main() {
     await tester.tap(find.text('本地小说').first);
     await pumpUntil(tester, paragraph('备用书源第二章的第一段。'));
     expect(hits['/b/c/2'], 1);
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+    await tester.pumpAndSettle();
+    // 阅读页直接换回原书源，仍停在第二章，返回一次就是书架。
+    await tester.tap(find.byTooltip('换书源'));
+    await pumpUntil(tester, find.text('本地测试'));
+    await tester.tap(find.text('本地测试'));
+    await pumpUntil(tester, paragraph('第二章的第一段。'));
+    final readerChanged = (await db.shelf()).single.book;
+    expect((readerChanged.originName, readerChanged.durChapterIndex), ('本地测试', 1));
+    expect(await db.getBook(moved.bookUrl), isNull);
     await tester.pumpAndSettle();
     await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
     await tester.pumpAndSettle();

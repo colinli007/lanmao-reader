@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../ui/icons.dart';
 import '../../ui/tokens.dart';
 import '../../ui/widgets.dart';
+import '../font_page.dart';
+import '../reader_fonts.dart';
 import '../reader_settings.dart';
 
-/// 排版面板（reader「阅读设置」，redesign-minimal-ui 设计 D5、D6）：字号、缩进、边距用步进，行距、段距用三个预设，翻页方式四选一。
+/// 排版面板：字体选择；字号、缩进、边距用步进，行距、段距用三个预设，翻页方式四选一。
 class LayoutPanel extends ConsumerWidget {
   const LayoutPanel({super.key});
 
@@ -16,6 +19,8 @@ class LayoutPanel extends ConsumerWidget {
     final settings = ref.watch(readerSettingsProvider);
     final notifier = ref.read(readerSettingsProvider.notifier);
     final colors = AppColors.of(context);
+    final fonts = ref.watch(readerFontsProvider);
+    final fontName = fonts.familyFor(settings.fontId) == null ? '系统字体' : fonts.find(settings.fontId)!.name;
 
     Widget row(String label, Widget control, {bool expand = false}) => SizedBox(
       height: 52,
@@ -34,7 +39,10 @@ class LayoutPanel extends ConsumerWidget {
           value: value,
           label: '${_presetNames[i]}$name',
           color: null,
-          child: CustomPaint(size: const Size(18, 16), painter: _Lines(gap: 3.0 + i * 2, color: colors.textPrimary)),
+          child: CustomPaint(
+            size: const Size(18, 16),
+            painter: _Lines(gap: 3.0 + i * 2, color: colors.textPrimary),
+          ),
         ),
     ];
 
@@ -58,6 +66,21 @@ class LayoutPanel extends ConsumerWidget {
                 step: 1,
                 onChanged: (value) => notifier.update(settings.copyWith(fontSize: value)),
               ),
+            ),
+            row(
+              '字体',
+              TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FontPage())),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(child: Text(fontName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 4),
+                    const Icon(LucideIcons.chevronRight, size: 18),
+                  ],
+                ),
+              ),
+              expand: true,
             ),
             row(
               '行距',

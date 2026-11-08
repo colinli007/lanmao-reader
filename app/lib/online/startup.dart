@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/providers.dart';
+import '../reader/reader_fonts.dart';
 import '../reader/reader_settings.dart';
 import '../storage/database.dart';
 import '../storage/write_queue.dart';
@@ -24,12 +25,15 @@ Future<List<Override>> startServices({AppDatabase? database}) async {
   final sources = await SourceRepository.load(db);
   final replaceRules = await ReplaceRuleRepository.load(db);
   final settings = await db.loadSettings();
+  final fonts = ReaderFonts();
+  await fonts.restore(ReaderSettings.fromMap(settings).fontId);
   // 进入后台时等落盘队列清空，app 被杀时不丢最后几次写入（监听器注册到 binding 上，整个运行期间有效）
   AppLifecycleListener(onHide: queue.flush, onPause: queue.flush);
   final sourceEngine = PoolSourceEngine(engine.pool, engine.host.execute);
   return [
     databaseProvider.overrideWithValue(db),
     initialSettingsProvider.overrideWithValue(settings),
+    readerFontsProvider.overrideWith((ref) => fonts),
     contentSourceProvider.overrideWithValue(OnlineContentSource(sourceEngine, sources, replaceRules)),
     sourceEngineProvider.overrideWithValue(sourceEngine),
     sourceRepositoryProvider.overrideWith((ref) => sources),

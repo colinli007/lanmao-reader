@@ -8,6 +8,7 @@ import '../support/test_app.dart';
 void main() {
   test('默认值：字号 18、行距 1.8、亮主题、覆盖翻页、跟随系统深色', () {
     final settings = ReaderSettings.fromMap(const {});
+    expect(settings.fontId, '');
     expect(
       (settings.fontSize, settings.lineHeight, settings.theme, settings.pageMode, settings.followSystemDark),
       (18, 1.8, ReaderTheme.light, PageMode.cover, true),
@@ -30,10 +31,10 @@ void main() {
     expect(const ReaderSettings(paragraphSpacing: 0.7000000000000001).toMap()['reader.paragraphSpacing'], '0.7');
   });
 
-  test('亮度：默认跟随系统、40%；越界截到 1% 到 100%，非法值回落到默认值', () {
+  test('亮度：默认跟随系统、40%；越界截到 0% 到 100%，非法值回落到默认值', () {
     final defaults = ReaderSettings.fromMap(const {});
     expect((defaults.brightnessFollowSystem, defaults.brightness), (true, 0.4));
-    expect(ReaderSettings.fromMap(const {'reader.brightness': '0'}).brightness, 0.01);
+    expect(ReaderSettings.fromMap(const {'reader.brightness': '-0.5'}).brightness, 0.0);
     expect(ReaderSettings.fromMap(const {'reader.brightness': '1.5'}).brightness, 1.0);
     final invalid = ReaderSettings.fromMap(const {'reader.brightness': 'dim', 'reader.brightnessFollowSystem': 'no'});
     expect((invalid.brightnessFollowSystem, invalid.brightness), (true, 0.4));
@@ -88,6 +89,7 @@ void main() {
     final container = ProviderContainer(overrides: services.overrides);
     addTearDown(container.dispose);
     const changed = ReaderSettings(
+      fontId: 'font-test',
       fontSize: 22,
       lineHeight: 2.1,
       theme: ReaderTheme.sepia,

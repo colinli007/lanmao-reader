@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanmao_reader/online/book_detail_page.dart';
 import 'package:lanmao_reader/online/search_controller.dart';
@@ -138,6 +139,54 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<ReaderPage>(find.byType(ReaderPage)).startAt, isNull);
   });
+
+  for (final shelved in [false, true]) {
+    testWidgets('阅读中换源后返回详情显示新书，并可再次继续阅读（书架=$shelved）', (tester) async {
+      if (shelved) await services.shelveSimpleBook();
+      await services.addSources([{'bookSourceUrl': 'https://b.com', 'bookSourceName': '书源乙', 'searchUrl': '/s'}]);
+      services.engine.onSearch = (source, key) async => [
+        SearchBook(bookUrl: '${source.bookSourceUrl}/book/1', origin: source.bookSourceUrl, originName: source.bookSourceName)
+          ..name = '三体'
+          ..author = '刘慈欣',
+      ];
+      await tester.pumpWidget(services.app(shelved
+          ? const BookDetailPage.shelf(SimpleBook.bookUrl)
+          : BookDetailPage.search(merged([SimpleBook.sourceUrl, 'https://b.com']))));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('开始阅读'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('换书源'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('书源乙'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReaderPage), findsNothing);
+      expect(find.text('书源乙'), findsOneWidget);
+      expect(find.text('共 5 章'), findsOneWidget);
+      expect((await services.db.getBook('https://b.com/book/1'))!.inShelf, shelved);
+      await tester.tap(find.text('继续阅读'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<ReaderPage>(find.byType(ReaderPage)).bookUrl, 'https://b.com/book/1');
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      if (!shelved) {
+        // 详情页原来的候选序号仍是甲，实际当前书源已经是乙；仍能重新选择甲。
+        await tester.tap(find.text('共 2 个书源'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('书源甲'));
+        await tester.pumpAndSettle();
+        expect(find.text('书源甲'), findsOneWidget);
+        expect(find.text('开始阅读'), findsOneWidget);
+      }
+    });
+  }
 
   testWidgets('从书架打开时换源：回到详情页，显示新书源名和目录，仍标明已在书架', (tester) async {
     await services.shelveSimpleBook();

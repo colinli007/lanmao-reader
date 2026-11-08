@@ -3,17 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../library/providers.dart';
 
-/// 阅读主题（设计 D9）。
+/// 配色来自花火阅读 1.3.3 APK 的 Profile.setReaderStyle；按钮色与正文背景分别定义。
+/// 枚举名称用于持久化，保留已有名称。
 enum ReaderTheme {
-  light('亮', Color(0xFFFFFFFF), Color(0xFF1F1F1F)),
-  dark('暗', Color(0xFF121212), Color(0xFFB8B8B8)),
-  sepia('护眼', Color(0xFFF2E8CF), Color(0xFF3B3326));
+  light('亮', Color(0xFFF8F8FA), Color(0xFF0E0E0E), Color(0xFFFFFFFF)),
+  sepia('米黄', Color(0xFFDDD7BE), Color(0xFF0E0E0E), Color(0xFFDDD9C7)),
+  green('浅绿', Color(0xFFD3E2C5), Color(0xFF0E0E0E), Color(0xFFDAE3CE)),
+  dark('暗', Color(0xFF000000), Color(0xFFB1B1B1), Color(0xFF1A191F));
 
-  const ReaderTheme(this.label, this.background, this.foreground);
+  const ReaderTheme(this.label, this.background, this.foreground, this.swatch);
 
   final String label;
   final Color background;
   final Color foreground;
+  final Color swatch;
 }
 
 /// 翻页方式（reader「翻页方式」，add-paged-reader 设计 D14）。前三种是分页，滚动是整章上下滚动。
@@ -32,6 +35,7 @@ enum PageMode {
 final class ReaderSettings {
   const ReaderSettings({
     this.fontSize = 18,
+    this.fontId = '',
     this.lineHeight = 1.8,
     this.theme = ReaderTheme.light,
     this.pageMode = PageMode.cover,
@@ -45,6 +49,7 @@ final class ReaderSettings {
   });
 
   factory ReaderSettings.fromMap(Map<String, String> map) => ReaderSettings(
+    fontId: map[_fontId] ?? '',
     fontSize: double.tryParse(map[_fontSize] ?? '')?.clamp(minFontSize, maxFontSize) ?? 18,
     lineHeight: double.tryParse(map[_lineHeight] ?? '')?.clamp(minLineHeight, maxLineHeight) ?? 1.8,
     theme: ReaderTheme.values.asNameMap()[map[_theme]] ?? ReaderTheme.light,
@@ -69,8 +74,8 @@ final class ReaderSettings {
   static const minMargin = 8.0;
   static const maxMargin = 48.0;
 
-  /// 阅读页亮度的范围：下限不是 0，部分 Android 机型上 0 几乎全黑（add-reader-brightness 设计 D3）。
-  static const minBrightness = 0.01;
+  /// 页面调暗范围：0 对应 50% 黑色遮罩，1 无遮罩，不改变系统屏幕亮度。
+  static const minBrightness = 0.0;
   static const maxBrightness = 1.0;
 
   /// 排版面板里行距、段距的三个预设：紧凑、适中、宽松（redesign-minimal-ui 设计 D6）。中间那个是默认值。
@@ -78,6 +83,7 @@ final class ReaderSettings {
   static const lineHeightPresets = [1.5, 1.8, 2.2];
   static const paragraphSpacingPresets = [0.3, 0.6, 1.0];
 
+  static const _fontId = 'reader.fontId';
   static const _fontSize = 'reader.fontSize';
   static const _lineHeight = 'reader.lineHeight';
   static const _theme = 'reader.theme';
@@ -90,6 +96,8 @@ final class ReaderSettings {
   static const _brightnessFollowSystem = 'reader.brightnessFollowSystem';
   static const _brightness = 'reader.brightness';
 
+  /// 空字符串表示系统字体；其余是应用内字体文件的稳定 ID。
+  final String fontId;
   final double fontSize;
   final double lineHeight;
   final ReaderTheme theme;
@@ -108,7 +116,7 @@ final class ReaderSettings {
   /// 阅读页显示期间屏幕不自动熄灭（reader「屏幕常亮」）。
   final bool keepScreenOn;
 
-  /// 打开时阅读页不改屏幕亮度；关闭时阅读页显示期间用 [brightness]（reader「阅读页亮度」）。
+  /// 打开时不加遮罩；关闭时按 [brightness] 叠加黑色调暗层（reader「阅读页亮度」）。
   final bool brightnessFollowSystem;
   final double brightness;
 
@@ -116,6 +124,7 @@ final class ReaderSettings {
   ReaderTheme effectiveTheme(Brightness platform) => followSystemDark && platform == Brightness.dark ? ReaderTheme.dark : theme;
 
   ReaderSettings copyWith({
+    String? fontId,
     double? fontSize,
     double? lineHeight,
     ReaderTheme? theme,
@@ -128,6 +137,7 @@ final class ReaderSettings {
     bool? brightnessFollowSystem,
     double? brightness,
   }) => ReaderSettings(
+    fontId: fontId ?? this.fontId,
     fontSize: fontSize ?? this.fontSize,
     lineHeight: lineHeight ?? this.lineHeight,
     theme: theme ?? this.theme,
@@ -142,6 +152,7 @@ final class ReaderSettings {
   );
 
   Map<String, String> toMap() => {
+    _fontId: fontId,
     _fontSize: '$fontSize',
     _lineHeight: lineHeight.toStringAsFixed(1),
     _theme: theme.name,
@@ -162,6 +173,11 @@ final initialSettingsProvider = Provider<Map<String, String>>((ref) => const {})
 final class ReaderSettingsNotifier extends Notifier<ReaderSettings> {
   @override
   ReaderSettings build() => ReaderSettings.fromMap(ref.read(initialSettingsProvider));
+
+  /// 文件删除完成后按当前选择回落；不依赖字体页是否仍然显示，也不覆盖期间更改的其他设置。
+  void resetFontIfSelected(String id) {
+    if (state.fontId == id) update(state.copyWith(fontId: ''));
+  }
 
   /// 立即生效并落盘。
   void update(ReaderSettings settings) {

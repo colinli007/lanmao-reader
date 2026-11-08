@@ -1,19 +1,23 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' show SemanticsFlag;
+import 'dart:ui' show ImageByteFormat, SemanticsFlag;
 
 import 'package:blocking_bridge/blocking_bridge.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanmao_reader/reader/image_viewer_page.dart';
 import 'package:lanmao_reader/reader/layout/page_painter.dart';
+import 'package:lanmao_reader/reader/layout/chapter_layout.dart';
 import 'package:lanmao_reader/reader/menu/appearance_panel.dart';
 import 'package:lanmao_reader/reader/menu/layout_panel.dart';
 import 'package:lanmao_reader/reader/menu/progress_panel.dart';
 import 'package:lanmao_reader/reader/paged/paged_view.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/reader/reader_fonts.dart';
+import 'package:lanmao_reader/reader/font_page.dart';
 import 'package:lanmao_reader/reader/reader_settings.dart';
 import 'package:lanmao_reader/reader/toc_page.dart';
 import 'package:lanmao_reader/ui/tokens.dart';
@@ -32,24 +36,27 @@ void main() {
   tearDown(() => services.db.close());
 
   /// 阅读页压在一个空页面上，这样能返回。正文是自己画的，用读屏标签找段落（testWidgets 默认打开语义树）。
-  Future<void> open(WidgetTester tester, {int? startAt, TestServices? using}) async {
+  Future<void> open(WidgetTester tester, {int? startAt, TestServices? using, ReaderFonts? fonts}) async {
     final s = using ?? services;
-    await tester.pumpWidget(
-      s.app(
-        Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ReaderPage(bookUrl: SimpleBook.bookUrl, startAt: startAt),
+    final app = s.app(
+      Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => RepaintBoundary(
+                  key: const ValueKey('reader-test-surface'),
+                  child: ReaderPage(bookUrl: SimpleBook.bookUrl, startAt: startAt),
                 ),
               ),
-              child: const Text('打开'),
             ),
+            child: const Text('打开'),
           ),
         ),
       ),
+      overrides: [if (fonts != null) readerFontsProvider.overrideWith((ref) => fonts)],
     );
+    await tester.pumpWidget(app);
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
   }
@@ -260,44 +267,75 @@ void main() {
     });
   });
 
+  Color? dimmingColor(WidgetTester tester) {
+    final layer = find.byKey(const ValueKey('reader-dimming'));
+    return layer.evaluate().isEmpty ? null : tester.widget<ColoredBox>(layer).color;
+  }
+
   group('阅读页亮度', () {
-    testWidgets('跟随系统时不改亮度；关掉后用自己的亮度，调整立即生效，再打开跟随系统时恢复', (tester) async {
+    testWidgets('跟随系统无遮罩；亮度 60% 叠加 20% 黑色，最低 50%，最高无遮罩', (tester) async {
       await open(tester, startAt: 0);
-      expect(services.brightness.calls, isEmpty);
-      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false));
-      expect(services.brightness.calls, [0.4]);
-      await update(tester, (s) => s.copyWith(brightness: 0.1));
-      expect(services.brightness.calls, [0.4, 0.1]);
+      expect(dimmingColor(tester), isNull);
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.6));
+      expect(dimmingColor(tester), const Color(0x33000000));
+      await update(tester, (s) => s.copyWith(brightness: 0));
+      expect(dimmingColor(tester), const Color(0x80000000));
+      await update(tester, (s) => s.copyWith(brightness: 1));
+      expect(dimmingColor(tester), isNull);
+      await update(tester, (s) => s.copyWith(brightness: 0.4));
+      expect(dimmingColor(tester), const Color(0x4D000000));
       await update(tester, (s) => s.copyWith(brightnessFollowSystem: true));
-      expect(services.brightness.calls, [0.4, 0.1, null]);
-    });
+      expect(dimmingColor(tester), isNull);
+    }, variant: TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.macOS}));
 
-    testWidgets('进入阅读页用自己的亮度，app 退到后台恢复、回到前台再用，返回后恢复', (tester) async {
+    testWidgets('遮罩保留选择，切前后台和退出均不调用系统亮度', (tester) async {
+      final calls = <MethodCall>[];
+      const channel = MethodChannel('novel_reader/screen');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
       await open(tester, startAt: 0);
-      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.1));
+      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.6));
       await back(tester);
-      services.brightness.calls.clear();
-
+      expect(dimmingColor(tester), isNull);
       await open(tester, startAt: 0);
-      expect(services.brightness.calls, [0.1]);
-      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden]) {
+      expect(dimmingColor(tester), const Color(0x33000000));
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
         tester.binding.handleAppLifecycleStateChanged(state);
       }
-      expect(services.brightness.calls, [0.1, null]);
-      for (final state in [AppLifecycleState.inactive, AppLifecycleState.resumed]) {
-        tester.binding.handleAppLifecycleStateChanged(state);
-      }
-      expect(services.brightness.calls, [0.1, null, 0.1]);
+      await tester.pumpAndSettle();
+      expect(dimmingColor(tester), const Color(0x33000000));
       await back(tester);
-      expect(services.brightness.calls, [0.1, null, 0.1, null]);
+      expect(dimmingColor(tester), isNull);
+      expect(calls, isEmpty);
     });
 
-    testWidgets('macOS 上不改亮度', (tester) async {
+    testWidgets('四种翻页模式合成后的浅绿底色一致，遮罩不阻止翻页或打开菜单', (tester) async {
       await open(tester, startAt: 0);
-      await update(tester, (s) => s.copyWith(brightnessFollowSystem: false, brightness: 0.1));
-      await back(tester);
-      expect(services.brightness.calls, isEmpty);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+      await update(tester, (s) => s.copyWith(theme: ReaderTheme.green, brightnessFollowSystem: false, brightness: 0.6));
+      for (final mode in PageMode.values) {
+        await update(tester, (s) => s.copyWith(pageMode: mode));
+        final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('reader-test-surface')));
+        await tester.runAsync(() async {
+          final image = await boundary.toImage(pixelRatio: 1);
+          final data = (await image.toByteData(format: ImageByteFormat.rawRgba))!;
+          final offset = (2 * image.width + 2) * 4;
+          // #D3E2C5 叠加 20% 黑色；从实际合成画面取像素，覆盖分页与滚动背景。
+          for (final (i, value) in [169, 181, 158, 255].indexed) {
+            expect(data.getUint8(offset + i), closeTo(value, 1), reason: mode.name);
+          }
+          image.dispose();
+        });
+      }
+      await update(tester, (s) => s.copyWith(pageMode: PageMode.cover));
+      final before = pageText(tester);
+      await tapRight(tester);
+      expect(pageText(tester), isNot(before));
+      await openPanel(tester, '外观');
+      expect(find.byType(Slider), findsOneWidget);
+    });
   });
 
   group('正文图片', () {
@@ -625,6 +663,58 @@ void main() {
     });
   });
 
+  Future<ReaderFonts> importedFonts(WidgetTester tester) async {
+    return (await tester.runAsync(() async {
+      final directory = await Directory.systemTemp.createTemp('reader-font-position-');
+      addTearDown(() => directory.delete(recursive: true));
+      final fonts = ReaderFonts(directory: directory);
+      await fonts.import('测试字体.ttf', await File('assets/fonts/lucide.ttf').readAsBytes());
+      return fonts;
+    }))!;
+  }
+
+  testWidgets('分页字体切换：从排版入口选择，正文和标题重排，保留阅读位置；切回系统字体', (tester) async {
+    final fonts = await importedFonts(tester);
+    await open(tester, startAt: 3, fonts: fonts);
+    await tapRight(tester);
+    await tapRight(tester);
+    final view = tester.widget<PagedView>(find.byType(PagedView));
+    final before = view.window.layoutOf(3)!;
+    final offset = view.window.offset;
+    await openPanel(tester, '排版');
+    await tester.tap(find.text('系统字体'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FontPage), findsOneWidget);
+    await tester.tap(find.text('测试字体'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    final layout = view.window.layoutOf(3)!;
+    expect(identical(before, layout), isFalse);
+    expect(layout.spec.fontFamily, fonts.entries.single.family);
+    expect(layout.titlePainter(Colors.black).first!.text!.style!.fontFamily, fonts.entries.single.family);
+    final segment = layout.pages[layout.pageAt(offset)].segments.first;
+    final body = layout.painterFor(segment, Colors.black) as TextSegmentPainter;
+    final painter = body.first ?? body.rest!;
+    expect(painter.text!.style!.fontFamily, fonts.entries.single.family);
+    expect(painter.strutStyle!.fontFamily, fonts.entries.single.family);
+    expect(view.window.offset, offset);
+    await update(tester, (s) => s.copyWith(fontId: ''));
+    expect(view.window.layoutOf(3)!.spec.fontFamily, isNull);
+    expect(view.window.offset, offset);
+  });
+
+  testWidgets('滚动字体切换：字体变化后重新定位顶部段落，切回系统仍保留位置', (tester) async {
+    final fonts = await importedFonts(tester);
+    await open(tester, startAt: 3, fonts: fonts);
+    await useScroll(tester);
+    await scrollTo(tester, paragraph(3, 20));
+    await update(tester, (s) => s.copyWith(fontId: fonts.entries.single.id));
+    expect(topOf(tester, paragraph(3, 20)), closeTo(0, 1));
+    await update(tester, (s) => s.copyWith(fontId: ''));
+    expect(topOf(tester, paragraph(3, 20)), closeTo(0, 1));
+  });
+
   group('设置', () {
     /// 分页视图当前画的这一页。
     PagePainter painterOf(WidgetTester tester) => tester
@@ -706,16 +796,29 @@ void main() {
       expect(pageText(tester).split('\n').length, greaterThan(lines));
     });
 
-    testWidgets('主题在设置里切换，对所有书生效并落盘', (tester) async {
+    Color background(WidgetTester tester) =>
+        tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first).backgroundColor!;
+
+    testWidgets('四种背景在外观面板切换，立即生效并落盘，重新打开保留选择', (tester) async {
       await open(tester, startAt: 0);
       await openPanel(tester, '外观');
-      await tester.tap(find.bySemanticsLabel('暗主题'));
-      await tester.pumpAndSettle();
-      expect((await services.db.loadSettings())['reader.theme'], 'dark');
+      final first = firstParagraph(tester);
+      for (final (label, name, color) in [
+        ('亮', 'light', const Color(0xFFF8F8FA)),
+        ('米黄', 'sepia', const Color(0xFFDDD7BE)),
+        ('暗', 'dark', const Color(0xFF000000)),
+        ('浅绿', 'green', const Color(0xFFD3E2C5)),
+      ]) {
+        await tester.tap(find.bySemanticsLabel('$label主题'));
+        await tester.pumpAndSettle();
+        expect((await services.db.loadSettings())['reader.theme'], name);
+        expect(background(tester), color);
+        expect(firstParagraph(tester), first);
+      }
       await back(tester);
       await open(tester, startAt: 1);
       final scaffold = tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first);
-      expect(scaffold.backgroundColor, ReaderTheme.dark.background);
+      expect(scaffold.backgroundColor, ReaderTheme.green.background);
     });
 
     testWidgets('外观面板的亮度：跟随系统时滑块不可用；关掉后拖动立即生效并落盘', (tester) async {
@@ -724,19 +827,19 @@ void main() {
       expect(tester.widget<Slider>(find.byType(Slider)).onChanged, isNull);
       await tester.tap(find.text('跟随系统'));
       await tester.pumpAndSettle();
-      expect(services.brightness.calls, [0.4]);
+      expect(dimmingColor(tester), const Color(0x4D000000));
       await tester.drag(find.byType(Slider), const Offset(-1000, 0));
       await tester.pumpAndSettle();
-      expect(services.brightness.calls.last, ReaderSettings.minBrightness);
+      expect(dimmingColor(tester), const Color(0x80000000));
       final saved = await services.db.loadSettings();
-      expect((saved['reader.brightnessFollowSystem'], saved['reader.brightness']), ('false', '0.01'));
+      expect((saved['reader.brightnessFollowSystem'], saved['reader.brightness']), ('false', '0.0'));
     });
 
-    testWidgets('macOS 上外观面板只有主题', (tester) async {
+    testWidgets('macOS 上同样显示亮度与主题', (tester) async {
       await open(tester, startAt: 0);
       await openPanel(tester, '外观');
-      expect(find.byType(Slider), findsNothing);
-      expect(find.text('跟随系统'), findsNothing);
+      expect(find.byType(Slider), findsOneWidget);
+      expect(find.text('跟随系统'), findsOneWidget);
       expect(find.bySemanticsLabel('暗主题'), findsOneWidget);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
@@ -795,15 +898,16 @@ void main() {
           .statusBarIconBrightness;
       expect(icons(), Brightness.dark);
       await openPanel(tester, '外观');
-      for (final (theme, expected) in [(ReaderTheme.dark, Brightness.light), (ReaderTheme.sepia, Brightness.dark)]) {
+      for (final (theme, expected) in [
+        (ReaderTheme.dark, Brightness.light),
+        (ReaderTheme.sepia, Brightness.dark),
+        (ReaderTheme.green, Brightness.dark),
+      ]) {
         await tester.tap(find.bySemanticsLabel('${theme.label}主题'));
         await tester.pumpAndSettle();
         expect(icons(), expected, reason: theme.label);
       }
     });
-
-    Color background(WidgetTester tester) =>
-        tester.widget<Scaffold>(find.descendant(of: find.byType(ReaderPage), matching: find.byType(Scaffold)).first).backgroundColor!;
 
     testWidgets('系统切到深色：变成暗主题，还停在原来那一页；切回浅色恢复护眼主题', (tester) async {
       await open(tester, startAt: 3);

@@ -71,6 +71,51 @@ void main() {
     expect(await services.db.getContentImage(SimpleBook.bookUrl, 'https://a.com/2.png'), picture);
   });
 
+  for (final changeSource in [false, true]) {
+    test('${changeSource ? '换源' : '删除'}事务期间到达的正文：事务提交后不能重建旧缓存或继续下载图片', () async {
+      // 只留一章待缓存，明确等待它的消费结束，不用固定时长推测异步任务是否完成。
+      for (var i = 1; i < 10; i++) {
+        await cache(i);
+      }
+      final pending = Completer<ChapterContent>();
+      services.engine.onContent = (source, b, chapter, next) => pending.future;
+      final old = await book();
+      final toc = await services.db.chaptersOf(old.bookUrl);
+      await controller().start(old, CacheRange.all);
+      final consumed = Completer<void>();
+      final subscription = container.listen(bookCacheProvider, (_, state) {
+        if (state[old.bookUrl]?.done == 1 && !consumed.isCompleted) consumed.complete();
+      });
+      addTearDown(subscription.close);
+
+      final deleting = Completer<void>();
+      final commit = Completer<void>();
+      final mutation = services.db.transaction(() async {
+        if (changeSource) {
+          const newUrl = 'https://other.com/book/1';
+          await services.db.changeSource(old.bookUrl, old.copyWith(bookUrl: newUrl), [
+            for (final chapter in toc) chapter.copyWith(bookUrl: newUrl),
+          ]);
+        } else {
+          await services.db.removeBook(old.bookUrl);
+        }
+        deleting.complete();
+        await commit.future;
+      });
+      await deleting.future;
+      pending.complete(ChapterContent('迟到的正文<img src="https://a.com/late.png">', title: '第0章'));
+      await pumpEventQueue(); // 让结果进入 _save；其写入此时排队等待删除事务。
+      expect(progress()!.done, 0);
+      commit.complete();
+      await mutation;
+      controller().stop(old.bookUrl);
+      await consumed.future;
+      expect(await services.db.getBook(old.bookUrl), isNull);
+      expect(await services.db.cachedChapterUrls(old.bookUrl), isEmpty);
+      expect(services.engine.calls.where((call) => call.startsWith('image ')), isEmpty);
+    });
+  }
+
   test('正在缓存时再次发起：只并入不在队列里的章节；停止后不再写入', () async {
     final release = Completer<void>();
     final original = services.engine.onContent!;

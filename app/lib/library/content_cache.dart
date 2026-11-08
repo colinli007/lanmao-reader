@@ -13,7 +13,10 @@ Future<Size> cacheContentImage(AppDatabase db, BookContentSource source, ShelfBo
   if (cached != null) return imageSizeOf(cached);
   final bytes = await source.loadImage(book, src);
   final size = await imageSizeOf(bytes);
-  await db.putContentImage(book.bookUrl, src, bytes);
+  // 下载期间可能换源或移出书架；和删除事务串行，不能把旧书的图片缓存写回来。
+  await db.transaction(() async {
+    if (await db.getBook(book.bookUrl) != null) await db.putContentImage(book.bookUrl, src, bytes);
+  });
   return size;
 }
 

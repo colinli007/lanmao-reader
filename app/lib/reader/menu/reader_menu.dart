@@ -15,15 +15,17 @@ import 'progress_panel.dart';
 /// 菜单底栏上方的面板（reader「阅读菜单」）。
 enum ReaderPanel { progress, appearance, layout }
 
-/// 阅读菜单（redesign-minimal-ui 设计 D5）：顶栏只有返回，底栏四个图标。目录打开目录页，另外三个在底栏上方原地切换面板。
+/// 阅读菜单：顶栏返回和换书源，底栏四个图标。目录打开目录页，另外三个在底栏上方原地切换面板。
 ///
 /// 只在菜单显示时构建：菜单收起时这个组件被销毁，打开的面板跟着清空。配色跟着正文主题的深浅。
 class ReaderMenu extends ConsumerStatefulWidget {
-  const ReaderMenu({super.key, required this.book, required this.chapters, required this.window});
+  const ReaderMenu({super.key, required this.book, required this.chapters, required this.window, this.onChangeSource, this.changingSource = false});
 
   final ShelfBook book;
   final List<TocChapter> chapters;
   final ChapterWindow window;
+  final VoidCallback? onChangeSource;
+  final bool changingSource;
 
   @override
   ConsumerState<ReaderMenu> createState() => _ReaderMenuState();
@@ -67,7 +69,21 @@ class _ReaderMenuState extends ConsumerState<ReaderMenu> {
                   color: colors.background,
                   child: SafeArea(
                     bottom: false,
-                    child: SizedBox(height: 56, child: Row(children: [const SizedBox(width: 4), BackButton(color: colors.textPrimary)])),
+                    child: SizedBox(
+                      height: 56,
+                      child: Row(children: [
+                        const SizedBox(width: 4),
+                        BackButton(color: colors.textPrimary),
+                        const Spacer(),
+                        if (widget.onChangeSource != null)
+                          IconButton(
+                            tooltip: '换书源',
+                            icon: Icon(LucideIcons.arrowLeftRight, color: colors.textPrimary),
+                            onPressed: widget.changingSource ? null : widget.onChangeSource,
+                          ),
+                        const SizedBox(width: 4),
+                      ]),
+                    ),
                   ),
                 ),
               ),

@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../chapter_format.dart';
 
-/// 排版参数：字号、行距、段距、首行缩进和正文区域的尺寸。任何一项变了，排版结果都作废，换一个新的 [ChapterLayout]（设计 D6）。
+/// 排版参数：字体、字号、行距、段距、首行缩进和正文区域的尺寸。任何一项变了，排版结果都作废，换一个新的 [ChapterLayout]（设计 D6）。
 /// 段距和缩进相对字号给出，缺省是阅读设置的默认值（complete-reader-settings 设计 D2）。
 @immutable
 final class LayoutSpec {
@@ -16,8 +16,10 @@ final class LayoutSpec {
     required this.size,
     this.paragraphSpacingRatio = 0.6,
     this.indentChars = 2,
+    this.fontFamily,
   });
 
+  final String? fontFamily;
   final double fontSize;
   final double lineHeight;
 
@@ -37,6 +39,7 @@ final class LayoutSpec {
   @override
   bool operator ==(Object other) =>
       other is LayoutSpec &&
+      other.fontFamily == fontFamily &&
       other.fontSize == fontSize &&
       other.lineHeight == lineHeight &&
       other.size == size &&
@@ -44,7 +47,7 @@ final class LayoutSpec {
       other.indentChars == indentChars;
 
   @override
-  int get hashCode => Object.hash(fontSize, lineHeight, size, paragraphSpacingRatio, indentChars);
+  int get hashCode => Object.hash(fontFamily, fontSize, lineHeight, size, paragraphSpacingRatio, indentChars);
 }
 
 /// 画图片时要的位图（add-content-images 设计 D4）：解码好的直接给；还没有时开始解码并返回 null，解码完成后通知监听者。
@@ -149,9 +152,10 @@ class ChapterLayout extends ChangeNotifier {
 
   // ---------------------------------------------------------------- 文字样式
 
-  TextStyle _body(Color color) => TextStyle(fontSize: spec.fontSize, color: color);
+  TextStyle _body(Color color) => TextStyle(fontFamily: spec.fontFamily, fontSize: spec.fontSize, color: color);
 
   StrutStyle get _strut => StrutStyle(
+    fontFamily: spec.fontFamily,
     fontSize: spec.fontSize,
     height: spec.lineHeight,
     forceStrutHeight: true,
@@ -159,7 +163,7 @@ class ChapterLayout extends ChangeNotifier {
   );
 
   TextStyle _titleStyle(Color color) =>
-      TextStyle(fontSize: spec.fontSize * 1.3, height: spec.lineHeight, fontWeight: FontWeight.w600, color: color);
+      TextStyle(fontFamily: spec.fontFamily, fontSize: spec.fontSize * 1.3, height: spec.lineHeight, fontWeight: FontWeight.w600, color: color);
 
   TextPainter _painter(_Span span, double width, {int? maxLines}) {
     final painter = TextPainter(text: span.span, textAlign: TextAlign.justify, textDirection: TextDirection.ltr, strutStyle: _strut, maxLines: maxLines);

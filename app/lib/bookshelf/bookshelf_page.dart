@@ -133,7 +133,14 @@ class _ShelfTile extends ConsumerWidget {
     };
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ReaderPage(bookUrl: book.bookUrl))),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ReaderPage(
+          bookUrl: book.bookUrl,
+          onChangeSource: (context, url) => Navigator.of(context).push<String>(
+            MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: url)),
+          ),
+        ),
+      )),
       onLongPress: () => _showActions(context, ref, book),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,8 +193,6 @@ class _ShelfTile extends ConsumerWidget {
       MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: book.bookUrl)),
     );
     if (bookUrl == null) return;
-    // 旧书源的书已经删掉，它的缓存任务跟着停（add-book-cache 设计 D2）
-    ref.read(bookCacheProvider.notifier).stop(book.bookUrl);
     final changed = await db.getBook(bookUrl);
     messenger.showSnackBar(SnackBar(content: Text('已换到${changed!.originName}')));
   }

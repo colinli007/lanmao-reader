@@ -211,6 +211,67 @@ void main() {
     expect(await services.db.getBook('$c/book/1'), isNull);
   });
 
+  for (final pendingStage in ['详情', '目录']) {
+    testWidgets('$pendingStage 在退场动画中返回：取消后不提交，也不误弹下面的阅读页', (tester) async {
+      final pendingInfo = Completer<Book>();
+      final pendingToc = Completer<TocResult>();
+      final originalInfo = services.engine.onBookInfo!;
+      final originalToc = services.engine.onChapterList!;
+      final candidate = found(c).toBook();
+      final result = await originalToc(services.repository[c]!.source, candidate);
+      services.engine.onBookInfo = (source, book) =>
+          source.bookSourceUrl == c && pendingStage == '详情' ? pendingInfo.future : originalInfo(source, book);
+      services.engine.onChapterList = (source, book) =>
+          source.bookSourceUrl == c && pendingStage == '目录' ? pendingToc.future : originalToc(source, book);
+      await tester.pumpWidget(
+        services.app(
+          Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => ReaderPage(
+                    bookUrl: SimpleBook.bookUrl,
+                    onChangeSource: (context, url) => Navigator.of(context).push<String>(
+                      MaterialPageRoute(builder: (_) => ChangeSourcePage(bookUrl: url)),
+                    ),
+                  ),
+                )),
+                child: const Text('打开阅读'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('打开阅读'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getCenter(find.byType(ReaderPage)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('换书源'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('书源丙'));
+      await tester.pump();
+      final page = tester.state(find.byType(ChangeSourcePage));
+      final route = ModalRoute.of(page.context)!;
+      await tester.pageBack();
+      // 不推进动画：路由已经 pop，State 仍 mounted，正是仅判断 mounted 会漏掉的窗口。
+      expect(page.mounted, isTrue);
+      expect(route.isCurrent, isFalse);
+      if (pendingStage == '详情') {
+        pendingInfo.complete(candidate);
+      } else {
+        pendingToc.complete(result);
+      }
+      await tester.pumpAndSettle();
+      expect(await services.db.getBook(SimpleBook.bookUrl), isNotNull);
+      expect(await services.db.getBook('$c/book/1'), isNull);
+      expect(find.byType(ReaderPage), findsOneWidget);
+      expect(find.byType(ChangeSourcePage), findsNothing);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('打开阅读'), findsOneWidget);
+    });
+  }
+
   testWidgets('书源已删除的书也能换', (tester) async {
     await services.repository.delete({SimpleBook.sourceUrl});
     await open(tester);
