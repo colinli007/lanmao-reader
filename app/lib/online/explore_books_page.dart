@@ -95,7 +95,12 @@ class _ExploreBooksPageState extends ConsumerState<ExploreBooksPage> {
                 ],
               )
             : _end
-            ? Text(_books.isEmpty ? '没有书' : '没有更多了', style: TextStyle(color: colors.textSecondary))
+            // 第一页解析出 0 本多半是网站拦截或规则失效，而不是分类没书（fix-explore-compat 设计 D4）
+            ? Text(
+                _books.isEmpty ? '没有取到书，可能是网站拦截了请求，或者书源规则已经失效' : '没有更多了',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.textSecondary),
+              )
             : const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2)),
       ),
     );

@@ -564,7 +564,20 @@ final Map<String, _Api> _textApis = {
   'htmlFormat': (c) => formatKeepImg(c.str(0), null),
   'randomUUID': (c) => randomUuid(),
   'getWebViewUA': (c) => webViewUserAgent,
+  'androidId': (c) => _androidId(c.task),
 };
+
+/// 设备编号在书源级存储里的键：不属于任何书源，和书源变量的 `v_` 前缀分开。
+const String _androidIdKey = 'app.androidId';
+
+/// `androidId()`：MD3 返回设备的 ANDROID_ID。第一次调用时随机生成并保存，之后一直返回它（fix-explore-compat 设计 D3）。
+String _androidId(SourceTask task) {
+  final saved = task.storeGet(_androidIdKey);
+  if (saved != null) return saved;
+  final id = randomAndroidId();
+  task.storePut(_androidIdKey, id);
+  return id;
+}
 
 // ---------------------------------------------------------------- 日志
 

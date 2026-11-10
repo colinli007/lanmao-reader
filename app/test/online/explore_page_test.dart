@@ -193,7 +193,7 @@ void main() {
     testWidgets('第一页没有书', (tester) async {
       services.engine.onExplore = (source, url, page) async => const [];
       await openKind(tester);
-      expect(find.text('没有书'), findsOneWidget);
+      expect(find.text('没有取到书，可能是网站拦截了请求，或者书源规则已经失效'), findsOneWidget);
     });
 
     testWidgets('出错时显示原因，点「重试」重新取这一页', (tester) async {

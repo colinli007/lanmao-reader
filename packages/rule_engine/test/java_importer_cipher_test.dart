@@ -50,6 +50,48 @@ void main() {
     );
   });
 
+  test('importClass 按短类名导入已实现的类，优先于导入的包', () {
+    expect(
+      js('''
+      var ji = new JavaImporter(Packages.java.util);
+      ji.importClass(Packages.java.lang.String, javax.crypto.Cipher, Packages.io.legado.app.help.http.StrResponse);
+      var answer;
+      with (ji) {
+        var l = new ArrayList(); l.add('甲');
+        answer = [l.size(), String('乙').getBytes('UTF-8').length, Cipher === javax.crypto.Cipher,
+          typeof StrResponse, Base64 === Packages.java.util.Base64];
+      }
+      JSON.stringify(answer);
+    '''),
+      '[1,3,true,"function",true]',
+    );
+  });
+
+  test('importClass 登记未实现的类，使用时才以「不支持的宿主 API」结束', () {
+    final s = source({
+      'jsLib': '''
+        var ji = new JavaImporter();
+        ji.importClass(Packages.okhttp3.HttpUrl);
+        function parse(u) { with (ji) { return HttpUrl.parse(u); } }
+      ''',
+    });
+    expect(js('typeof ji', s: s), 'object');
+    expect(() => js('parse("https://a.com")', s: s),
+        throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'Packages.okhttp3.HttpUrl.parse')));
+  });
+
+  test('importClass 的参数是已实现的包或不是 Java 对象时是 JS 错误', () {
+    expect(
+      js('''
+      var ji = new JavaImporter();
+      [Packages.java.util, {}, 'java.lang.String'].map(function (x) {
+        try { ji.importClass(x); return 'ok'; } catch (e) { return e instanceof TypeError; }
+      }).join(',');
+    '''),
+      'true,true,true',
+    );
+  });
+
   test('Java 包全名与 javax 别名共享类，Base64 字节输入与缺省填充按 JDK 解码', () {
     expect(
       js('''

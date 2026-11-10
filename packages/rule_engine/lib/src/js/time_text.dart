@@ -162,6 +162,9 @@ int _chineseNumber(String text) {
   return (section + pending + billions).toSigned(32);
 }
 
+/// 16 位小写十六进制的设备编号，和 Android 的 ANDROID_ID 同样格式。
+String randomAndroidId() => [for (var i = 0; i < 8; i++) _random.nextInt(256).toRadixString(16).padLeft(2, '0')].join();
+
 /// `java.randomUUID()`：小写带连字符的 v4 UUID。
 String randomUuid() {
   final bytes = [for (var i = 0; i < 16; i++) _random.nextInt(256)];

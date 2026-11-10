@@ -48,7 +48,7 @@ void main() {
   group('不支持的宿主 API', () {
     const apis = [
       'startBrowser', 'startBrowserAwait', 'getVerificationCode', 'openUrl', 'webView', 'webViewGetSource',
-      'webViewGetOverrideUrl', 'androidId', 'getReadBookConfig', 'getThemeMode', 'getThemeConfig',
+      'webViewGetOverrideUrl', 'getReadBookConfig', 'getThemeMode', 'getThemeConfig',
       'downloadFile', 'cacheFile', 'importScript', 'getFile', 'readFile', 'readTxtFile', 'unzipFile', 'queryTTF',
       'replaceFont', 't2s', 's2t', 'createAsymmetricCrypto', 'createSign', 'refreshTocUrl', 'reGetBook', 'refreshExplore',
     ];
@@ -222,6 +222,19 @@ void main() {
     test('java 和 source 上都能取', () {
       expect(js('java.getWebViewUA()'), allOf(contains('; wv)'), contains('Mobile Safari')));
       expect(js('source.getWebViewUA() == java.getWebViewUA()'), 'true');
+    });
+  });
+
+  group('设备编号', () {
+    test('格式：16 位小写十六进制', () {
+      expect(js('java.androidId()'), matches(RegExp(r'^[0-9a-f]{16}$')));
+    });
+
+    test('不同书源、新的任务、source 对象上取到同一个值', () {
+      final first = js('java.androidId()');
+      final other = source({'bookSourceUrl': 'https://www.b.com', 'bookSourceName': '另一个书源'});
+      expect(js('java.androidId()', s: other), first);
+      expect(js('source.androidId()'), first);
     });
   });
 

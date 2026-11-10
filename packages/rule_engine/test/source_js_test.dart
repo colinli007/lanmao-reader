@@ -315,6 +315,18 @@ void main() {
           throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'org.apache.commons.Foo')));
     });
 
+    test('MD3 里也没有的类：和 Rhino 一样是可以捕获的 TypeError', () {
+      expect(
+        analyze('x').getString('@js:try { new Packages.io.legato.kazusa.utils.TimeoutCancellationException(""); "改版" } '
+            'catch (e) { "官方" + (e instanceof TypeError) }'),
+        '官方true',
+      );
+      expect(analyze('x').getString('@js:try { Packages.com.example.Foo.bar() } catch (e) { "caught" }'), 'caught');
+      // MD3 的包根下仍拦不住
+      expect(() => analyze('x').getString('@js:try { new Packages.io.legado.app.Foo() } catch (e) { "caught" }'),
+          throwsA(isA<UnsupportedHostApiException>().having((e) => e.api, 'api', 'Packages.io.legado.app.Foo')));
+    });
+
     test('解构箭头函数：执行前加括号', () {
       expect(analyze('x').getString('@js:[["男频","1"],["女频","2"]].map([t,id]=>t+id).join(",")'), '男频1,女频2');
       expect(analyze('x').getString('@js:"[a]=>" + [1][0]'), '[a]=>1');

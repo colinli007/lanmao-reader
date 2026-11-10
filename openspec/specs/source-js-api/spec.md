@@ -148,7 +148,7 @@ SHALL 提供：`md5Encode`（32 位小写）、`md5Encode16`（32 位结果的�
 - **THEN** 结果为 `42`
 
 ### Requirement: 不支持的宿主 API
-下列 API 不在本能力内：界面交互（`startBrowser`、`startBrowserAwait`、`getVerificationCode`、`openUrl`）、WebView（`webView`、`webViewGetSource`、`webViewGetOverrideUrl`）、设备与 App 配置（`androidId`、`getReadBookConfig`、`getThemeMode`、`getThemeConfig`）、文件与压缩包（`downloadFile`、`cacheFile`、`importScript`、`getFile`、`readFile`、`readTxtFile`、`unzipFile` 等）、字体（`queryTTF`、`replaceFont`）、简繁转换（`t2s`、`s2t`）、非对称加密与签名（`createAsymmetricCrypto`、`createSign`）、需要重新拉取书籍的 `refreshTocUrl`、`reGetBook` 和发现页的 `refreshExplore`。调用它们时 MUST 以「不支持的宿主 API」错误结束，错误里带有 API 名、书源名和字段，MUST NOT 返回空值让书源继续执行。
+下列 API 不在本能力内：界面交互（`startBrowser`、`startBrowserAwait`、`getVerificationCode`、`openUrl`）、WebView（`webView`、`webViewGetSource`、`webViewGetOverrideUrl`）、App 配置（`getReadBookConfig`、`getThemeMode`、`getThemeConfig`）、文件与压缩包（`downloadFile`、`cacheFile`、`importScript`、`getFile`、`readFile`、`readTxtFile`、`unzipFile` 等）、字体（`queryTTF`、`replaceFont`）、简繁转换（`t2s`、`s2t`）、非对称加密与签名（`createAsymmetricCrypto`、`createSign`）、需要重新拉取书籍的 `refreshTocUrl`、`reGetBook` 和发现页的 `refreshExplore`。调用它们时 MUST 以「不支持的宿主 API」错误结束，错误里带有 API 名、书源名和字段，MUST NOT 返回空值让书源继续执行。
 
 #### Scenario: 调用验证码
 - **WHEN** 正文规则执行 `java.getVerificationCode(url)`
@@ -210,6 +210,17 @@ SHALL 提供：`md5Encode`（32 位小写）、`md5Encode16`（32 位结果的�
 #### Scenario: 取 UA
 - **WHEN** 规则是 `@js:java.getWebViewUA()`
 - **THEN** 结果包含 `; wv)` 和 `Mobile Safari`
+
+### Requirement: 设备编号
+`java.androidId()`（三种 java 对象和书源对象都有）SHALL 返回 16 位小写十六进制文本，对应 MD3 的 ANDROID_ID。第一次调用时随机生成，存进书源级存储（不属于任何书源、不过期）；之后所有书源、所有任务 SHALL 返回同一个值，app 重启后不变。清除 app 数据或卸载重装后重新生成。
+
+#### Scenario: 格式
+- **WHEN** 规则是 `@js:java.androidId()`
+- **THEN** 结果匹配 `^[0-9a-f]{16}$`
+
+#### Scenario: 不同书源取到同一个值
+- **WHEN** 书源 A 的规则先调用 `java.androidId()`，之后书源 B 的规则再调用
+- **THEN** 两次结果相同
 
 ### Requirement: Java Base64、数组与 AES
 `java.util.Base64.getDecoder().decode(文本或字节数组)` SHALL 使用 Java basic Base64 规则：允许省略末尾 padding，拒绝空白、URL 安全字母和不合法的 padding，空输入返回空数组。`java.util.Arrays.copyOfRange(字节数组, from, to)` SHALL 返回独立副本，to 超过输入长度时补零，from 越界或 to 小于 from 时以 JS 错误结束。

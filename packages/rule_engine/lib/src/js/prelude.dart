@@ -142,10 +142,10 @@ const String sourceJsPrelude = r'''
     'aesEncodeToBase64String', 'aesEncodeArgsBase64Str', 'desDecodeToString', 'desBase64DecodeToString',
     'desEncodeToString', 'desEncodeToBase64String', 'tripleDESDecodeStr', 'tripleDESDecodeArgsBase64Str',
     'tripleDESEncodeBase64Str', 'tripleDESEncodeArgsBase64Str', 'timeFormat', 'timeFormatUTC', 'toNumChapter',
-    'htmlFormat', 'randomUUID', 'getWebViewUA'];
+    'htmlFormat', 'randomUUID', 'getWebViewUA', 'androidId'];
   // 不支持的宿主 API：调用时以「不支持的宿主 API」结束，JS 的 try/catch 拦不住
   var unsupported = ['startBrowser', 'startBrowserAwait', 'getVerificationCode', 'openUrl', 'webView',
-    'webViewGetSource', 'webViewGetOverrideUrl', 'androidId', 'getReadBookConfig',
+    'webViewGetSource', 'webViewGetOverrideUrl', 'getReadBookConfig',
     'getReadBookConfigMap', 'getThemeMode', 'getThemeConfig', 'getThemeConfigMap', 'downloadFile', 'cacheFile',
     'importScript', 'getFile', 'readFile', 'readTxtFile', 'deleteFile', 'unzipFile', 'un7zFile', 'unrarFile',
     'unArchiveFile', 'getTxtInFolder', 'getZipStringContent', 'getRarStringContent', 'get7zStringContent',
@@ -154,8 +154,10 @@ const String sourceJsPrelude = r'''
 
   // ---------------------------------------------------------------- Java 包（add-rhino-compat 设计 D1、D3）
 
-  // Rhino 的 Java 包：已知的路径返回实现，其余任何属性都是下一层包，调用或 new 时以「不支持的宿主 API：类名」结束
+  // Rhino 的 Java 包：已知的路径返回实现，其余任何属性都是下一层包，调用或 new 时按 missingClass 结束
   var javaPackages = new WeakMap();
+  // 包里用普通函数实现的类 → 短类名，供 importClass 取名（fix-explore-compat 设计 D1）
+  var javaClassNames = new WeakMap();
   function javaPackage(path, known, isClass) {
     var proxy = new Proxy(function () {}, {
       get: function (target, name) {
@@ -163,16 +165,31 @@ const String sourceJsPrelude = r'''
         if (known && Object.prototype.hasOwnProperty.call(known, name)) return known[name];
         return javaPackage(path + '.' + name, null);
       },
-      apply: function () { hostCall('unsupported', [path]); },
-      construct: function () { hostCall('unsupported', [path]); }
+      apply: function () { missingClass(path); },
+      construct: function () { missingClass(path); }
     });
     javaPackages.set(proxy, { path: path, known: known, isClass: !!isClass });
+    if (known && !isClass) {
+      Object.keys(known).forEach(function (name) {
+        var value = known[name];
+        if (typeof value === 'function' && !javaPackages.has(value)) javaClassNames.set(value, name);
+      });
+    }
     return proxy;
+  }
+
+  // MD3 运行时带的包根（设计 D2）：这些包下没实现的类是我们的能力缺口，以拦不住的「不支持的宿主 API」结束；
+  // 其它包根在 MD3 里也没有，和 Rhino 调用不存在的类一样是可以捕获的 TypeError
+  var md3PackageRoot = /^(java|javax|android|androidx|dalvik|kotlin|kotlinx|okhttp3|okio|cn\.hutool|me\.ag2s|io\.legado|org\.(apache|jsoup|json|mozilla|w3c|xml)|com\.(google|jayway|script))(\.|$)/;
+  function missingClass(path) {
+    if (md3PackageRoot.test(path.replace(/^Packages\./, ''))) hostCall('unsupported', [path]);
+    throw new TypeError(path + ' 不是 Java 类');
   }
 
   // with 只解析已导入的类；普通变量和原生全局仍沿原作用域查找。
   function JavaImporter() {
     var packages = [];
+    var classes = Object.create(null);
     var target = Object.create(null);
     hidden(target, 'importPackage', function () {
       for (var i = 0; i < arguments.length; i++) {
@@ -182,8 +199,19 @@ const String sourceJsPrelude = r'''
         if (packages.indexOf(info) < 0) packages.push(info);
       }
     });
+    // 按短类名登记；没实现的路径（无法区分类和包）当成类，调用或 new 时才结束（设计 D1）
+    hidden(target, 'importClass', function () {
+      for (var i = 0; i < arguments.length; i++) {
+        var info = javaPackages.get(arguments[i]);
+        var name = info ? (info.isClass || !info.known ? info.path.split('.').pop() : null) : javaClassNames.get(arguments[i]);
+        if (!name) throw new TypeError('importClass 需要 Java 类');
+        classes[name] = arguments[i];
+      }
+    });
+    // 显式导入的类优先于导入的包
     function lookup(name) {
       if (typeof name !== 'string') return undefined;
+      if (name in classes) return classes[name];
       var found;
       packages.forEach(function (pkg) {
         if (!Object.prototype.hasOwnProperty.call(pkg.known, name)) return;
