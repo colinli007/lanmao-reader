@@ -60,6 +60,13 @@ void main() {
     expect(env.requests, isEmpty);
   });
 
+  test('data 地址按 Android Base64.DEFAULT 解码：空格跳过；不是 base64 的 data 地址以错误结束', () {
+    final s = source();
+    expect(getContentImage(env, s, book(s), 'data:image/png;base64,iVBO Rw0K Ggo='), base64Decode('iVBORw0KGgo='));
+    expect(() => getContentImage(env, s, book(s), 'data:text/plain,abc'), throwsA(isA<RuleException>()));
+    expect(env.requests, isEmpty);
+  });
+
   test('404 时以错误结束', () {
     final s = source();
     env.respond('https://img.a.com/5.jpg', image('https://img.a.com/5.jpg', const [], status: 404));

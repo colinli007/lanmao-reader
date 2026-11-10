@@ -5,7 +5,6 @@
 /// 但需要 JS、WebView 的错误不吞：MD3 里这些规则能正常执行，跳过会得到不同的结果。
 library;
 
-import 'dart:convert';
 import 'dart:typed_data';
 
 import '../core/environment.dart';
@@ -485,10 +484,12 @@ ChapterContent getContent(
 }
 
 /// 正文里的一张图片（book-chains「正文图片」，add-content-images 设计 D9；MD3 `BookHelp.saveImage`）：
-/// `data:` 地址直接解码，其余按书源构造请求取原始字节，非 2xx 报错；再执行 `ruleContent.imageDecode`。
+/// `data:` 地址直接解码（和请求共用 [dataUriBytes]），其余按书源构造请求取原始字节，非 2xx 报错；再执行 `ruleContent.imageDecode`。
 Uint8List getContentImage(RuleEnvironment env, BookSource source, Book book, String src) {
   return _withTask(env, source, 'image', (task) {
-    final bytes = src.startsWith('data:') ? _dataUriBytes(src) : _imageResponseBytes(task, book, src);
+    final bytes = src.startsWith('data:')
+        ? dataUriBytes(src) ?? (throw RuleException('不支持的图片地址：${_take(src, 40)}'))
+        : _imageResponseBytes(task, book, src);
     final decode = task.source.ruleContent['imageDecode'];
     if (decode == null || decode.trim().isEmpty) return bytes;
     return task.inField('ruleContent.imageDecode', () {
@@ -497,13 +498,6 @@ Uint8List getContentImage(RuleEnvironment env, BookSource source, Book book, Str
       return jsBytes(result);
     });
   });
-}
-
-/// `data:[类型][;base64],数据`：只认 base64（MD3 的 `AnalyzeUrl` 也只解 base64）。
-Uint8List _dataUriBytes(String src) {
-  final comma = src.indexOf(',');
-  if (comma < 0 || !src.substring(0, comma).contains(';base64')) throw RuleException('不支持的图片地址：${_take(src, 40)}');
-  return base64Decode(src.substring(comma + 1).trim());
 }
 
 Uint8List _imageResponseBytes(SourceTask task, Book book, String src) {

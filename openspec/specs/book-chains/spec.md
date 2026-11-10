@@ -137,7 +137,7 @@
 ### Requirement: 正文图片
 系统 SHALL 可以按书源取正文里的一张图片，在 worker 中执行，结果是图片的字节：
 
-- 地址以 `data:` 开头时，按 base64 解码逗号后面的部分，不发请求。
+- 地址以 `data:` 开头时，不发请求：匹配 `data:…;base64,数据` 的，按 Android `Base64.DEFAULT` 解码数据（和 source-request「URL 选项」的 `data:` 地址相同）；不匹配时 MUST 以错误结束。
 - 其余地址（正文链路已经转成绝对地址，可能带 `,{选项}`）按书源构造请求：带书源的请求头和 Cookie，处理选项（请求头、方法等），和正文链路的请求相同；取响应的原始字节。响应状态码不是 2xx 时 MUST 以错误结束。
 - 书源的 `ruleContent.imageDecode` 不为空时，SHALL 用书源级的 JS 上下文执行它，`book` 是书籍，`result` 是上一步的字节，`src` 是图片地址；返回值（字节数组或文本）作为图片的字节。返回 null 时 MUST 以错误结束。
 

@@ -190,6 +190,22 @@ void main() {
   });
 
   group('详情', () {
+    test('type 选项的 data 地址：不发请求，正文是解码后字节的十六进制', () {
+      final s = source({
+        'ruleBookInfo': {'name': '@js:java.hexDecodeToString(result)'},
+      });
+      const url = 'data:;base64,5LiJ5L2T,{"type":"qingtian"}';
+      final book = getBookInfo(env, s, Book.of(s, url));
+      expect(env.requests, isEmpty);
+      expect(book.name, '三体');
+    });
+
+    test('不带 type 的 data 地址照常交给网络', () {
+      final s = source({'ruleBookInfo': {'name': 'tag.h1@text'}});
+      getBookInfo(env, s, Book.of(s, 'data:;base64,5LiJ5L2T'));
+      expect(env.requests.single.url, 'data:;base64,5LiJ5L2T');
+    });
+
     test('目录就在详情页', () {
       env.respond('https://a.com/b/1', '<h1>三体</h1><ul><li><a href="1.html">第一章</a></li></ul>');
       final s = source({

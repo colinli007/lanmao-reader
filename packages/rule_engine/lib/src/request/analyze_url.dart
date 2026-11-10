@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import '../chain/models.dart';
 import '../core/environment.dart';
 import '../core/errors.dart';
 import '../core/source_task.dart';
+import '../js/codec.dart';
 import '../js/source_js.dart';
 import '../json/json_text.dart';
 import '../net/java_url.dart';
@@ -249,9 +251,19 @@ final class SourceRequest {
 
   /// 发出请求并处理响应（MD3 的 `getStrResponse`）：选项 `type` 不为 null 时正文是响应字节的十六进制，
   /// 否则解码正文，再执行 `bodyJs`（`result` 是正文，返回值转成文本，null 是 `null`）。
+  /// 选项 `type` 不为 null 且地址是 `data:` 时不发请求（MD3 `getByteArrayIfDataUri`，fix-data-uri-request 设计 D1）。
   StrResponse fetch() {
     task.env.checkCancelled();
+    if (type != null) {
+      if (dataUriBytes(_urlNoQuery) case final bytes?) return StrResponse(url: url, body: hexEncode(bytes));
+    }
     return response(task.env.fetch(http));
+  }
+
+  /// MD3 的 `urlNoQuery`：GET 请求去掉查询串，其它方法是整个地址。
+  String get _urlNoQuery {
+    final pos = url.indexOf('?');
+    return _method == 'GET' && pos != -1 ? url.substring(0, pos) : url;
   }
 
   /// 处理一个已经拿到的响应，见 [fetch]。
@@ -327,6 +339,15 @@ Map<String, String> sourceHeaders(SourceTask task) {
 }
 
 String _jsText(Object? value) => value == null ? 'null' : valueToString(value);
+
+/// `data:…;base64,数据` 的字节（MD3 的 `dataUriRegex` 加 Android `Base64.DEFAULT`，fix-data-uri-request 设计 D2）；
+/// 不是这种地址时为 null。数据不是合法 base64 时以 [FormatException] 结束。
+Uint8List? dataUriBytes(String url) {
+  final match = _dataUriPattern.firstMatch(url);
+  return match == null ? null : base64DecodeAndroid(match.group(1)!, 0);
+}
+
+final RegExp _dataUriPattern = RegExp(r'^data:.*?;base64,(.*)');
 
 /// MD3 的 `NetworkUtils.getBaseUrl`：http(s) 地址的协议加主机（和端口）部分。
 String? _baseUrlOf(String url) {
