@@ -113,6 +113,8 @@
 
 ### D5 打包脚本 `app/tool/release.sh`
 
+> 2026-11-10：用户决定 macOS 只用于本地开发调试，不发布。脚本去掉了 dmg 的打包、检查和上传，下面关于 macOS、dmg 的内容只作历史记录。
+
 用 bash 写，和 `packages/quickjs_ng_ffi/tool/build_host.sh` 一样。两种用法：
 
 - `app/tool/release.sh`：只打包和检查产物，用来在发布前试打。

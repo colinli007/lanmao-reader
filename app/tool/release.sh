@@ -1,5 +1,5 @@
 #!/bin/bash
-# 打三个平台的发布包（openspec release，prepare-release 设计 D5）。
+# 打 Android、iOS 两个平台的发布包（openspec release，prepare-release 设计 D5）。macOS 只用于本地开发调试，不发布。
 #   tool/release.sh                      打包并检查产物，不上传：发布前试打
 #   tool/release.sh --upload <说明文件>   先做发布前检查，通过后打包、检查产物，建 GitHub 草稿 Release
 # 产物放在 build/release/<版本>/ 下。草稿由维护者在 GitHub 上检查后再发布。
@@ -47,11 +47,10 @@ fi
 out=$PWD/build/release/$version
 apk=$out/novel-reader-$version-android-arm64.apk
 ipa=$out/novel-reader-$version-ios-unsigned.ipa
-dmg=$out/novel-reader-$version-macos.dmg
 rm -rf "$out"
 mkdir -p "$out"
 stage=$(mktemp -d)
-trap 'hdiutil detach -quiet "$stage/mnt" 2>/dev/null || true; rm -rf "$stage"' EXIT
+trap 'rm -rf "$stage"' EXIT
 
 # Android：只出 arm64-v8a（不支持 32 位 ARM）
 flutter build apk --release --split-per-abi --target-platform android-arm64
@@ -77,22 +76,8 @@ ipa_version=$(unzip -p "$ipa" Payload/Runner.app/Info.plist | plutil -extract CF
 [[ $ipa_version == "$version" ]] || fail "IPA 的版本是 ${ipa_version}，应该是 $version"
 ok "IPA：arm64，含 quickjs，版本 ${ipa_version}，$(mb "$(stat -f%z "$ipa")")"
 
-# macOS：dmg 里是「懒猫阅读.app」和「应用程序」的快捷方式。.app 改名不影响签名（设计 D2）
-flutter build macos --release
-mkdir "$stage/dmg"
-ditto build/macos/Build/Products/Release/lanmao_reader.app "$stage/dmg/懒猫阅读.app"
-ln -s /Applications "$stage/dmg/应用程序"
-hdiutil create -quiet -volname 懒猫阅读 -srcfolder "$stage/dmg" -fs HFS+ -format UDZO "$dmg"
-hdiutil verify -quiet "$dmg" || fail "dmg 校验失败"
-hdiutil attach -quiet -nobrowse -readonly -mountpoint "$stage/mnt" "$dmg"
-dmg_version=$(plutil -extract CFBundleShortVersionString raw "$stage/mnt/懒猫阅读.app/Contents/Info.plist")
-[[ $dmg_version == "$version" ]] || fail "dmg 里 app 的版本是 ${dmg_version}，应该是 $version"
-[[ -L $stage/mnt/应用程序 ]] || fail "dmg 里没有「应用程序」的快捷方式"
-hdiutil detach -quiet "$stage/mnt"
-ok "dmg：懒猫阅读.app，版本 ${dmg_version}，$(mb "$(stat -f%z "$dmg")")"
-
 if [[ -n $upload ]]; then
-  gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "懒猫阅读 $version" --notes-file "$notes" "$apk" "$ipa" "$dmg"
+  gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "懒猫阅读 $version" --notes-file "$notes" "$apk" "$ipa"
 else
   echo "产物在 ${out}（没有上传；发布用 --upload <说明文件>）"
 fi
