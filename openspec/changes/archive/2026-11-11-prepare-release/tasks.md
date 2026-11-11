@@ -300,8 +300,14 @@
   - 第六节：开头写明机型和日期，每一条后面写实测结果；翻页掉帧写明不达标和用户的决定，200 个书源写明真机没有测。
   - 第七节：第 8 步「界面极简改版」标为已完成；第 9 步写明还剩的事。
   - 通读过一遍，数字和本文件第 6 组的记录一致。
-- [ ] 8.3 等用户要求「提交并推送」后，先问用户确认，再运行 `app/tool/release.sh --upload docs/发布说明/v0.1.0.md`。验证：
+- [x] 8.3 等用户要求「提交并推送」后，先问用户确认，再运行 `app/tool/release.sh --upload docs/发布说明/v0.1.0.md`。验证：
   - 脚本打印出草稿的网址
   - 草稿里有 APK、IPA 两个文件（2026-11-10 用户决定 macOS 只用于本地开发调试，不发布），文件名和大小与本机 `app/build/release/0.1.0/` 下的一致
   - 再运行一次 `--upload`，在「草稿 Release 已存在」那一项检查停下（spec「版本已经发布过」）
   - 草稿由用户检查后自己点发布
+  结果（2026-11-11，提交 f5e5723）：
+  - 第一次 `--upload` 在 IPA 检查处报「IPA 里没有 quickjs_ng_ffi.framework」，其实文件在里面：`unzip -Z1 | grep -q` 在 pipefail 下，grep 找到就退出，unzip 收到 SIGPIPE（退出码 141），bash 下 200 次失败 196 次。改为先取完整列表再查，200 次 0 次失败，缺文件时仍能报出来。
+  - 发布前，按用户要求把 novel-reader 改名为 lanmao-reader：GitHub 仓库改名，发布文件名、README、发布说明、关于页源码地址跟着改。
+  - 草稿网址打印出来了；草稿名「懒猫阅读 0.1.0」，tag `v0.1.0`，指向 f5e5723；里面是 `lanmao-reader-0.1.0-android-arm64.apk`（11117051 字节）和 `lanmao-reader-0.1.0-ios-unsigned.ipa`（28227228 字节），和本机一致。
+  - 再运行一次 `--upload`，在「Release v0.1.0 已经存在（可能是草稿）」处停下。
+  - 2026-11-11 用户让我代为发布：Release 已发布（https://github.com/colinli007/lanmao-reader/releases/tag/v0.1.0），tag v0.1.0 指向 f5e5723；同时按用户要求把仓库设为公开（GPL-3.0），公开前扫过 git 历史，没有密钥文件、令牌或私钥。
