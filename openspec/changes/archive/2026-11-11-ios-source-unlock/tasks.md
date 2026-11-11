@@ -15,4 +15,6 @@
 - [x] 2.3 iOS 模拟器上实际操作并截图：关闭时的书架和设置、连点 10 次后的关于页、打开后的设置。验证：截图和规格一致。
 
   结果（2026-11-11，iPhone 17 模拟器，内存数据库，不动模拟器上 app 的数据）：关闭时底部只有书架、设置，书架只显示「书架还是空的」，设置页没有书源一组；连点 10 次弹出「已开启书源功能」，返回设置页能看到书源、替换净化规则，底部出现发现。第一次截图发现点版本那一行有水波纹，改成 `GestureDetector` 后重新截图，没有水波纹。
-- [ ] 2.4 用户确认后在 `feat/ios-source-unlock` 上提交，同步主规格并归档。验证：`openspec validate --strict` 通过。
+- [x] 2.4 用户确认后在 `feat/ios-source-unlock` 上提交，同步主规格并归档。验证：`openspec validate --strict` 通过。
+
+  结果（2026-11-11）：代码和提案提交为 9fcfe6c；app-shell 新增「iOS 书源功能开关」、替换「底部 tab」，bookshelf 替换「书架列表」，settings 替换「设置页入口」「关于页」；`openspec validate --specs --strict` 22 项通过。
