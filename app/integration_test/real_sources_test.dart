@@ -11,6 +11,7 @@ import 'package:lanmao_reader/online/search_controller.dart';
 import 'package:lanmao_reader/online/search_page.dart';
 import 'package:lanmao_reader/online/startup.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
+import 'package:lanmao_reader/settings/source_feature.dart';
 import 'package:lanmao_reader/storage/database.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -80,6 +81,8 @@ void main() {
   }
 
   Future<void> startApp(WidgetTester tester, AppDatabase db) async {
+    // iOS 上书源功能默认关闭（关于页连点版本号打开），这里直接写成已打开
+    await db.putSetting(SourceFeatureNotifier.unlockedKey, 'true');
     await tester.pumpWidget(
       ProviderScope(
         overrides: await startServices(database: db),

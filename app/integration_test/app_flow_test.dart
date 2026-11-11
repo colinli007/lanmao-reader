@@ -10,6 +10,7 @@ import 'package:lanmao_reader/app.dart';
 import 'package:lanmao_reader/online/startup.dart';
 import 'package:lanmao_reader/reader/reader_page.dart';
 import 'package:lanmao_reader/settings/byte_size.dart';
+import 'package:lanmao_reader/settings/source_feature.dart';
 import 'package:lanmao_reader/storage/database.dart';
 
 /// 端到端：本地 HTTP 服务器上的假书源，走完导入书源和替换规则 → 搜索 → 详情 → 加入书架 → 翻页读第 1、2 章 → 切到滚动模式再读一遍 → 返回书架
@@ -161,6 +162,8 @@ void main() {
 
   testWidgets('导入书源和替换规则 → 搜索 → 详情 → 加入书架 → 读两章 → 返回书架 → 清除缓存后再打开 → 换书源', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
+    // iOS 上书源功能默认关闭（关于页连点版本号打开），这里直接写成已打开
+    await db.putSetting(SourceFeatureNotifier.unlockedKey, 'true');
     await tester.pumpWidget(
       ProviderScope(
         overrides: await startServices(database: db),

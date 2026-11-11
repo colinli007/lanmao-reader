@@ -12,6 +12,7 @@ import '../ui/widgets.dart';
 import 'about_page.dart';
 import 'byte_size.dart';
 import 'reader_settings_page.dart';
+import 'source_feature.dart';
 
 /// 进入设置页时统计，离开就丢掉（add-settings 设计 D3）：设置页和阅读页不会同时打开，统计期间缓存不会变。
 /// 设置页只在设置 tab 选中时构建（redesign-minimal-ui 设计 D1），所以每次切过去都重新统计。
@@ -19,12 +20,12 @@ final contentCacheStatsProvider = FutureProvider.autoDispose<ContentCacheStats>(
   (ref) => ref.read(databaseProvider).contentCacheStats(),
 );
 
-/// 设置页（settings「设置页入口」，redesign-minimal-ui 设计 D7）：浅灰底上三组卡片。
-class SettingsPage extends StatelessWidget {
+/// 设置页（settings「设置页入口」，redesign-minimal-ui 设计 D7）：浅灰底上三组卡片；书源功能关闭时没有书源那一组。
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     Widget link(String title, Widget Function() page) => ListTile(
       title: Text(title),
@@ -51,13 +52,15 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          SettingsGroup(
-            children: [
-              link('书源', () => const SourceListPage()),
-              link('替换净化规则', () => const ReplaceRuleListPage()),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.section),
+          if (ref.watch(sourceFeatureProvider)) ...[
+            SettingsGroup(
+              children: [
+                link('书源', () => const SourceListPage()),
+                link('替换净化规则', () => const ReplaceRuleListPage()),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.section),
+          ],
           SettingsGroup(children: [link('阅读设置', () => const ReaderSettingsPage()), const _ContentCacheTile()]),
           const SizedBox(height: AppSpacing.section),
           SettingsGroup(children: [link('关于', () => const AboutPage())]),

@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../app_info.dart';
 import '../ui/icons.dart';
+import 'source_feature.dart';
 
 /// 安装包的版本号（设计 D4）：Flutter 构建时从 pubspec.yaml 写进安装包，这里读回来。
 final appVersionProvider = FutureProvider<String>((ref) async => (await PackageInfo.fromPlatform()).version);
@@ -23,7 +24,7 @@ class AboutPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('关于')),
       body: ListView(
         children: [
-          ListTile(title: const Text(appName), subtitle: Text(version == null ? '' : '版本 $version')),
+          _VersionTile(version: version),
           const ListTile(title: Text('开源协议'), subtitle: Text('GPL-3.0')),
           ListTile(
             title: const Text('源代码'),
@@ -43,5 +44,36 @@ class AboutPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// 名称和版本。书源功能关闭时，连点 [SourceFeatureNotifier.unlockTaps] 次打开它；中途没有提示，离开关于页重新计数。
+class _VersionTile extends ConsumerStatefulWidget {
+  const _VersionTile({required this.version});
+
+  final String? version;
+
+  @override
+  ConsumerState<_VersionTile> createState() => _VersionTileState();
+}
+
+class _VersionTileState extends ConsumerState<_VersionTile> {
+  int _taps = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final version = widget.version;
+    // 不用 ListTile.onTap：点击没有水波纹，看不出这一行能点
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: ref.watch(sourceFeatureProvider) ? null : _tap,
+      child: ListTile(title: const Text(appName), subtitle: Text(version == null ? '' : '版本 $version')),
+    );
+  }
+
+  void _tap() {
+    if (++_taps < SourceFeatureNotifier.unlockTaps) return;
+    ref.read(sourceFeatureProvider.notifier).unlock();
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已开启书源功能')));
   }
 }

@@ -8,6 +8,7 @@ import '../online/book_detail_page.dart';
 import '../online/change_source_page.dart';
 import '../online/search_page.dart';
 import '../reader/reader_page.dart';
+import '../settings/source_feature.dart';
 import '../storage/database.dart';
 import '../ui/icons.dart';
 import '../ui/tokens.dart';
@@ -33,6 +34,7 @@ class BookshelfPage extends ConsumerWidget {
     final refresh = ref.watch(shelfRefreshProvider);
     final controller = ref.read(shelfRefreshProvider.notifier);
     final colors = AppColors.of(context);
+    final searchable = ref.watch(sourceFeatureProvider);
     return Scaffold(
       appBar: largeTitleAppBar(
         context,
@@ -45,7 +47,7 @@ class BookshelfPage extends ConsumerWidget {
               icon: const Icon(LucideIcons.refreshCw),
               onPressed: refresh.running || shelf.isEmpty ? null : controller.refresh,
             ),
-          IconButton(tooltip: '搜索', icon: const Icon(LucideIcons.search), onPressed: () => _openSearch(context)),
+          if (searchable) IconButton(tooltip: '搜索', icon: const Icon(LucideIcons.search), onPressed: () => _openSearch(context)),
         ],
       ),
       body: Column(
@@ -73,8 +75,10 @@ class BookshelfPage extends ConsumerWidget {
                       children: [
                         const SizedBox(height: 120),
                         Center(child: Text('书架还是空的', style: TextStyle(color: colors.textSecondary))),
-                        const SizedBox(height: AppSpacing.item),
-                        Center(child: FillButton(onPressed: () => _openSearch(context), child: const Text('去搜索'))),
+                        if (searchable) ...[
+                          const SizedBox(height: AppSpacing.item),
+                          Center(child: FillButton(onPressed: () => _openSearch(context), child: const Text('去搜索'))),
+                        ],
                       ],
                     )
                   : LayoutBuilder(
