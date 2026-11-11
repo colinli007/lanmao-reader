@@ -14,12 +14,12 @@
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/colinli007/novel-reader/releases) 下载对应平台的文件（`<版本>` 是版本号，如 `0.1.0`）：
+从 [GitHub Releases](https://github.com/colinli007/lanmao-reader/releases) 下载对应平台的文件（`<版本>` 是版本号，如 `0.1.0`）：
 
 | 平台 | 文件 |
 |---|---|
-| Android（64 位） | `novel-reader-<版本>-android-arm64.apk` |
-| iOS | `novel-reader-<版本>-ios-unsigned.ipa` |
+| Android（64 位） | `lanmao-reader-<版本>-android-arm64.apk` |
+| iOS | `lanmao-reader-<版本>-ios-unsigned.ipa` |
 
 **Android**：
 

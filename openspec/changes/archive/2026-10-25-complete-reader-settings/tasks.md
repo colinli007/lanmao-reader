@@ -60,6 +60,7 @@
   - Android：profile 构建也是可调试的（Flutter 的 profile 在 debug 的基础上建），这时按设计保留标志，所以改用 release 构建验证。用临时探针跑 `flutter run --release`：阅读页打开时窗口标志有 `KEEP_SCREEN_ON`，返回后没有。
   - macOS：阅读页打开时 `pmset -g assertions` 里有本 app 的 `PreventUserIdleDisplaySleep`，返回后没有。断言名改成英文 `novel_reader reading`，中文名在 `pmset` 里显示为空。
   - iOS 模拟器（iPhone 17 Pro）：打开、返回各调用一次，没有异常；常亮效果等真机测试时确认。
+  - iPhone 13 真机（2026-11-11，iOS 16.7.2，release 构建）：用户确认阅读页打开常亮时屏幕一直亮，返回书架后按时锁屏。
 - [x] 3.5 音量键翻页（D3）：
   - `PagedView`、`ScrollReaderView` 包 `Focus(autofocus: true, onKeyEvent:)`
   - 滚动视图抽出 `_scrollScreen(forward)`，点击和按键共用

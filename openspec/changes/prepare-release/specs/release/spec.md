@@ -9,14 +9,14 @@
 
 | 平台 | 文件名 | 内容 |
 |---|---|---|
-| Android | `novel-reader-<版本>-android-arm64.apk` | 只含 arm64-v8a，不含 32 位 ARM 和 x86；体积 MUST NOT 超过 20MB |
-| iOS | `novel-reader-<版本>-ios-unsigned.ipa` | 未签名，用户自签后安装 |
+| Android | `lanmao-reader-<版本>-android-arm64.apk` | 只含 arm64-v8a，不含 32 位 ARM 和 x86；体积 MUST NOT 超过 20MB |
+| iOS | `lanmao-reader-<版本>-ios-unsigned.ipa` | 未签名，用户自签后安装 |
 
 Release 的 tag 是 `v<版本>`，指向打包时的提交。打包 SHALL 在工作区没有未提交的改动、并且这个提交已经推送时进行，否则拒绝打包。Release SHALL 先建成草稿，由维护者检查后再发布。macOS MUST NOT 打包发布。
 
 #### Scenario: 一个版本的两个文件
 - **WHEN** 维护者为 0.1.0 打包
-- **THEN** 得到 `novel-reader-0.1.0-android-arm64.apk`、`novel-reader-0.1.0-ios-unsigned.ipa`，并且 GitHub 上出现 tag 为 `v0.1.0` 的草稿 Release，两个文件都在里面，没有 macOS 的文件
+- **THEN** 得到 `lanmao-reader-0.1.0-android-arm64.apk`、`lanmao-reader-0.1.0-ios-unsigned.ipa`，并且 GitHub 上出现 tag 为 `v0.1.0` 的草稿 Release，两个文件都在里面，没有 macOS 的文件
 
 #### Scenario: APK 超过 20MB
 - **WHEN** 打出来的 APK 是 21MB

@@ -5,8 +5,8 @@ import 'app_shell.dart';
 import 'ui/theme.dart';
 
 /// 极简主题（redesign-minimal-ui 设计 D2），跟随系统亮暗。
-class NovelReaderApp extends StatelessWidget {
-  const NovelReaderApp({super.key});
+class LanmaoReaderApp extends StatelessWidget {
+  const LanmaoReaderApp({super.key});
 
   @override
   Widget build(BuildContext context) {

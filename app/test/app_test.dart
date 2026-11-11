@@ -8,7 +8,7 @@ import 'support/test_app.dart';
 void main() {
   testWidgets('书架顶栏进入搜索，设置 tab 进入书源', (tester) async {
     final services = await TestServices.create();
-    await tester.pumpWidget(ProviderScope(overrides: services.overrides, child: const NovelReaderApp()));
+    await tester.pumpWidget(ProviderScope(overrides: services.overrides, child: const LanmaoReaderApp()));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('搜索'));
     await tester.pumpAndSettle();

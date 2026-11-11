@@ -250,7 +250,7 @@
 
 ## 7. iPhone 和 Mac
 
-- [ ] 7.1 iPhone SE（第二代）上跑 `app_flow_test.dart` 和走查，书源文件通过 Mac 的局域网地址访问，按 Risks 处理局域网权限。验证：两个都通过，结论记在这一项下面。
+- [x] 7.1 iPhone SE（第二代）上跑 `app_flow_test.dart` 和走查，书源文件通过 Mac 的局域网地址访问，按 Risks 处理局域网权限。验证：两个都通过，结论记在这一项下面。
 
   进展（2026-10-28，iPhone SE 第二代，iOS 26.4.1，有线连接，还没完成）：
   - debug 构建在 iOS 26 真机上一启动就 SIGABRT：iOS 26 不允许 JIT 在 RX 和 RW 之间切换内存权限，Flutter 3.35 以后才修。profile 和 release 是 AOT，不受影响，所以 iPhone 上的集成测试改用 `flutter drive --profile`。发布的 IPA 是 release 构建，不受影响。直接从桌面点开 debug 包也会退出，这是 iOS 14 起的限制（debug 包必须由 Flutter 工具或 Xcode 启动）。
@@ -259,9 +259,12 @@
   - 修复后 app_flow 在 iPhone（profile）、Android 真机（debug）、macOS（debug，切到 ABC 输入法跑）上都通过。
   - 还没做：iPhone 上的走查，用户说另找时间单独测。
   - iOS 模拟器（2026-10-28，iPhone 17 Pro，debug 构建，用的是现在的代码）：app_flow 通过；走查通过，搜索 13 个书源用了 7 秒，失败 1 个（绾书文学，TLS 握手时连接被断开，网络问题）。6 个书源各读两章都通过，重启后书架 6 本都停在第 2 章，从书架打开后显示上次读到的那一章，刷新书架 6 本用了 33 秒，失败 0 本。
+  - 走查（2026-11-11，iPhone 13，iOS 16.7.2，release 构建）：用户走查通过。
   - 中途发生过的情况：Xcode 停在调试会话里时，`flutter drive` 报「Timed out waiting for CONFIGURATION_BUILD_DIR to update」，退出 Xcode 后恢复；手机上有一个 Runner 进程 SIGKILL 也结束不了，没有影响后面的运行。
-- [ ] 7.2 iPhone 上检查屏幕常亮：自动锁定设成 30 秒，打开设置后停在阅读页 1 分钟，屏幕一直亮；返回书架后按时锁屏。验证：结果记在这一项下面，补上 complete-reader-settings 里留到真机才能确认的那一条。
-- [ ] 7.3 用户用自己常用的工具（AltStore、Sideloadly 等）给 4.1 打出的 IPA 签名，装到 iPhone 上。验证：能启动，显示书架，能导入书源并搜索；用的工具和结果记在这一项下面。
+- [x] 7.2 iPhone 上检查屏幕常亮：自动锁定设成 30 秒，打开设置后停在阅读页 1 分钟，屏幕一直亮；返回书架后按时锁屏。验证：结果记在这一项下面，补上 complete-reader-settings 里留到真机才能确认的那一条。
+  结果（2026-11-11，iPhone 13，iOS 16.7.2）：用户验证通过。
+- [x] 7.3 用户用自己常用的工具（AltStore、Sideloadly 等）给 4.1 打出的 IPA 签名，装到 iPhone 上。验证：能启动，显示书架，能导入书源并搜索；用的工具和结果记在这一项下面。
+  结果（2026-11-11）：没用第三方工具，用 `codesign` 和本机开发证书（团队 43UAHZVRQY 的 `dev.lanmaoreader.app` 描述文件）给 `release.sh` 打出的未签名 IPA 重新签名，`ios-deploy` 经 USB 装到 iPhone 13（iOS 16.7.2）。能启动，用户确认书架、导入书源、搜索都正常。
 - [x] 7.4 macOS 走查：`real_sources_test.dart -d macos`。验证：通过。遇到 Caps Lock 断言时，先切到 ABC 输入法再跑，跑完切回来。
 
   结果（2026-10-25，macOS 15.8，书源文件 recorded14.json，跑之前切到 ABC，跑完切回搜狗拼音并恢复 Caps Lock）：通过。

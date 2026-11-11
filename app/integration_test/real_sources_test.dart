@@ -83,7 +83,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: await startServices(database: db),
-        child: const NovelReaderApp(),
+        child: const LanmaoReaderApp(),
       ),
     );
     await tester.pumpAndSettle();

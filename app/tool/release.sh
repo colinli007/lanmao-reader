@@ -45,8 +45,8 @@ if [[ -n $upload ]]; then
 fi
 
 out=$PWD/build/release/$version
-apk=$out/novel-reader-$version-android-arm64.apk
-ipa=$out/novel-reader-$version-ios-unsigned.ipa
+apk=$out/lanmao-reader-$version-android-arm64.apk
+ipa=$out/lanmao-reader-$version-ios-unsigned.ipa
 rm -rf "$out"
 mkdir -p "$out"
 stage=$(mktemp -d)
@@ -71,7 +71,8 @@ ditto build/ios/iphoneos/Runner.app "$stage/Payload/Runner.app"
 ditto -c -k --keepParent "$stage/Payload" "$ipa"
 unzip -p "$ipa" Payload/Runner.app/Runner >"$stage/Runner"
 [[ $(lipo -archs "$stage/Runner") == arm64 ]] || fail "IPA 的可执行文件不是 arm64"
-unzip -Z1 "$ipa" | grep -q '^Payload/Runner.app/Frameworks/quickjs_ng_ffi.framework/' || fail "IPA 里没有 quickjs_ng_ffi.framework"
+# 先取完整的文件列表再查：管道里 grep -q 一找到就退出，unzip 会因 SIGPIPE 失败，pipefail 下检查就误报
+grep -q '^Payload/Runner.app/Frameworks/quickjs_ng_ffi.framework/' <<<"$(unzip -Z1 "$ipa")" || fail "IPA 里没有 quickjs_ng_ffi.framework"
 ipa_version=$(unzip -p "$ipa" Payload/Runner.app/Info.plist | plutil -extract CFBundleShortVersionString raw -)
 [[ $ipa_version == "$version" ]] || fail "IPA 的版本是 ${ipa_version}，应该是 $version"
 ok "IPA：arm64，含 quickjs，版本 ${ipa_version}，$(mb "$(stat -f%z "$ipa")")"

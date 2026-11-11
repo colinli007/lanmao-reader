@@ -12,5 +12,5 @@ Future<void> main() async {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(['Lucide'], await rootBundle.loadString('assets/fonts/LUCIDE_LICENSE.txt'));
   });
-  runApp(ProviderScope(overrides: await startServices(), child: const NovelReaderApp()));
+  runApp(ProviderScope(overrides: await startServices(), child: const LanmaoReaderApp()));
 }
